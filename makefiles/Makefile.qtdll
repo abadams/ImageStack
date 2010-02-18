@@ -1,0 +1,38 @@
+# Cygwin make-based build file for QT+mingw ImageStack DLL (_not_ cygwin gcc + -mnocygwin)
+# Required for proper exeception handling across library boundaries.
+# Assumes standard QT env variables are defined as in the QT command prompt (QTDIR, mainly)
+
+include ../Makefile.common
+
+LIB = ../lib
+SRC = ../src
+INCLUDE = ../include
+
+CXX = $(QTDIR)/../mingw/bin/g++.exe
+
+CCFLAGS = -DNO_RAW -DNO_OPENEXR -O3 -Wall -Werror -pipe			\
+-fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations	\
+-falign-functions=4 -funroll-loops -malign-double			\
+-fprefetch-loop-arrays -march=pentium3 -msse -mfpmath=sse		\
+-Wno-uninitialized
+
+IMAGESTACK_CCFLAGS = $(CCFLAGS) -I../deps/win32/include -DNO_SDL
+IMAGESTACK_LIBS = -L../deps/win32/lib  -lpng -ltiff -ljpeg -lfftw3 -lwsock32 -lwinmm  -lz
+
+all: $(LIB)/ImageStack.dll $(INCLUDE)/ImageStack.h
+
+$(LIB)/ImageStack.dll: ImageStack.o
+	$(CXX) $(IMAGESTACK_CCFLAGS) -shared ImageStack.o $(IMAGESTACK_LIBS) -o $(LIB)/ImageStack.dll
+
+$(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
+	cp $(SRC)/*.h $(INCLUDE)
+
+ImageStack.o: $(SRC)/ImageStack.cpp
+	$(CXX) $(IMAGESTACK_CCFLAGS) -c $<
+
+install:
+	echo "Copy $(LIB)/ImageStack.dll and $(INCLUDE)/*.h to whereever you need them for QT yourself!"
+
+clean:
+	-rm -f *.o $(LIB)/*
+	-rm -f $(INCLUDE)/*

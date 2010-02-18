@@ -1,0 +1,20 @@
+include ../Makefile.common
+
+BIN = ../bin
+SRC = ../src
+CCFLAGS = -O3 -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=pentium3 -msse -mfpmath=sse -Wno-uninitialized 
+
+IMAGESTACK_CCFLAGS = $(CCFLAGS) -DNO_OPENEXR -DNO_JPEG -DNO_TIFF -DNO_PNG -DNO_FFTW -DNO_RAW -DNO_SDL 
+IMAGESTACK_LIBS = 
+
+$(BIN)/ImageStack: $(IMAGESTACK_OBJECTS)
+	g++ $(IMAGESTACK_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN)/ImageStack 
+
+%.o: $(SRC)/%.cpp
+	g++ $(IMAGESTACK_CCFLAGS) -c $<
+
+clean:
+	-rm -f *.o $(BIN)/*
+
+install:
+	cp $(BIN)/* /usr/local/bin
