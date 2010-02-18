@@ -26,6 +26,8 @@ void Load::help() {
     printf("\n");
     FileJPG::help();
     printf("\n");
+    FileEXR::help();
+    printf("\n");
     FilePNG::help();
     printf("\n");
     FilePPM::help();
@@ -56,6 +58,8 @@ Image Load::apply(string filename) {
         return FileHDR::load(filename);
     } else if (suffixMatch(filename, ".jpg") || suffixMatch(filename, ".jpeg")) {
         return FileJPG::load(filename);
+    } else if (suffixMatch(filename, ".exr")) {
+	return FileEXR::load(filename);
     } else if (suffixMatch(filename, ".png")) {
         return FilePNG::load(filename);
     } else if (suffixMatch(filename, ".tga")) {
@@ -133,6 +137,8 @@ void Save::help() {
     printf("\n");
     FileJPG::help();
     printf("\n");
+    FileEXR::help();
+    printf("\n");
     FilePNG::help();
     printf("\n");
     FilePPM::help();
@@ -172,6 +178,11 @@ void Save::apply(Window im, string filename, string arg) {
 	if (arg == "") quality = 90;
 	else quality = readInt(arg);
         FileJPG::save(im, filename, quality);
+    } else if (suffixMatch(filename, ".exr")) {
+	string compression;
+	if (arg == "") compression = "piz";
+	else compression = arg;
+	FileEXR::save(im, filename, compression);
     } else if (suffixMatch(filename, ".png")) {
         FilePNG::save(im, filename);
     } else if (suffixMatch(filename, ".tga")) {
