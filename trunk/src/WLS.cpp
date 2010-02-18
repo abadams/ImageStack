@@ -9,9 +9,6 @@
 #include "Statistics.h"
 #include "LAHBPCG.h"
 
-#include <vector>
-#include <string>
-
 void WLS::help() {
     pprintf("-wls filters the image with the wls-filter described in the paper"
 	    " Edge-Preserving Decompositions for Multi-Scale Tone and Detail"
