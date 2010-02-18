@@ -13,6 +13,7 @@
 #include <fstream>
 #include <algorithm>
 #include <list>
+#include <set>
 
 #ifdef WIN32
 #include <winsock2.h>
