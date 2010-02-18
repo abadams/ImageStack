@@ -1,0 +1,30 @@
+include ../Makefile.common
+
+LIB = ../lib
+SRC = ../src
+INCLUDE = ../include
+
+CCFLAGS = -O3 -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=pentium3 -msse -mfpmath=sse -Wno-uninitialized 
+
+IMAGESTACK_CCFLAGS = $(CCFLAGS) -DNO_SDL -DNO_OPENEXR -I/sw/include 
+IMAGESTACK_LIBS = -L/sw/lib -lz -lpng -ltiff -ljpeg -lfftw3 
+
+all: $(LIB)/libImageStack.dylib $(INCLUDE)/ImageStack.h
+
+$(LIB)/libImageStack.dylib: ImageStack.o
+	g++ $(IMAGESTACK_CCFLAGS) -dynamiclib -install_name /sw/lib/libImageStack.dylib ImageStack.o -o $(LIB)/libImageStack.dylib $(IMAGESTACK_LIBS)
+
+$(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
+	cp $(SRC)/*.h $(INCLUDE)
+
+ImageStack.o: $(SRC)/ImageStack.cpp
+	g++ $(IMAGESTACK_CCFLAGS) -c $<
+
+install:	
+	cp $(LIB)/*.dylib /sw/lib
+	mkdir -p /sw/include/ImageStack
+	cp $(INCLUDE)/*.h /sw/include/ImageStack/
+
+clean:
+	-rm -f *.o $(LIB)/*
+	-rm -f $(INCLUDE)/*

@@ -1,0 +1,53 @@
+# common variables for all ImageStack makefiles
+
+# the components of imagestack
+IMAGESTACK_OBJECTS = \
+	Calculus.o \
+	Color.o \
+	Complex.o \
+	Control.o \
+	Convolve.o \
+	DFT.o \
+	Display.o \
+	DisplayWindow.o \
+        Exception.o \
+	File.o \
+	FileEXR.o \
+	FileCSV.o \
+	FileHDR.o \
+	FileJPG.o \
+	FilePNG.o \
+	FileTMP.o \
+	FilePPM.o \
+	FileTGA.o \
+	FileTIFF.o \
+	FileFLO.o \
+        FileWAV.o \
+	Filter.o \
+	GaussTransform.o \
+	Geometry.o \
+        HDR.o \
+        Image.o \
+	LAHBPCG.o \
+	LightField.o \
+	Arithmetic.o \
+	Alignment.o \
+	NetworkOps.o \
+	Network.o \
+	Operation.o \
+	Paint.o \
+	Panorama.o \
+	PatchMatch.o \
+	Parser.o \
+	Prediction.o \
+	Projection.o \
+	Stack.o \
+	Statistics.o \
+	Wavelet.o \
+	WLS.o \
+	main.o \
+
+
+
+
+

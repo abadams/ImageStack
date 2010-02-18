@@ -1,0 +1,22 @@
+include ../Makefile.common
+
+BIN = ../bin
+SRC = ../src
+CCFLAGS = -O3 -Wall -Werror -pipe -fomit-frame-pointer -funroll-loops -march=pentium3 -Wno-uninitialized 
+
+IMAGESTACK_CCFLAGS = $(CCFLAGS) `sdl-config --cflags` -DNO_FFTW -DNO_OPENEXR
+IMAGESTACK_LIBS = `sdl-config --libs` -L/usr/local/lib -lz -lpng -ltiff -ljpeg 
+
+all: $(BIN)/ImageStack 
+
+$(BIN)/ImageStack: $(IMAGESTACK_OBJECTS)
+	g++ $(IMAGESTACK_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN)/ImageStack 
+
+%.o: $(SRC)/%.cpp
+	g++ $(IMAGESTACK_CCFLAGS) -c $<
+
+clean:
+	-rm -f *.o ../bin/*
+
+install:
+	cp $(BIN)/* /usr/local/bin

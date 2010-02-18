@@ -1,0 +1,106 @@
+BIN = ../bin
+LIB = ../lib
+SRC = ../src
+INCLUDE = ../include
+
+CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=core2 -msse3 -mfpmath=sse -Wno-uninitialized -enable-auto-import
+
+##########################
+# Dependencies           #
+##########################
+
+# Comment out any dependencies you do not wish to include, or do not have
+SDL_CCFLAGS = -I/usr/local/include/SDL
+SDL_LIBS = -lSDL
+
+JPEG_CCFLAGS = 
+JPEG_LIBS = -ljpeg
+
+TIFF_CCFLAGS = 
+TIFF_LIBS = -ltiff
+
+PNG_CCFLAGS =
+PNG_LIBS = -lpng
+
+FFTW_CCFLAGS = 
+FFTW_LIBS = -lfftw3f
+
+# By default we don't include OpenEXR, because most people won't have it installed
+#OPENEXR_CCFLAGS = -I /usr/local/include/OpenEXR
+#OPENEXR_LIBS = -L/usr/local/lib -lImath -lHalf -lIex -lIlmImf
+
+# This adds the appropriate defines for dependencies not included
+SDL_CCFLAGS ?= -DNO_SDL
+JPEG_CCFLAGS ?= -DNO_JPEG
+TIFF_CCFLAGS ?= -DNO_TIFF
+PNG_CCFLAGS ?= -DNO_PNG
+FFTW_CCFLAGS ?= -DNO_FFTW
+OPENEXR_CCFLAGS ?= -DNO_OPENEXR
+
+##########################
+# Top-level targets      #
+##########################
+
+# By default, build ImageStack the program
+default: $(BIN)/ImageStack
+
+all: $(BIN)/ImageStack library
+
+clean:
+	-rm -f *.o *.gch $(BIN)/* $(LIB)/* $(INCLUDE)/*
+
+##########################
+# ImageStack the program #
+##########################
+
+# Get the list of .o files to generate
+include ../Makefile.common
+
+IMAGESTACK_P_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+IMAGESTACK_P_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+
+# Everything includes main.h. By precompiling that header we can speed up compilation about 30%
+main.h.gch: $(SRC)/main.h
+	g++ $(CCFLAGS) -x c++-header -O3 -o ./main.h.gch $(SRC)/main.h
+
+$(BIN)/ImageStack: $(IMAGESTACK_OBJECTS)
+	g++ $(IMAGESTACK_P_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_P_LIBS) -o $(BIN)/ImageStack 
+
+%.o: $(SRC)/%.cpp main.h.gch
+	g++ -include main.h $(IMAGESTACK_P_CCFLAGS) -c $<
+
+install: $(BIN)/ImageStack
+	cp $(BIN)/* /usr/local/bin
+
+##########################
+# ImageStack the library #
+##########################
+
+IMAGESTACK_L_CCFLAGS = $(CCFLAGS) -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+IMAGESTACK_L_LIBS = $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+
+library: $(LIB)/cygImageStack.dll $(INCLUDE)/ImageStack.h 
+
+$(LIB)/cygImageStack.dll: ImageStack.o
+	g++ $(IMAGESTACK_L_CCFLAGS) -shared -o $(LIB)/cygImageStack.dll -Wl,--out-implib=$(LIB)/libImageStack.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive ImageStack.o -Wl,--no-whole-archive $(IMAGESTACK_L_LIBS)
+
+ImageStack.o: $(SRC)/ImageStack.cpp
+	g++ $(IMAGESTACK_L_CCFLAGS) -c $<
+
+$(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
+	cp $(SRC)/*.h $(INCLUDE)
+
+libinstall: library
+	cp $(LIB)/lib*.dll.a /usr/local/lib
+	cp $(LIB)/cyg*.dll /usr/local/bin
+	mkdir -p /usr/local/include/ImageStack
+	cp $(INCLUDE)/*.h /usr/local/include/ImageStack/
+
+
+
+
+
+
+
+
+
