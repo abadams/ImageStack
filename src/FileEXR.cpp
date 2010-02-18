@@ -6,9 +6,16 @@ namespace FileEXR {
     #include "FileNotImplemented.h"
 }
 #else 
+
+#ifdef IMAGESTACK_NAMESPACE
+}
+#endif
 #include <ImfRgbaFile.h>
 #include <ImfArray.h>
 #include <ImfChannelList.h>
+#ifdef IMAGESTACK_NAMESPACE
+namespace ImageStack {
+#endif
 
 namespace FileEXR {
 

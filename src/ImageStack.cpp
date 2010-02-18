@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <limits>
 #include <list>
+#include <set>
 
 #ifdef WIN32
 #include <winsock2.h>
