@@ -54,7 +54,7 @@ void Haar::apply(Window im, int times) {
             }
         }
         // separate into averages and differences
-        Deinterleave::apply(win, 1, 2, 1);
+        Deinterleave::apply(win, 2, 1, 1);
         // repeat on the averages
         win = Window(win, 0, 0, 0, win.width/2, win.height, win.frames);
     }
@@ -77,7 +77,7 @@ void Haar::apply(Window im, int times) {
             }
         }
         // separate into averages and differences
-        Deinterleave::apply(win, 1, 1, 2);
+        Deinterleave::apply(win, 1, 2, 1);
         // repeat on the averages
         win = Window(win, 0, 0, 0, win.width, win.height/2, win.frames);
     }
@@ -120,7 +120,7 @@ void InverseHaar::apply(Window im, int times) {
     Window win(im, 0, 0, 0, im.width, h, im.frames); 
     while (1) {
         // combine the averages and differences
-        Interleave::apply(win, 1, 1, 2);
+        Interleave::apply(win, 1, 2, 1);
 
         for (int t = 0; t < win.frames; t++) {            
             for (int y = 0; y < win.height; y+=2) {
@@ -147,7 +147,7 @@ void InverseHaar::apply(Window im, int times) {
     win = Window(im, 0, 0, 0, w, im.height, im.frames); 
     while (1) {
         // combine the averages and differences
-        Interleave::apply(win, 1, 2, 1);
+        Interleave::apply(win, 2, 1, 1);
 
         for (int t = 0; t < win.frames; t++) {            
             for (int y = 0; y < win.height; y++) {
@@ -242,7 +242,7 @@ void Daubechies::apply(Window im) {
             }
         }
         // separate into averages and differences
-        Deinterleave::apply(win, 1, 2, 1);
+        Deinterleave::apply(win, 2, 1, 1);
         
         if (win.width == 2) break;
 
@@ -293,7 +293,7 @@ void Daubechies::apply(Window im) {
             }
         }
         // separate into averages and differences
-        Deinterleave::apply(win, 1, 1, 2);
+        Deinterleave::apply(win, 1, 2, 1);
         
         if (win.height == 2) break;
 
@@ -327,7 +327,7 @@ void InverseDaubechies::apply(Window im) {
     Window win(im, 0, 0, 0, 2, im.height, im.frames); 
     while (1) {
         // Collect averages and differences
-        Interleave::apply(win, 1, 2, 1);
+        Interleave::apply(win, 2, 1, 1);
 
         for (int t = 0; t < win.frames; t++) {            
             for (int y = 0; y < win.height; y++) {
@@ -379,7 +379,7 @@ void InverseDaubechies::apply(Window im) {
     win = Window(im, 0, 0, 0, im.width, 2, im.frames); 
     while (1) {
         // Collect averages and differences
-        Interleave::apply(win, 1, 1, 2);
+        Interleave::apply(win, 1, 2, 1);
 
         for (int t = 0; t < win.frames; t++) {            
             for (int x = 0; x < win.width; x++) {
