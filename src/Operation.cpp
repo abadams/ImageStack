@@ -249,7 +249,7 @@ void Help::help() {
     OperationMapIterator i;
 
     for (i = operationMap.begin(); i != operationMap.end(); ++i) {
-        printf(i->first.c_str());
+        printf("%s", i->first.c_str());
         printf(" ");
     }
     printf("\n");
