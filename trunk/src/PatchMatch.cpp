@@ -391,14 +391,12 @@ void BidirectionalSimilarity::apply(Window source, Window target,
 		memcpy(targPtr, newTargPtr, sizeof(float)*target.channels*target.width);
 	    }
 	}	
-	Save::apply(smallTarget, "small.tmp");
-	Save::apply(target, "upsampled.tmp");
     }
 
     for(int i = 0; i < numIter; i++) {
 	printf("Bidir.. %d/%d\n", i, numIter);
 
-	int patchSize = 9; 
+	int patchSize = 5; 
 	Image completeMatch, coherentMatch;
 
 	// The homogeneous output for this iteration
