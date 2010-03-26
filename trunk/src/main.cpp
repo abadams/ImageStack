@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     try {
         parseCommands(args);
     } catch(Exception &e) {
-        printf(e.message);
+        printf("%s", e.message);
     }
 
     fflush(stdout);
@@ -216,14 +216,14 @@ void pprintf(const char *str) {
 	
 	if (!*endOfLine) {
 	    *linePtr = 0;
-	    printf(line);
+	    printf("%s", line);
 	    return;
 	}
 
 	if (*endOfLine == '\n') {
 	    linePtr[0] = '\n';
 	    linePtr[1] = 0;
-	    printf(line);
+	    printf("%s", line);
 	    startOfLine = endOfLine + 1;
 	    continue;
 	}
@@ -238,7 +238,7 @@ void pprintf(const char *str) {
 	if (*lastSpace == ' ') {
 	    lastSpace[0] = '\n';
 	    lastSpace[1] = 0;
-	    printf(line);
+	    printf("%s", line);
 	    startOfLine += lastSpace - line + 1;
 	} 
     }

@@ -3,7 +3,7 @@ LIB = ../lib
 SRC = ../src
 INCLUDE = ../include
 
-CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -fprefetch-loop-arrays -march=nocona -msse3 -mfpmath=sse -Wno-uninitialized -I /usr/local/include
+CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -fprefetch-loop-arrays -march=nocona -msse3 -mfpmath=sse -Wno-uninitialized -Wno-unused-result -I /usr/local/include
 
 ##########################
 # Dependencies           #

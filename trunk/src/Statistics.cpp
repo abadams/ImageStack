@@ -330,9 +330,9 @@ void Histogram::parse(vector<string> args) {
         sprintf(left, "-Inf NaN +Inf   %.3f", s.minimum(c));
         char right[80];
         sprintf(right, "%.3f", s.maximum(c));
-        printf(left);
+        printf("%s", left);
         for (size_t i = strlen(left); i < buckets - strlen(right)+strlen(left); i++) putchar(' ');
-        printf(right);
+        printf("%s", right);
         printf("\n");
         for (int i=0;i<buckets+(int)strlen(left);i++) {
             printf("-");
