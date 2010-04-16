@@ -62,7 +62,7 @@ void parseCommands(vector<string>);
 void start();
 void end();
 
-// Generate a uniform random integer within [min, max)
+// Generate a uniform random integer within [min, max]
 int randomInt(int min, int max);
 
 // Generate a uniform random float within [min, max]

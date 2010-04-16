@@ -223,7 +223,7 @@ void loadOperations() {
     // PatchMatch stuff
     operationMap["-patchmatch"] = new PatchMatch();
     operationMap["-bidirectionalsimilarity"] = new BidirectionalSimilarity();
-
+    operationMap["-heal"] = new Heal();
 }
 
 

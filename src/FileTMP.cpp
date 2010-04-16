@@ -187,7 +187,7 @@ namespace FileTMP {
 	    im = loadData<signed long long>(file, frames, width, height, channels);	    
 	} else {
 	    printf("Unknown type code %d. Possibly trying to load an old-style tmp file.\n", typeCode);
-	    fseek(file, 20, SEEK_SET);
+	    fseek(file, 16, SEEK_SET);
 	    im = loadData<float>(file, frames, width, height, channels);
 	}
 

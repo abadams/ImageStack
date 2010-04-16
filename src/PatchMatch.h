@@ -30,4 +30,10 @@ class BidirectionalSimilarity : public Operation {
 };
 
 
+class Heal : public Operation {
+  public:
+    void help();
+    void parse(vector<string> args);		      
+};
+
 #endif
