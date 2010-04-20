@@ -84,14 +84,14 @@ class Equalize : public Operation {
     static void apply(Window im, float lower, float upper);
 };
 
-/*
+
 class HistogramMatch : public Operation {
   public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, Window model);
 };
-*/
+
 
 class Shuffle : public Operation {
   public:
