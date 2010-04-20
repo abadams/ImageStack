@@ -405,7 +405,7 @@ void Equalize::apply(Window im, float lower, float upper) {
 }
 
 
-/*
+
 
 void HistogramMatch::help() {
     pprintf("-histogrammatch alters the histogram of the current image to match"
@@ -423,44 +423,76 @@ void HistogramMatch::parse(vector<string> args) {
 void HistogramMatch::apply(Window im, Window model) {
     assert(im.channels == model.channels, "Images must have the same number of channels\n");
 
-    // map the image from values to percentiles by equalizing it
-    Equalize::apply(im, 0, 1);
+    // Compute cdfs of the two images
+    Stats s1(im), s2(model);
+    int buckets = 4096;
+    Image cdf1 = Histogram::apply(im, buckets, s1.minimum(), s1.maximum());
+    Image cdf2 = Histogram::apply(model, buckets, s2.minimum(), s2.maximum()); 
+    Integrate::apply(cdf1, 'x');
+    Integrate::apply(cdf2, 'x');
 
-    // make a sorted list of samples from the other image, which will map from percentile to value
-    int modelSize = model.width * model.height * model.frames;
-    int samples = min(modelSize, 1 << 15);
-    vector< vector<float> > table;
-    for (int c = 0; c < im.channels; c++) {
-        table.push_back(vector<float>(samples, 0));
-        for (int i = 0; i < samples; i++) {
-            int t = randomInt(0, model.frames-1);
-            int x = randomInt(0, model.width-1);
-            int y = randomInt(0, model.height-1);
-            table[c][i] = model(x, y, t)[c];
-        }
-        sort(table[c].begin(), table[c].end());
+    // Invert cdf2
+    Image inverseCDF2(cdf2.width, 1, 1, cdf2.channels);
+    for (int c = 0; c < inverseCDF2.channels; c++) {
+	int xi = 0;
+	float invWidth = 1.0f / cdf2.width;
+	for (int x = 0; x < inverseCDF2.width; x++) {	    
+	    while (cdf2(xi, 0)[c] < x * invWidth && xi < cdf2.width) xi++;
+	    // cdf2(xi, 0)[c] is now just greater than x / inverseCDF2.width
+	    float lower = xi > 0 ? cdf2(xi-1, 0)[c] : 0;
+	    float upper = xi < cdf2.width ? cdf2(xi, 0)[c] : lower;
+
+	    // where is x*invWidth between lower and upper?
+	    float alpha = 0;
+	    if (upper > lower && x*invWidth >= lower && x*invWidth <= upper)
+		alpha = (x*invWidth - lower)/(upper - lower);
+	    
+	    inverseCDF2(x, 0)[c] = xi + alpha;	    
+	}
     }
 
-    // now apply the mapping
+    // Now apply the cdf of image 1 followed by the inverse cdf of image 2
+    float invBucketWidth = buckets / (s1.maximum() - s1.minimum());
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    float value = im(x, y, t)[c];
-                    float alpha = value * (samples-1);
-                    int bucket = (int)alpha; // which bucket
-                    if (value == 1.0f) {
-                        bucket = samples - 2;
-                        alpha = 1;
-                    }
-                    alpha -= bucket; // how far along in that bucket
-                    im(x, y, t)[c] = (1 - alpha) * table[c][bucket] + alpha * table[c][bucket + 1];
+		    float alpha = (im(x, y, t)[c] - s1.minimum()) * invBucketWidth;
+                    int bucket = (int)alpha; // which bucket am I in?
+		    if (bucket < 0) bucket = 0;
+		    if (bucket >= buckets) bucket = buckets-1;
+                    alpha -= bucket; // how far along am I in this bucket?
+		    
+                    // how many pixels are probably less than me?
+                    float lesser = 0;
+                    if (bucket > 0) lesser = cdf1(bucket-1, 0)[c];
+                    float equal = cdf1(bucket, 0)[c] - lesser;
+
+                    // use the estimate to get the percentile
+                    float percentile = lesser + alpha * equal;
+
+		    //im(x, y, t)[c] = percentile;
+
+		    
+		    // look up the percentile in inverseCDF2 in the same way
+		    alpha = percentile * buckets;
+		    bucket = (int)alpha;
+		    if (bucket < 0) bucket = 0;
+		    if (bucket >= buckets) bucket = buckets-1;
+		    alpha -= bucket;
+			
+		    lesser = 0;
+		    if (bucket > 0) lesser = inverseCDF2(bucket-1, 0)[c];
+		    equal = inverseCDF2(bucket, 0)[c] - lesser;
+		    
+		    im(x, y, t)[c] = (lesser + alpha * equal) * (s2.maximum() - s2.minimum()) / buckets + s2.minimum();
+		    
                 }
             }
         }
-    }
+    }     
 }
-*/
+
 
 void Shuffle::help() {
     pprintf("-shuffle takes every pixel in the current image and swaps it to a"
