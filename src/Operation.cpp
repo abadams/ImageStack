@@ -51,8 +51,8 @@ void loadOperations() {
     operationMap["-dimensions"] = new Dimensions();
     operationMap["-noise"] = new Noise();
     operationMap["-histogram"] = new Histogram();
-    operationMap["-equalize"] = new Equalize();
-    operationMap["-histogrammatch"] = new HistogramMatch();
+    //operationMap["-equalize"] = new Equalize();
+    //operationMap["-histogrammatch"] = new HistogramMatch();
     operationMap["-shuffle"] = new Shuffle();
     operationMap["-kmeans"] = new KMeans();
     operationMap["-sort"] = new Sort();
