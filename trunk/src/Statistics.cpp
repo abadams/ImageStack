@@ -284,94 +284,42 @@ void Noise::apply(Window im, float minVal, float maxVal) {
 
 
 void Histogram::help() {
-    pprintf("-histogram displays a per-channel histogram of the current image."
+    pprintf("-histogram computes a per-channel histogram of the current image."
 	    " The first optional argument specifies the number of buckets in the"
-	    " histogram. If this is not given it defaults to 60."
-	    " The second optional argument specifies a file to save the histogram to.\n\n"
-	    "Usage: ImageStack -load a.tga -histogram\n");
+	    " histogram. If this is not given it defaults to 256. The second and"
+	    " third arguments indicate the range of data to expect. These default"
+	    " to 0 and 1."
+	    "Usage: ImageStack -load a.tga -histogram -normalize -plot 256 256 3 -display\n");
 }
 
 
 void Histogram::parse(vector<string> args) {
-    assert(args.size() < 3, "-histogram takes zero, one or two arguments\n");
-    int buckets = 60;
+    assert(args.size() < 4, "-histogram takes three or fewer arguments\n");
+    int buckets = 256;
+    float minVal = 0.0f;
+    float maxVal = 1.0f;
     if (args.size() > 0) {
         buckets = readInt(args[0]);
     }
-    Stats s(stack(0));
-    vector< vector<float> > hg = apply(stack(0), buckets);
-    for (int c = 0; c < stack(0).channels; c++) {
-        printf("\nChannel %i\n", c);
-
-        // find the largest histogram value and map it to 25
-        float maxVal = 0.05f;
-        for (int i = 0; i < buckets; i++) maxVal = max(maxVal, hg[c][i]);
-        float scale = maxVal/25.0f;
-
-        for (int row = 25; row >= 0; row--) {
-            printf("   ");
-            if (hg[c][buckets] > scale * row) putchar('#');
-            else putchar(' ');
-            printf("   ");
-            if (hg[c][buckets+1] > scale * row) putchar('#');
-            else putchar(' ');
-            printf("   ");
-            if (hg[c][buckets+2] > scale * row) putchar('#');
-            else putchar(' ');
-            printf("  ");
-
-            for (int i = 0; i < buckets; i++) {
-                if (hg[c][i] >= scale * row) putchar('#');
-                else putchar(' ');
-            }
-            putchar('\n');
-        }
-        char left[80];
-        sprintf(left, "-Inf NaN +Inf   %.3f", s.minimum(c));
-        char right[80];
-        sprintf(right, "%.3f", s.maximum(c));
-        printf("%s", left);
-        for (size_t i = strlen(left); i < buckets - strlen(right)+strlen(left); i++) putchar(' ');
-        printf("%s", right);
-        printf("\n");
-        for (int i=0;i<buckets+(int)strlen(left);i++) {
-            printf("-");
-        }
-        printf("\n");
-        //save the data if the user specifies a file
-        if (args.size() == 2) {
-            FILE *HIST = fopen(args[1].c_str(),"w");
-            for (int i=0;i<buckets;i++) {
-                fprintf(HIST,"%0.08lf",s.minimum(c)+(s.maximum(c)-s.minimum(c))*(double)i/(double)buckets);
-                for (int c=0;c<stack(0).channels;c++) {
-                    fprintf(HIST," %0.08lf",hg[c][i]);
-                }
-                fprintf(HIST,"\n");
-            }
-            fclose(HIST);
-        }
+    if (args.size() > 1) {
+	minVal = readFloat(args[1]);
     }
+    if (args.size() > 2) {
+	maxVal = readFloat(args[2]);
+    }
+
+    push(apply(stack(0), buckets, minVal, maxVal));
 }
 
 
-// one histogram per channel is returned
-// there are the specified number of buckets in the histogram + 3,  
-// the final 3 are -inf, nan, and +inf
-vector< vector<float> > Histogram::apply(Window im, int buckets) {
-    // find the maxima and minima
-    Stats stats(im);
+Image Histogram::apply(Window im, int buckets, float minVal, float maxVal) {
 
-    // precalculate buckets / (maxValues[c] - minValues[c])
-    vector<float> invBucketWidth(im.channels);
-    for (int c = 0; c < im.channels; c++) {
-        invBucketWidth[c] = (float)(buckets / (stats.maximum(c) - stats.minimum(c)));
-    }
+    float invBucketWidth = buckets / (maxVal - minVal);
 
-    // now do the actual histogram
-    vector< vector<float> > hg;
-    for (int c = 0; c < im.channels; c++) {
-        hg.push_back(vector<float>(buckets+3, 0));
-    }
+    float inc = 1.0f / (im.width * im.height * im.frames);
+
+
+    Image hg(buckets, 1, 1, im.channels);
 
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
@@ -380,25 +328,17 @@ vector< vector<float> > Histogram::apply(Window im, int buckets) {
                     double value = im(x, y, t)[c];
                     int bucket;
                     if (isnan((float)value)) {
-                        bucket = buckets + 1;
+			continue;
                     } else if (isinf((float)value)) {
-                        if (value < 0) bucket = buckets;
-                        else bucket = buckets+2;
+			continue;
                     } else {
-                        bucket = (int)((value - stats.minimum(c)) * invBucketWidth[c]);
-                        if (bucket == buckets) bucket--; // include max value in the end bucket
+			bucket = (int)((value - minVal) * invBucketWidth);
+                        if (bucket >= buckets) bucket = buckets-1;
+			if (bucket < 0) bucket = 0;
                     }
-                    hg[c][bucket]++;
+                    hg(bucket, 0, 0)[c] += inc;
                 }
             }
-        }
-    }
-
-    // now renormalize the buckets
-    float invSize = 1.0f / (im.width * im.height * im.frames);
-    for (int c = 0; c < im.channels; c++) {       
-        for (int bucket = 0; bucket < buckets+3; bucket++) {
-            hg[c][bucket] *= invSize;
         }
     }
 
@@ -406,6 +346,7 @@ vector< vector<float> > Histogram::apply(Window im, int buckets) {
 }
 
 
+/*
 void Equalize::help() {
     pprintf("-equalize flattens out the histogram of an image, while preserving ordering"
             " between pixel brightnesses. It does this independently in each channel. When"
@@ -527,6 +468,7 @@ void HistogramMatch::apply(Window im, Window model) {
         }
     }
 }
+*/
 
 void Shuffle::help() {
     pprintf("-shuffle takes every pixel in the current image and swaps it to a"

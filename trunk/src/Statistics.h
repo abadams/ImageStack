@@ -73,9 +73,10 @@ class Histogram : public Operation {
   public:
     void help();
     void parse(vector<string> args);
-    static vector< vector<float> > apply(Window im, int buckets = 256);    
+    static Image apply(Window im, int buckets = 256, float minVal = 0, float maxVal = 1);    
 }; 
 
+/*
 class Equalize : public Operation {
   public:
     void help();
@@ -89,6 +90,7 @@ class HistogramMatch : public Operation {
     void parse(vector<string> args);
     static void apply(Window im, Window model);
 };
+*/
 
 class Shuffle : public Operation {
   public:
