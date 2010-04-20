@@ -76,7 +76,7 @@ class Histogram : public Operation {
     static Image apply(Window im, int buckets = 256, float minVal = 0, float maxVal = 1);    
 }; 
 
-/*
+
 class Equalize : public Operation {
   public:
     void help();
@@ -84,6 +84,7 @@ class Equalize : public Operation {
     static void apply(Window im, float lower, float upper);
 };
 
+/*
 class HistogramMatch : public Operation {
   public:
     void help();

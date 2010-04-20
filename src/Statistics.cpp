@@ -1,5 +1,7 @@
 #include "main.h"
 #include "Statistics.h"
+#include "Calculus.h"
+#include "Arithmetic.h"
 #include "eigenvectors.h"
 #include <algorithm>
 #include <iostream>
@@ -318,7 +320,6 @@ Image Histogram::apply(Window im, int buckets, float minVal, float maxVal) {
 
     float inc = 1.0f / (im.width * im.height * im.frames);
 
-
     Image hg(buckets, 1, 1, im.channels);
 
     for (int t = 0; t < im.frames; t++) {
@@ -346,7 +347,7 @@ Image Histogram::apply(Window im, int buckets, float minVal, float maxVal) {
 }
 
 
-/*
+
 void Equalize::help() {
     pprintf("-equalize flattens out the histogram of an image, while preserving ordering"
             " between pixel brightnesses. It does this independently in each channel. When"
@@ -371,38 +372,29 @@ void Equalize::parse(vector<string> args) {
 void Equalize::apply(Window im, float lower, float upper) {
     Stats stats(im);
 
+    // STEP 1) Normalize the image to the 0-1 range
+    Normalize::apply(im);
 
-    // STEP 1) Calculate a histogram of the image
+    // STEP 2) Calculate a CDF of the image
     int buckets = 4096;
-    vector< vector<float> > histogram = Histogram::apply(im, buckets);
-
-    // STEP 2) Integrate it to get a CDF
-    for (int c = 0; c < im.channels; c++) {
-        for (int i = 1; i < buckets; i++) {
-            histogram[c][i] += histogram[c][i-1];
-        }
-    }
+    Image cdf = Histogram::apply(im, buckets);
+    Integrate::apply(cdf, 'x');
 
     // STEP 3) For each pixel, find out how many things are in the same bucket or smaller, and use that to set the value
-
-    // precalculate buckets / (maxValues[c] - minValues[c])
-    vector<float> invBucketWidth(im.channels);
-    for (int c = 0; c < im.channels; c++) {
-        invBucketWidth[c] = (float)(buckets / (stats.maximum(c) - stats.minimum(c)));
-    }
-
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    float alpha = (im(x, y, t)[c] - (float)stats.minimum(c)) * invBucketWidth[c];
+		    float alpha = im(x, y, t)[c] * buckets;
                     int bucket = (int)alpha; // which bucket am I in?
+		    if (bucket < 0) bucket = 0;
+		    if (bucket >= buckets) bucket = buckets-1;
                     alpha -= bucket; // how far along am I in this bucket?
-
+		    
                     // how many pixels are probably less than me?
                     float lesser = 0;
-                    if (bucket > 0) lesser = histogram[c][bucket];
-                    float equal = histogram[c][bucket] - lesser;
+                    if (bucket > 0) lesser = cdf(bucket-1, 0)[c];
+                    float equal = cdf(bucket, 0)[c] - lesser;
 
                     // use the estimate to set the value
                     im(x, y, t)[c] = (lesser + alpha * equal) * (upper - lower) + lower;
@@ -413,7 +405,7 @@ void Equalize::apply(Window im, float lower, float upper) {
 }
 
 
-
+/*
 
 void HistogramMatch::help() {
     pprintf("-histogrammatch alters the histogram of the current image to match"
