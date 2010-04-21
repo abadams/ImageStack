@@ -148,7 +148,7 @@ private:
 
 // computes the vector indices into an image (0 to m*n - 1)
 void PCG::RBBmaps() {
-    int numOctaves = ceil(log2(min(f.width, f.height)));
+    int numOctaves = ceil(logf(min(f.width, f.height))/logf(2.0f));
     int by = 0; int bx = 0; // (0,0) is black
   
     int a = 1;
@@ -255,7 +255,7 @@ void PCG::constructPreconditioner() {
     for (int k = 0; k < (int) index_map.size(); k++) {
   
 	bool oddLevel = (k+1) % 2;
-	int stride = pow(2, (k/2));
+	int stride = 1 << (k/2);
 	//printf("stride: %d\n", stride);
     
 	unsigned int dn1, dn2;
@@ -596,7 +596,7 @@ Image PCG::hbPrecondition(Image r) {
 	// turns out that recomputing these numbers is 
 	// faster than accessing it in memory because of the misses
 	bool oddLevel = (k+1) % 2;
-	int stride = pow(2, (k/2));
+	int stride = 1 << (k/2);
 	//printf("stride: %d\n", stride);
     
 	unsigned int dn1, dn2;
@@ -660,7 +660,7 @@ Image PCG::hbPrecondition(Image r) {
     for (int k = (int) index_map.size() - 1; k >= 0; k--) {
 	//int i = index_map.size() - 1;
 	bool oddLevel = (k+1) % 2;
-	int stride = pow(2, (k/2));
+	int stride = 1 << (k/2);
 	//printf("stride: %d\n", stride);
     
 	unsigned int dn1, dn2;
