@@ -5,6 +5,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageStack", "ImageStack.vc
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageStack.lib", "ImageStack.lib\ImageStack.lib.vcxproj", "{24973419-CB88-4CE2-BBF3-784748473206}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Example", "Example\Example.vcxproj", "{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -29,6 +31,14 @@ Global
 		{24973419-CB88-4CE2-BBF3-784748473206}.Release|Win32.Build.0 = Release|Win32
 		{24973419-CB88-4CE2-BBF3-784748473206}.Release|x64.ActiveCfg = Release|x64
 		{24973419-CB88-4CE2-BBF3-784748473206}.Release|x64.Build.0 = Release|x64
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Debug|Win32.Build.0 = Debug|Win32
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Debug|x64.ActiveCfg = Debug|x64
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Debug|x64.Build.0 = Debug|x64
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Release|Win32.ActiveCfg = Release|Win32
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Release|Win32.Build.0 = Release|Win32
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Release|x64.ActiveCfg = Release|x64
+		{BBCE071D-D00D-4F47-95C4-A76B0B2ADED1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
