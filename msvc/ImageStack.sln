@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageStack", "ImageStack.vcxproj", "{D7E8DB69-02AB-426F-B07E-8A2A61BA0002}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageStack.lib", "ImageStack.lib\ImageStack.lib.vcxproj", "{24973419-CB88-4CE2-BBF3-784748473206}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +21,14 @@ Global
 		{D7E8DB69-02AB-426F-B07E-8A2A61BA0002}.Release|Win32.Build.0 = Release|Win32
 		{D7E8DB69-02AB-426F-B07E-8A2A61BA0002}.Release|x64.ActiveCfg = Release|x64
 		{D7E8DB69-02AB-426F-B07E-8A2A61BA0002}.Release|x64.Build.0 = Release|x64
+		{24973419-CB88-4CE2-BBF3-784748473206}.Debug|Win32.ActiveCfg = Debug|Win32
+		{24973419-CB88-4CE2-BBF3-784748473206}.Debug|Win32.Build.0 = Debug|Win32
+		{24973419-CB88-4CE2-BBF3-784748473206}.Debug|x64.ActiveCfg = Debug|x64
+		{24973419-CB88-4CE2-BBF3-784748473206}.Debug|x64.Build.0 = Debug|x64
+		{24973419-CB88-4CE2-BBF3-784748473206}.Release|Win32.ActiveCfg = Release|Win32
+		{24973419-CB88-4CE2-BBF3-784748473206}.Release|Win32.Build.0 = Release|Win32
+		{24973419-CB88-4CE2-BBF3-784748473206}.Release|x64.ActiveCfg = Release|x64
+		{24973419-CB88-4CE2-BBF3-784748473206}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
