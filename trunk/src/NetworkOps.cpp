@@ -8,8 +8,8 @@
 
 void Send::help() {
   printf("\n-send sends an image over a TCP connection. It has an optional first and second\n"
-	 "argument.  The first argument specifies which server to contact, and the second\n" 
-	 "argument specifies the port. By default, 127.0.0.1:5678 is used.\n\n"
+         "argument.  The first argument specifies which server to contact, and the second\n" 
+         "argument specifies the port. By default, 127.0.0.1:5678 is used.\n\n"
          "Usage: ImageStack -load a.tga -remotedisplay localhost 5678\n");
 }
 

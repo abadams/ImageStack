@@ -4,88 +4,88 @@
 namespace FileHDR {
 
     void help() {
-	printf(".hdr files. These always have three channels and one frame. They store data\n"
-	       "in a 4 bytes per pixel red green blue exponent (rgbe) format.\n");
+        printf(".hdr files. These always have three channels and one frame. They store data\n"
+               "in a 4 bytes per pixel red green blue exponent (rgbe) format.\n");
     }
   
-#define  RED		0
-#define  GRN		1
-#define  BLU		2
-#define  EXP		3
-#define  COLXS		128	/* excess used for exponent */
+#define  RED                0
+#define  GRN                1
+#define  BLU                2
+#define  EXP                3
+#define  COLXS                128        /* excess used for exponent */
 
-    typedef unsigned char  BYTE;	/* 8-bit unsigned integer */
+    typedef unsigned char  BYTE;        /* 8-bit unsigned integer */
 
-    typedef BYTE  COLR[4];		/* red, green, blue, exponent */
+    typedef BYTE  COLR[4];                /* red, green, blue, exponent */
 
-#define  copycolr(c1,c2)	(c1[0]=c2[0],c1[1]=c2[1],	\
-				 c1[2]=c2[2],c1[3]=c2[3])
+#define  copycolr(c1,c2)        (c1[0]=c2[0],c1[1]=c2[1],        \
+                                 c1[2]=c2[2],c1[3]=c2[3])
 
-    typedef float  COLOR[3];	/* red, green, blue */
+    typedef float  COLOR[3];        /* red, green, blue */
 
-#define  colval(col,pri)	((col)[pri])
+#define  colval(col,pri)        ((col)[pri])
 
-#define  setcolor(col,r,g,b)	((col)[RED]=(r),(col)[GRN]=(g),(col)[BLU]=(b))
+#define  setcolor(col,r,g,b)        ((col)[RED]=(r),(col)[GRN]=(g),(col)[BLU]=(b))
 
-#define  copycolor(c1,c2)	((c1)[0]=(c2)[0],(c1)[1]=(c2)[1],(c1)[2]=(c2)[2])
+#define  copycolor(c1,c2)        ((c1)[0]=(c2)[0],(c1)[1]=(c2)[1],(c1)[2]=(c2)[2])
 
-#define  scalecolor(col,sf)	((col)[0]*=(sf),(col)[1]*=(sf),(col)[2]*=(sf))
+#define  scalecolor(col,sf)        ((col)[0]*=(sf),(col)[1]*=(sf),(col)[2]*=(sf))
 
-#define  addcolor(c1,c2)	((c1)[0]+=(c2)[0],(c1)[1]+=(c2)[1],(c1)[2]+=(c2)[2])
+#define  addcolor(c1,c2)        ((c1)[0]+=(c2)[0],(c1)[1]+=(c2)[1],(c1)[2]+=(c2)[2])
 
-#define  multcolor(c1,c2)	((c1)[0]*=(c2)[0],(c1)[1]*=(c2)[1],(c1)[2]*=(c2)[2])
+#define  multcolor(c1,c2)        ((c1)[0]*=(c2)[0],(c1)[1]*=(c2)[1],(c1)[2]*=(c2)[2])
 
 #ifdef  NTSC
-#define  bright(col)		(.295*(col)[RED]+.636*(col)[GRN]+.070*(col)[BLU])
-#define  normbright(c)		(int)((74L*(c)[RED]+164L*(c)[GRN]+18L*(c)[BLU])/256)
+#define  bright(col)                (.295*(col)[RED]+.636*(col)[GRN]+.070*(col)[BLU])
+#define  normbright(c)                (int)((74L*(c)[RED]+164L*(c)[GRN]+18L*(c)[BLU])/256)
 #else
-#define  bright(col)		(.263*(col)[RED]+.655*(col)[GRN]+.082*(col)[BLU])
-#define  normbright(c)		(int)((67L*(c)[RED]+168L*(c)[GRN]+21L*(c)[BLU])/256)
+#define  bright(col)                (.263*(col)[RED]+.655*(col)[GRN]+.082*(col)[BLU])
+#define  normbright(c)                (int)((67L*(c)[RED]+168L*(c)[GRN]+21L*(c)[BLU])/256)
 #endif
 
-#define  intens(col)		( (col)[0] > (col)[1]			\
-				  ? (col)[0] > (col)[2] ? (col)[0] : (col)[2] \
-				  : (col)[1] > (col)[2] ? (col)[1] : (col)[2] )
+#define  intens(col)                ( (col)[0] > (col)[1]                        \
+                                  ? (col)[0] > (col)[2] ? (col)[0] : (col)[2] \
+                                  : (col)[1] > (col)[2] ? (col)[1] : (col)[2] )
 
-#define  colrval(c,p)		( (c)[EXP] ?				\
-				  ldexp((c)[p]+.5,(int)(c)[EXP]-(COLXS+8)) : \
-				  0. )
+#define  colrval(c,p)                ( (c)[EXP] ?                                \
+                                  ldexp((c)[p]+.5,(int)(c)[EXP]-(COLXS+8)) : \
+                                  0. )
 
-#define  WHTCOLOR		{1.0,1.0,1.0}
-#define  BLKCOLOR		{0.0,0.0,0.0}
-#define  WHTCOLR		{128,128,128,COLXS+1}
-#define  BLKCOLR		{0,0,0,0}
+#define  WHTCOLOR                {1.0,1.0,1.0}
+#define  BLKCOLOR                {0.0,0.0,0.0}
+#define  WHTCOLR                {128,128,128,COLXS+1}
+#define  BLKCOLR                {0,0,0,0}
 
     /* definitions for resolution header */
-#define  XDECR			1
-#define  YDECR			2
-#define  YMAJOR			4
+#define  XDECR                        1
+#define  YDECR                        2
+#define  YMAJOR                        4
 
     /* picture format identifier */
-#define  COLRFMT		"32-bit_rle_rgbe"
+#define  COLRFMT                "32-bit_rle_rgbe"
 
     /* macros for exposures */
-#define  EXPOSSTR		"EXPOSURE="
-#define  LEXPOSSTR		9
-#define  isexpos(hl)		(!strncmp(hl,EXPOSSTR,LEXPOSSTR))
-#define  exposval(hl)		atof((hl)+LEXPOSSTR)
-#define  fputexpos(ex,fp)	fprintf(fp,"%s%e\n",EXPOSSTR,ex)
+#define  EXPOSSTR                "EXPOSURE="
+#define  LEXPOSSTR                9
+#define  isexpos(hl)                (!strncmp(hl,EXPOSSTR,LEXPOSSTR))
+#define  exposval(hl)                atof((hl)+LEXPOSSTR)
+#define  fputexpos(ex,fp)        fprintf(fp,"%s%e\n",EXPOSSTR,ex)
 
     /* macros for pixel aspect ratios */
-#define  ASPECTSTR		"PIXASPECT="
-#define  LASPECTSTR		10
-#define  isaspect(hl)		(!strncmp(hl,ASPECTSTR,LASPECTSTR))
-#define  aspectval(hl)		atof((hl)+LASPECTSTR)
-#define  fputaspect(pa,fp)	fprintf(fp,"%s%f\n",ASPECTSTR,pa)
+#define  ASPECTSTR                "PIXASPECT="
+#define  LASPECTSTR                10
+#define  isaspect(hl)                (!strncmp(hl,ASPECTSTR,LASPECTSTR))
+#define  aspectval(hl)                atof((hl)+LASPECTSTR)
+#define  fputaspect(pa,fp)        fprintf(fp,"%s%f\n",ASPECTSTR,pa)
 
     /* macros for color correction */
-#define  COLCORSTR		"COLORCORR="
-#define  LCOLCORSTR		10
-#define  iscolcor(hl)		(!strncmp(hl,COLCORSTR,LCOLCORSTR))
-#define  colcorval(cc,hl)	sscanf(hl+LCOLCORSTR,"%f %f %f",	\
-				       &(cc)[RED],&(cc)[GRN],&(cc)[BLU])
-#define  fputcolcor(cc,fp)	fprintf(fp,"%s %f %f %f\n",COLCORSTR,	\
-					(cc)[RED],(cc)[GRN],(cc)[BLU])
+#define  COLCORSTR                "COLORCORR="
+#define  LCOLCORSTR                10
+#define  iscolcor(hl)                (!strncmp(hl,COLCORSTR,LCOLCORSTR))
+#define  colcorval(cc,hl)        sscanf(hl+LCOLCORSTR,"%f %f %f",        \
+                                       &(cc)[RED],&(cc)[GRN],&(cc)[BLU])
+#define  fputcolcor(cc,fp)        fprintf(fp,"%s %f %f %f\n",COLCORSTR,        \
+                                        (cc)[RED],(cc)[GRN],(cc)[BLU])
 
 
     /* Copyright (c) 1991 Regents of the University of California */
@@ -96,10 +96,10 @@ namespace FileHDR {
      *     10/10/85
      */
 
-#define  MINELEN	8	/* minimum scanline length for encoding */
-#define  MINRUN		4	/* minimum run length */
+#define  MINELEN        8        /* minimum scanline length for encoding */
+#define  MINRUN                4        /* minimum run length */
 
-    char * tempbuffer(size_t len)			/* get a temporary buffer */
+    char * tempbuffer(size_t len)                        /* get a temporary buffer */
     {
         static char  *tempbuf = NULL;
         static size_t tempbuflen = 0;
@@ -119,44 +119,44 @@ namespace FileHDR {
     {
         int  i, j, beg, cnt = 0;
         int  c2;
-	
-		if (len < MINELEN) {		/* too small to encode */
+        
+                if (len < MINELEN) {                /* too small to encode */
             int written = (int)(fwrite((char *)scanline,sizeof(COLR),len,fp)) - len;
-			return written;
-		} if (len > 32767) {		/* too big! */
+                        return written;
+                } if (len > 32767) {                /* too big! */
             return -1;
-		}
-        putc(2, fp);			/* put magic header */
+                }
+        putc(2, fp);                        /* put magic header */
         putc(2, fp);
         putc(len>>8, fp);
         putc(len&255, fp);
         /* put components separately */
         for (i = 0; i < 4; i++) {
-            for (j = 0; j < len; j += cnt) {	/* find next run */
+            for (j = 0; j < len; j += cnt) {        /* find next run */
                 for (beg = j; beg < len; beg += cnt) {
                     for (cnt = 1; cnt < 127 && beg+cnt < len &&
                              scanline[beg+cnt][i] == scanline[beg][i]; cnt++)
                         ;
                     if (cnt >= MINRUN)
-                        break;			/* long enough */
+                        break;                        /* long enough */
                 }
                 if (beg-j > 1 && beg-j < MINRUN) {
                     c2 = j+1;
                     while (scanline[c2++][i] == scanline[j][i])
-                        if (c2 == beg) {	/* short run */
+                        if (c2 == beg) {        /* short run */
                             putc(128+beg-j, fp);
                             putc(scanline[j][i], fp);
                             j = beg;
                             break;
                         }
                 }
-                while (j < beg) {		/* write out non-run */
+                while (j < beg) {                /* write out non-run */
                     if ((c2 = beg-j) > 128) c2 = 128;
                     putc(c2, fp);
                     while (c2--)
                         putc(scanline[j++][i], fp);
                 }
-                if (cnt >= MINRUN) {		/* write out run */
+                if (cnt >= MINRUN) {                /* write out run */
                     putc(128+cnt, fp);
                     putc(scanline[beg][i], fp);
                 } else
@@ -166,13 +166,13 @@ namespace FileHDR {
         return(ferror(fp) ? -1 : 0);
     }
 
-    int oldreadcolrs(COLR *scanline, int len, FILE *fp)		/* read in an old colr scanline */
+    int oldreadcolrs(COLR *scanline, int len, FILE *fp)                /* read in an old colr scanline */
     {
         int  rshift;
         int  i;
-	
+        
         rshift = 0;
-	
+        
         while (len > 0) {
             scanline[0][RED] = getc(fp);
             scanline[0][GRN] = getc(fp);
@@ -221,28 +221,28 @@ namespace FileHDR {
             return(oldreadcolrs(scanline+1, len-1, fp));
         }
         if ((scanline[0][BLU]<<8 | i) != len)
-            return(-1);		/* length mismatch! */
+            return(-1);                /* length mismatch! */
         /* read each component */
         for (i = 0; i < 4; i++)
             for (j = 0; j < len; ) {
                 if ((code = getc(fp)) == EOF)
                     return(-1);
-                if (code > 128) {	/* run */
+                if (code > 128) {        /* run */
                     scanline[j++][i] = getc(fp);
                     for (code &= 127; --code; j++)
                         scanline[j][i] = scanline[j-1][i];
-                } else			/* non-run */
+                } else                        /* non-run */
                     while (code--)
                         scanline[j++][i] = getc(fp);
             }
         return(feof(fp) ? -1 : 0);
     }
 
-    void setcolr(COLR clr, double r, double g, double b)		/* assign a short color value */
+    void setcolr(COLR clr, double r, double g, double b)                /* assign a short color value */
     {
         double  d;
         int  e;
-	
+        
         d = r > g ? r : g;
         if (b > d) d = b;
 
@@ -260,7 +260,7 @@ namespace FileHDR {
         clr[EXP] = (unsigned char)(e + COLXS);
     }
 
-    int fwritescan(COLOR *scanline, int len, FILE *fp)		/* write out a scanline */
+    int fwritescan(COLOR *scanline, int len, FILE *fp)                /* write out a scanline */
     {
         COLR *clrscan;
         int  n;
@@ -282,10 +282,10 @@ namespace FileHDR {
     }
 
 
-    void colr_color(COLOR col, COLR clr)		/* convert short to float color */
+    void colr_color(COLOR col, COLR clr)                /* convert short to float color */
     {
         double  f;
-	
+        
         if (clr[EXP] == 0)
             col[RED] = col[GRN] = col[BLU] = 0.0;
         else {
@@ -297,7 +297,7 @@ namespace FileHDR {
     }
 
 
-    int freadscan(COLOR *scanline, int len, FILE *fp)		/* read in a scanline */
+    int freadscan(COLOR *scanline, int len, FILE *fp)                /* read in a scanline */
     {
         COLR  *clrscan;
 
@@ -321,7 +321,7 @@ namespace FileHDR {
     }
 
 
-    int bigdiff(COLOR c1, COLOR c2, double md)			/* c1 delta c2 > md? */
+    int bigdiff(COLOR c1, COLOR c2, double md)                        /* c1 delta c2 > md? */
     {
         int  i;
 
@@ -334,19 +334,19 @@ namespace FileHDR {
 
 
     void save(Window im, string filename) {
-        	
+                
         assert(im.channels == 3, "Can't save HDR image with <> 3 channels.\n");
         assert(im.frames == 1, "Can't save a multi-frame HDR image\n");
     
         FILE *f = fopen(filename.c_str(), "wb");            
-	
+        
         assert(f, "Could not write output file %s\n", filename.c_str());
-	
+        
         // Write trivial hdr header
         fprintf(f,"#?RADIANCE\n");
         fprintf(f,"\n");
         fprintf(f,"-Y %d +X %d\n", im.height, im.width);
-	
+        
         // Read image
         for (int y = 0; y < im.height; y++) {
             fwritescan((COLOR *)im(0, y), im.width, f);
@@ -357,7 +357,7 @@ namespace FileHDR {
 
     Image load(string filename) {
         FILE *f = fopen(filename.c_str(), "rb");            
-	
+        
         assert(f, "Could not open file\n");
         
         // Skip hdr header
@@ -365,13 +365,13 @@ namespace FileHDR {
         do {
             lastChar = thisChar;
             thisChar = fgetc(f);
-        } while	(lastChar != '\n' || thisChar != '\n');	    
+        } while        (lastChar != '\n' || thisChar != '\n');            
         
-	int height, width;
+        int height, width;
         assert(2 == fscanf(f, "-Y %d +X %d\n", &height, &width), 
                "Could not parse HDR header\n");
-	Image im(width, height, 1, 3);
-	
+        Image im(width, height, 1, 3);
+        
         // Read image
         for (int y = 0; y < height; y++) {
             FileHDR::freadscan((COLOR *)im(0, y), width, f);
@@ -379,7 +379,7 @@ namespace FileHDR {
         
         fclose(f);
 
-	return im;
+        return im;
     }
     
 }

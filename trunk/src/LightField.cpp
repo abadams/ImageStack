@@ -12,9 +12,9 @@
 
 void LFFocalStack::help() {
     printf("\n-lffocalstack turns a 4d light field into a 3d focal stack. The five arguments\n"
-	   "are the lenslet width, height, the minimum alpha, the maximum alpha, and the\n"
+           "are the lenslet width, height, the minimum alpha, the maximum alpha, and the\n"
            "step size between adjacent depths (alpha is slope in line space).\n\n"
-	   "Usage: ImageStack -load lf.exr -lffocalstack 16 16 -1 1 0.1 -display\n\n");
+           "Usage: ImageStack -load lf.exr -lffocalstack 16 16 -1 1 0.1 -display\n\n");
 }
 
 void LFFocalStack::parse(vector<string> args) {
@@ -37,24 +37,24 @@ Image LFFocalStack::apply(LightField lf, float minAlpha, float maxAlpha, float d
     int t = 0;
     for (float alpha = minAlpha; alpha <= maxAlpha; alpha += deltaAlpha) {
         printf("computing frame %i\n", t+1);
-	
-	for (int y = 0; y < lf.ySize; y++) {
-	    for (int v = 0; v < lf.vSize; v++) {
-		for (int x = 0; x < lf.xSize; x++) {
-		    for (int u = 0; u < lf.uSize; u++) {
-			float fx = x + alpha * (u + 0.5 - lf.uSize * 0.5);
-			float fy = y + alpha * (v + 0.5 - lf.vSize * 0.5);
-			int ix = (int)(fx + 0.5);
-			int iy = (int)(fy + 0.5);
-			if (ix < 0 || iy < 0 || ix >= out.width || iy >= out.height) continue;
-			for (int c = 0; c < out.channels; c++) {
-			    out(x, y, t)[c] += lf(ix, iy, u, v)[c];
-			}
-		    }
-		}
-	    }
-	}
-	t++;
+        
+        for (int y = 0; y < lf.ySize; y++) {
+            for (int v = 0; v < lf.vSize; v++) {
+                for (int x = 0; x < lf.xSize; x++) {
+                    for (int u = 0; u < lf.uSize; u++) {
+                        float fx = x + alpha * (u + 0.5 - lf.uSize * 0.5);
+                        float fy = y + alpha * (v + 0.5 - lf.vSize * 0.5);
+                        int ix = (int)(fx + 0.5);
+                        int iy = (int)(fy + 0.5);
+                        if (ix < 0 || iy < 0 || ix >= out.width || iy >= out.height) continue;
+                        for (int c = 0; c < out.channels; c++) {
+                            out(x, y, t)[c] += lf(ix, iy, u, v)[c];
+                        }
+                    }
+                }
+            }
+        }
+        t++;
     }
 
     return out;
@@ -63,12 +63,12 @@ Image LFFocalStack::apply(LightField lf, float minAlpha, float maxAlpha, float d
 
 void LFWarp::help() {
     printf("\n-lfwarp treats the top image of the stack as indices (within [0, 1]) into the\n"
-	   "lightfield represented by the second image, and samples quadrilinearly into it.\n"
+           "lightfield represented by the second image, and samples quadrilinearly into it.\n"
            "The two arguments it takes are the width and height of each lenslet.\n"
-	   "The number of channels in the top image has to be 4, with the channels being\n"
+           "The number of channels in the top image has to be 4, with the channels being\n"
            "the s,t,u and v coordinates in that order.\n"
            "An extra argument of 'quick' at the end switches nearest neighbor resampling on\n"
-	   "Usage: ImageStack -load lf.jpg -load lfmap.png -lfwarp 8 8 -save out.jpg\n\n");
+           "Usage: ImageStack -load lf.jpg -load lfmap.png -lfwarp 8 8 -save out.jpg\n\n");
 }
 
 void LFWarp::parse(vector<string> args) {
@@ -77,8 +77,8 @@ void LFWarp::parse(vector<string> args) {
     bool quick=false;
     // parse the rest of the options
     for(unsigned i=2;i<args.size();i++) {
-	if(args[i] == "quick")
-	    quick=true;
+        if(args[i] == "quick")
+            quick=true;
     }
     LightField lf(stack(1), readInt(args[0]), readInt(args[1]));
     Image im = apply(lf, stack(0),quick);
@@ -96,30 +96,30 @@ Image LFWarp::apply(LightField lf, Window warper, bool quick) {
     Image out(warper.frames,warper.width,warper.height,lf.channels);
     // do the processing loop
     for(int t=0;t<warper.frames;t++) {
-	for(int y=0;y<warper.height;y++) {
-	    for(int x=0;x<warper.width;x++) {
-		coords = warper(x, y, t);
-		lx = coords[0]*(lf.xSize-1);
-		ly = (1-coords[1])*(lf.ySize-1);
-		lu = coords[2]*(lf.uSize-1);
-		lv = (1-coords[3])*(lf.vSize-1);
-		if(!quick) {
-		    lf.sample4D(lx, ly, lu, lv, out(x, y, t));
-		} else {
-		    int ilx = (int)(lx+0.5);
-		    int ily = (int)(ly+0.5);
-		    int ilu = (int)(lu+0.5);
-		    int ilv = (int)(lv+0.5);
-		    ilx = clamp(ilx,0,lf.xSize-1);
-		    ily = clamp(ily,0,lf.ySize-1);
-		    ilu = clamp(ilu,0,lf.uSize-1);
-		    ilv = clamp(ilv,0,lf.vSize-1);
-		    float *result = lf(ilx,ily,ilu,ilv);
-		    for(int i=0;i<lf.channels;i++)
-			out(x, y, t)[i] = result[i];
-		}
-	    }
-	}
+        for(int y=0;y<warper.height;y++) {
+            for(int x=0;x<warper.width;x++) {
+                coords = warper(x, y, t);
+                lx = coords[0]*(lf.xSize-1);
+                ly = (1-coords[1])*(lf.ySize-1);
+                lu = coords[2]*(lf.uSize-1);
+                lv = (1-coords[3])*(lf.vSize-1);
+                if(!quick) {
+                    lf.sample4D(lx, ly, lu, lv, out(x, y, t));
+                } else {
+                    int ilx = (int)(lx+0.5);
+                    int ily = (int)(ly+0.5);
+                    int ilu = (int)(lu+0.5);
+                    int ilv = (int)(lv+0.5);
+                    ilx = clamp(ilx,0,lf.xSize-1);
+                    ily = clamp(ily,0,lf.ySize-1);
+                    ilu = clamp(ilu,0,lf.uSize-1);
+                    ilv = clamp(ilv,0,lf.vSize-1);
+                    float *result = lf(ilx,ily,ilu,ilv);
+                    for(int i=0;i<lf.channels;i++)
+                        out(x, y, t)[i] = result[i];
+                }
+            }
+        }
     }
     return out;
 }

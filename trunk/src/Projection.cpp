@@ -32,8 +32,8 @@ Image Sinugram::apply(Window im, int directions) {
                     float outXf = outX - (int)outX;
                     for (int c = 0; c < im.channels; c++) {
                         if (outX > 0) {
-			    out((int)outX, d, t)[c] += (1-outXf) * im(x, y, t)[c];
-			    weight((int)outX, d, t)[c] += (1-outXf);
+                            out((int)outX, d, t)[c] += (1-outXf) * im(x, y, t)[c];
+                            weight((int)outX, d, t)[c] += (1-outXf);
                         }
                         if (outX < out.width-1) {
                             out((int)outX+1, d, t)[c] += outXf * im(x, y, t)[c];

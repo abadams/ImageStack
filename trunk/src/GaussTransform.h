@@ -17,8 +17,8 @@ class JointBilateral : public Operation {
     void help();
     void parse(vector<string> args);
     static void apply(Window image, Window reference, 
-		      float filterWidth, float filterHeight, float filterFrames, float colorSigma,
-		      GaussTransform::Method m = GaussTransform::AUTO);
+                      float filterWidth, float filterHeight, float filterFrames, float colorSigma,
+                      GaussTransform::Method m = GaussTransform::AUTO);
 };
 
 class Bilateral : public Operation {
@@ -26,8 +26,8 @@ class Bilateral : public Operation {
     void help();
     void parse(vector<string> args);
     static void apply(Window image, float filterWidth, float filterHeight,
-		      float filterFrames, float colorSigma,
-		      GaussTransform::Method m = GaussTransform::AUTO);
+                      float filterFrames, float colorSigma,
+                      GaussTransform::Method m = GaussTransform::AUTO);
 };
 
 
@@ -52,8 +52,8 @@ class NLMeans : public Operation {
     void help();
     void parse(vector<string> args);
     static void apply(Window image, float patchSize, int dimensions,
-		      float spatialSigma, float patchSigma, 
-		      GaussTransform::Method m = GaussTransform::AUTO);
+                      float spatialSigma, float patchSigma, 
+                      GaussTransform::Method m = GaussTransform::AUTO);
 };
 
 

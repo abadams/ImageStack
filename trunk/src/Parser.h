@@ -35,7 +35,7 @@ class Expression {
     struct State {
         State(Window im_) : im(im_), stats(im_) {}
         int t, x, y, c;
-        float *val;	
+        float *val;        
         Window im;
         Stats stats;
     };
@@ -150,23 +150,23 @@ class Expression {
     };
 
     struct Funct_atan : public Unary {
-	Funct_atan(Node *arg) : Unary(arg) {}
-	float eval(State *state) {return atanf(arg->eval(state));}
+        Funct_atan(Node *arg) : Unary(arg) {}
+        float eval(State *state) {return atanf(arg->eval(state));}
     };
 
     struct Funct_asin : public Unary {
-	Funct_asin(Node *arg) : Unary(arg) {}
-	float eval(State *state) {return asinf(arg->eval(state));}
+        Funct_asin(Node *arg) : Unary(arg) {}
+        float eval(State *state) {return asinf(arg->eval(state));}
     };
 
     struct Funct_acos : public Unary {
-	Funct_acos(Node *arg) : Unary(arg) {}
-	float eval(State *state) {return acosf(arg->eval(state));}
+        Funct_acos(Node *arg) : Unary(arg) {}
+        float eval(State *state) {return acosf(arg->eval(state));}
     };
 
     struct Funct_atan2 : public Binary {
-	Funct_atan2(Node *left, Node *right) : Binary(left, right) {}
-	float eval(State *state) {return atan2f(left->eval(state), right->eval(state));}
+        Funct_atan2(Node *left, Node *right) : Binary(left, right) {}
+        float eval(State *state) {return atan2f(left->eval(state), right->eval(state));}
     };
 
     struct Funct_abs : public Unary {
@@ -308,8 +308,8 @@ class Expression {
         float eval(State *state) {
             if (!sample) sample = new float[state->im.channels];
             state->im.sample3D(left->eval(state), 
-				middle->eval(state), 
-				right->eval(state), sample);
+                                middle->eval(state), 
+                                right->eval(state), sample);
             return sample[state->c];
         }    
 

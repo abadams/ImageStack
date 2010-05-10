@@ -118,130 +118,130 @@ public:
     }
 
     void reset() {
-	for (int i = 0; i < N*N; i++) {
-	    AtA[i] = 0;
-	}
-	for (int i = 0; i < N*M; i++) {
-	    Atb[i] = 0;
-	}
+        for (int i = 0; i < N*N; i++) {
+            AtA[i] = 0;
+        }
+        for (int i = 0; i < N*M; i++) {
+            Atb[i] = 0;
+        }
     }
 
     void addCorrespondence(float *in, float *out, float weight) {
-	// update AtA
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < N; j++) {
-		AtA[i*N+j] += in[i]*in[j]*weight;
-	    }
-	}	
+        // update AtA
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                AtA[i*N+j] += in[i]*in[j]*weight;
+            }
+        }        
 
-	// update Atb
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < M; j++) {
-		Atb[i*M+j] += in[i]*out[j]*weight;
-	    }
-	}	
+        // update Atb
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < M; j++) {
+                Atb[i*M+j] += in[i]*out[j]*weight;
+            }
+        }        
     }
 
     void addCorrespondence(float *in, float *out) {
-	// update AtA
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < N; j++) {
-		AtA[i*N+j] += in[i]*in[j];
-	    }
-	}	
+        // update AtA
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                AtA[i*N+j] += in[i]*in[j];
+            }
+        }        
 
-	// update Atb
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < M; j++) {
-		Atb[i*M+j] += in[i]*out[j];
-	    }
-	}	
+        // update Atb
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < M; j++) {
+                Atb[i*M+j] += in[i]*out[j];
+            }
+        }        
     }
 
     void addCorrespondence(double *in, double *out, double weight) {
-	// update AtA
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < N; j++) {
-		AtA[i*N+j] += in[i]*in[j]*weight;
-	    }
-	}	
+        // update AtA
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                AtA[i*N+j] += in[i]*in[j]*weight;
+            }
+        }        
 
-	// update Atb
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < M; j++) {
-		Atb[i*M+j] += in[i]*out[j]*weight;
-	    }
-	}	
+        // update Atb
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < M; j++) {
+                Atb[i*M+j] += in[i]*out[j]*weight;
+            }
+        }        
     }
 
     void addCorrespondence(double *in, double *out) {
-	// update AtA
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < N; j++) {
-		AtA[i*N+j] += in[i]*in[j];
-	    }
-	}	
+        // update AtA
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                AtA[i*N+j] += in[i]*in[j];
+            }
+        }        
 
-	// update Atb
-	for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < M; j++) {
-		Atb[i*M+j] += in[i]*out[j];
-	    }
-	}	
+        // update Atb
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < M; j++) {
+                Atb[i*M+j] += in[i]*out[j];
+            }
+        }        
     }
 
     // returns whether or not it succeeded
     bool solve(double *solution) {
-	bool isspd = true;
+        bool isspd = true;
 
-	double L[N*N];
-	for (int i = 0; i < N*N; i++) {
-	    L[i] = 0.0;
-	}
-	// compute cholesky decomposition A = L'*L
-	for (int j = 0; j < N; j++) {
-	    double d = 0.0;
-	    for (int k = 0; k < j; k++) {
-		double s = 0.0;
-		for (int i = 0; i < k; i++) {
-		    s += L[k*N+i]*L[j*N+i];
-		}
-		L[j*N+k] = s = (AtA[j*N+k] - s)/L[k*N+k];
-		d = d + s*s;
-		isspd = isspd && (AtA[k*N+j] == AtA[j*N+k]); 
-	    }
-	    d = AtA[j*N+j] - d;
-	    isspd = isspd && (d > 0.0);
-	    L[j*N+j] = sqrt(d > 0.0 ? d : 0.0);
-	    for (int k = j+1; k < N; k++) {
-		L[j*N+k] = 0.0;
-	    }
-	}		
+        double L[N*N];
+        for (int i = 0; i < N*N; i++) {
+            L[i] = 0.0;
+        }
+        // compute cholesky decomposition A = L'*L
+        for (int j = 0; j < N; j++) {
+            double d = 0.0;
+            for (int k = 0; k < j; k++) {
+                double s = 0.0;
+                for (int i = 0; i < k; i++) {
+                    s += L[k*N+i]*L[j*N+i];
+                }
+                L[j*N+k] = s = (AtA[j*N+k] - s)/L[k*N+k];
+                d = d + s*s;
+                isspd = isspd && (AtA[k*N+j] == AtA[j*N+k]); 
+            }
+            d = AtA[j*N+j] - d;
+            isspd = isspd && (d > 0.0);
+            L[j*N+j] = sqrt(d > 0.0 ? d : 0.0);
+            for (int k = j+1; k < N; k++) {
+                L[j*N+k] = 0.0;
+            }
+        }                
 
-	// bail if not symmetric positive definite
-	if (!isspd) return false;
+        // bail if not symmetric positive definite
+        if (!isspd) return false;
 
-	for (int i = 0; i < M*N; i++) solution[i] = Atb[i];
+        for (int i = 0; i < M*N; i++) solution[i] = Atb[i];
 
-	// apply the decomposition to produce a solution
-	// Solve L*y = b;
-	for (int j = 0; j < M; j++) {
-	    for (int k = 0; k < N; k++) {
-		for (int i = 0; i < k; i++) 
-		    solution[j+k*M] -= solution[j+i*M]*L[k*N+i];
-		solution[j+k*M] /= L[k*N+k];	    
-	    }
+        // apply the decomposition to produce a solution
+        // Solve L*y = b;
+        for (int j = 0; j < M; j++) {
+            for (int k = 0; k < N; k++) {
+                for (int i = 0; i < k; i++) 
+                    solution[j+k*M] -= solution[j+i*M]*L[k*N+i];
+                solution[j+k*M] /= L[k*N+k];            
+            }
 
-	    // Solve L'*X = Y;
-	    for (int k = N-1; k >= 0; k--) {
-		for (int i = k+1; i < N; i++) 
-		    solution[j+k*M] -= solution[j+i*M]*L[i*N+k];
-		solution[j+k*M] /= L[k*N+k];
-	    }
-	}
+            // Solve L'*X = Y;
+            for (int k = N-1; k >= 0; k--) {
+                for (int i = k+1; i < N; i++) 
+                    solution[j+k*M] -= solution[j+i*M]*L[i*N+k];
+                solution[j+k*M] /= L[k*N+k];
+            }
+        }
 
 
-	return true;
+        return true;
     }    
 };
 

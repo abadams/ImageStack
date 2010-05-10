@@ -7,28 +7,28 @@
 
 void GaussianBlur::help() {
     pprintf("-gaussianblur takes a floating point width, height, and frames, and"
-	    " performs a gaussian blur with those standard deviations. The blur is"
-	    " performed out to three standard deviations. If given only two"
-	    " arguments, it performs a blur in x and y only. If given one argument,"
-	    " it performs the blur in x and y with filter width the same as"
-	    " height.\n"
-	    "\n"
-	    "Usage: ImageStack -load in.jpg -gaussianblur 5 -save blurry.jpg\n\n");
+            " performs a gaussian blur with those standard deviations. The blur is"
+            " performed out to three standard deviations. If given only two"
+            " arguments, it performs a blur in x and y only. If given one argument,"
+            " it performs the blur in x and y with filter width the same as"
+            " height.\n"
+            "\n"
+            "Usage: ImageStack -load in.jpg -gaussianblur 5 -save blurry.jpg\n\n");
 }
 
 void GaussianBlur::parse(vector<string> args) {
     float frames = 0, width = 0, height = 0;
     if (args.size() == 1) {
-	width = height = readFloat(args[0]);
+        width = height = readFloat(args[0]);
     } else if (args.size() == 2) {
-	width = readFloat(args[0]);
-	height = readFloat(args[1]);
+        width = readFloat(args[0]);
+        height = readFloat(args[1]);
     } else if (args.size() == 3) {
-	width  = readFloat(args[0]);
-	height = readFloat(args[1]);
-	frames = readFloat(args[2]);
+        width  = readFloat(args[0]);
+        height = readFloat(args[1]);
+        frames = readFloat(args[2]);
     } else {
-	panic("-gaussianblur takes one, two, or three arguments\n");
+        panic("-gaussianblur takes one, two, or three arguments\n");
     }
 
     Image im = apply(stack(0), width, height, frames);
@@ -40,72 +40,72 @@ Image GaussianBlur::apply(Window im, float filterWidth, float filterHeight, floa
     Image out(im);
 
     if (filterWidth != 0) {
-	// make the width filter
-	int size = (int)(filterWidth * 6 + 1) | 1;
-	// even tiny filters should do something, otherwise we
-	// wouldn't have called this function.
-	if (size == 1) size = 3;
-	int radius = size / 2;
-	Image filter(size, 1, 1, 1);
-	float sum = 0;
-	for (int i = 0; i < size; i++) {
+        // make the width filter
+        int size = (int)(filterWidth * 6 + 1) | 1;
+        // even tiny filters should do something, otherwise we
+        // wouldn't have called this function.
+        if (size == 1) size = 3;
+        int radius = size / 2;
+        Image filter(size, 1, 1, 1);
+        float sum = 0;
+        for (int i = 0; i < size; i++) {
             float diff = (i-radius)/filterWidth;
-	    float value = expf(-diff * diff / 2);
-	    filter(i, 0, 0)[0] = value;
-	    sum += value;
-	}
-	
-	for (int i = 0; i < size; i++) {
-	    filter(i, 0, 0)[0] /= sum;
-	}
-	
-	out = Convolve::apply(out, filter);
+            float value = expf(-diff * diff / 2);
+            filter(i, 0, 0)[0] = value;
+            sum += value;
+        }
+        
+        for (int i = 0; i < size; i++) {
+            filter(i, 0, 0)[0] /= sum;
+        }
+        
+        out = Convolve::apply(out, filter);
     }
 
     if (filterHeight != 0) {
-	// make the height filter
-	int size = (int)(filterHeight * 6 + 1) | 1;
-	// even tiny filters should do something, otherwise we
-	// wouldn't have called this function.
-	if (size == 1) size = 3;
-	int radius = size / 2;
-	Image filter(1, size, 1, 1);
-	float sum = 0;
-	for (int i = 0; i < size; i++) {
+        // make the height filter
+        int size = (int)(filterHeight * 6 + 1) | 1;
+        // even tiny filters should do something, otherwise we
+        // wouldn't have called this function.
+        if (size == 1) size = 3;
+        int radius = size / 2;
+        Image filter(1, size, 1, 1);
+        float sum = 0;
+        for (int i = 0; i < size; i++) {
             float diff = (i-radius)/filterHeight;
-	    float value = expf(-diff * diff / 2);
-	    filter(0, i, 0)[0] = value;
-	    sum += value;
-	}
-	
-	for (int i = 0; i < size; i++) {
-	    filter(0, i, 0)[0] /= sum;
-	}
-	
-	out = Convolve::apply(out, filter);
+            float value = expf(-diff * diff / 2);
+            filter(0, i, 0)[0] = value;
+            sum += value;
+        }
+        
+        for (int i = 0; i < size; i++) {
+            filter(0, i, 0)[0] /= sum;
+        }
+        
+        out = Convolve::apply(out, filter);
     }
 
     if (filterFrames != 0) {
-	// make the frames filter
-	int size = (int)(filterFrames * 6 + 1) | 1;       
-	// even tiny filters should do something, otherwise we
-	// wouldn't have called this function.
-	if (size == 1) size = 3;
-	int radius = size / 2;
-	Image filter(1, 1, size, 1);
-	float sum = 0;
-	for (int i = 0; i < size; i++) {
+        // make the frames filter
+        int size = (int)(filterFrames * 6 + 1) | 1;       
+        // even tiny filters should do something, otherwise we
+        // wouldn't have called this function.
+        if (size == 1) size = 3;
+        int radius = size / 2;
+        Image filter(1, 1, size, 1);
+        float sum = 0;
+        for (int i = 0; i < size; i++) {
             float diff = (i-radius)/filterFrames;
-	    float value = expf(-diff * diff / 2);
-	    filter(0, 0, i)[0] = value;
-	    sum += value;
-	}
-	
-	for (int i = 0; i < size; i++) {
-	    filter(0, 0, i)[0] /= sum;
-	}
-	
-	out = Convolve::apply(out, filter);
+            float value = expf(-diff * diff / 2);
+            filter(0, 0, i)[0] = value;
+            sum += value;
+        }
+        
+        for (int i = 0; i < size; i++) {
+            filter(0, 0, i)[0] /= sum;
+        }
+        
+        out = Convolve::apply(out, filter);
     }
 
     return out;
@@ -121,28 +121,28 @@ Image GaussianBlur::apply(Window im, float filterWidth, float filterHeight, floa
 
 void FastBlur::help() {
     pprintf("-fastblur takes a floating point frames, width, and height, and"
-	    " performs a fast approximate gaussian blur with those standard"
-	    " deviations using the IIR method of van Vliet et al. If given only two"
-	    " arguments, it performs a blur in x and y only. If given one argument,"
-	    " it performs the blur in x and y with filter width the same as"
-	    " height.\n"
-	    "\n"
-	    "Usage: ImageStack -load in.jpg -fastblur 5 -save blurry.jpg\n\n");
+            " performs a fast approximate gaussian blur with those standard"
+            " deviations using the IIR method of van Vliet et al. If given only two"
+            " arguments, it performs a blur in x and y only. If given one argument,"
+            " it performs the blur in x and y with filter width the same as"
+            " height.\n"
+            "\n"
+            "Usage: ImageStack -load in.jpg -fastblur 5 -save blurry.jpg\n\n");
 }
 
 void FastBlur::parse(vector<string> args) {
     float frames = 0, width = 0, height = 0;
     if (args.size() == 1) {
-	width = height = readFloat(args[0]);
+        width = height = readFloat(args[0]);
     } else if (args.size() == 2) {
-	width = readFloat(args[0]);
-	height = readFloat(args[1]);
+        width = readFloat(args[0]);
+        height = readFloat(args[1]);
     } else if (args.size() == 3) {
-	width  = readFloat(args[0]);
-	height = readFloat(args[1]);
-	frames = readFloat(args[2]);
+        width  = readFloat(args[0]);
+        height = readFloat(args[1]);
+        frames = readFloat(args[2]);
     } else {
-	panic("-fastblur takes one, two, or three arguments\n");
+        panic("-fastblur takes one, two, or three arguments\n");
     }
 
     apply(stack(0), width, height, frames);
@@ -150,9 +150,9 @@ void FastBlur::parse(vector<string> args) {
 
 void FastBlur::apply(Window im, float filterWidth, float filterHeight, float filterFrames, bool addMargin) {
     assert(filterFrames >= 0 &&
-	   filterWidth >= 0 &&
-	   filterHeight >= 0,
-	   "Filter sizes must be non-negative\n");
+           filterWidth >= 0 &&
+           filterHeight >= 0,
+           "Filter sizes must be non-negative\n");
 
     // Prevent filtering in useless directions
     if (im.width == 1)  filterWidth = 0;
@@ -164,24 +164,24 @@ void FastBlur::apply(Window im, float filterWidth, float filterHeight, float fil
     // blur is very narrow, also revert to the naive method, as IIR
     // won't work.
     if (filterFrames > 0 && (im.frames < 16 || filterFrames < 0.5)) {
-	Image blurry = GaussianBlur::apply(im, filterFrames, 0, 0);
-	FastBlur::apply(blurry, 0, filterWidth, filterHeight);	
-	Paste::apply(im, blurry, 0, 0, 0);
-	return;
+        Image blurry = GaussianBlur::apply(im, filterFrames, 0, 0);
+        FastBlur::apply(blurry, 0, filterWidth, filterHeight);        
+        Paste::apply(im, blurry, 0, 0, 0);
+        return;
     }
 
     if (filterWidth > 0 && (im.width < 16 || filterWidth < 0.5)) {
-	Image blurry = GaussianBlur::apply(im, 0, filterWidth, 0);
-	FastBlur::apply(blurry, filterFrames, 0, filterHeight);	
-	Paste::apply(im, blurry, 0, 0, 0);
-	return;
+        Image blurry = GaussianBlur::apply(im, 0, filterWidth, 0);
+        FastBlur::apply(blurry, filterFrames, 0, filterHeight);        
+        Paste::apply(im, blurry, 0, 0, 0);
+        return;
     }
 
     if (filterHeight > 0 && (im.height < 16 || filterHeight < 0.5)) {
-	Image blurry = GaussianBlur::apply(im, 0, 0, filterHeight);
-	FastBlur::apply(blurry, filterFrames, filterWidth, 0);
-	Paste::apply(im, blurry, 0, 0, 0);
-	return;
+        Image blurry = GaussianBlur::apply(im, 0, 0, filterHeight);
+        FastBlur::apply(blurry, filterFrames, filterWidth, 0);
+        Paste::apply(im, blurry, 0, 0, 0);
+        return;
     }
 
     // IIR filtering fails if the std dev is similar to the image
@@ -189,72 +189,72 @@ void FastBlur::apply(Window im, float filterWidth, float filterHeight, float fil
     // starting side. We solve this by adding a margin and using
     // homogeneous weights.
     if (addMargin && (im.frames / filterFrames < 8 ||
-		      im.width / filterWidth < 8 ||
-		      im.height / filterHeight < 8)) {
+                      im.width / filterWidth < 8 ||
+                      im.height / filterHeight < 8)) {
 
-	int marginT = (int)(filterFrames);
-	int marginX = (int)(filterWidth);
-	int marginY = (int)(filterHeight);
+        int marginT = (int)(filterFrames);
+        int marginX = (int)(filterWidth);
+        int marginY = (int)(filterHeight);
 
-	Image bigger(im.width+2*marginX, im.height+2*marginY, im.frames+2*marginT, im.channels+1);
-	for (int t = 0; t < im.frames; t++) {
-	    for (int y = 0; y < im.height; y++) {
-		float *imPtr = im(0, y, t);
-		float *biggerPtr = bigger(marginX, y+marginY, t+marginT);
-		for (int x = 0; x < im.width; x++) {
-		    *biggerPtr++ = 1;
-		    for (int c = 0; c < im.channels; c++) {
-			*biggerPtr++ = *imPtr++;
-		    }
-		}
-	    }
-	}
+        Image bigger(im.width+2*marginX, im.height+2*marginY, im.frames+2*marginT, im.channels+1);
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                float *imPtr = im(0, y, t);
+                float *biggerPtr = bigger(marginX, y+marginY, t+marginT);
+                for (int x = 0; x < im.width; x++) {
+                    *biggerPtr++ = 1;
+                    for (int c = 0; c < im.channels; c++) {
+                        *biggerPtr++ = *imPtr++;
+                    }
+                }
+            }
+        }
 
-	FastBlur::apply(bigger, filterFrames, filterWidth, filterHeight, false);
-	for (int t = 0; t < im.frames; t++) {
-	    for (int y = 0; y < im.height; y++) {
-		float *imPtr = im(0, y, t);
-		float *biggerPtr = bigger(marginX, y+marginY, t+marginT);
-		for (int x = 0; x < im.width; x++) {
-		    float w = 1.0f/(*biggerPtr++);
-		    for (int c = 0; c < im.channels; c++) {
-			*imPtr++ = w*(*biggerPtr++);
-		    }		    
-		}
-	    }
-	}
+        FastBlur::apply(bigger, filterFrames, filterWidth, filterHeight, false);
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                float *imPtr = im(0, y, t);
+                float *biggerPtr = bigger(marginX, y+marginY, t+marginT);
+                for (int x = 0; x < im.width; x++) {
+                    float w = 1.0f/(*biggerPtr++);
+                    for (int c = 0; c < im.channels; c++) {
+                        *imPtr++ = w*(*biggerPtr++);
+                    }                    
+                }
+            }
+        }
 
-	return;	
+        return;        
     }    
 
     // now perform the blur
     if (filterWidth > 32) {
-	// for large filters, we decompose into a dense blur and a
-	// sparse blur, by spacing out the taps on the IIR
-	float remainingStdDev = sqrtf(filterWidth*filterWidth - 32*32);
-	int tapSpacing = (int)(remainingStdDev / 32 + 1);	    
-	blurX(im, remainingStdDev/tapSpacing, tapSpacing);
-	blurX(im, 32, 1);
+        // for large filters, we decompose into a dense blur and a
+        // sparse blur, by spacing out the taps on the IIR
+        float remainingStdDev = sqrtf(filterWidth*filterWidth - 32*32);
+        int tapSpacing = (int)(remainingStdDev / 32 + 1);            
+        blurX(im, remainingStdDev/tapSpacing, tapSpacing);
+        blurX(im, 32, 1);
     } else if (filterWidth > 0) {
-	blurX(im, filterWidth, 1);
+        blurX(im, filterWidth, 1);
     }
 
     if (filterHeight > 32) {
-	float remainingStdDev = sqrtf(filterHeight*filterHeight - 32*32);
-	int tapSpacing = (int)(remainingStdDev / 32 + 1);	    
-	blurY(im, remainingStdDev/tapSpacing, tapSpacing);
-	blurY(im, 32, 1);
+        float remainingStdDev = sqrtf(filterHeight*filterHeight - 32*32);
+        int tapSpacing = (int)(remainingStdDev / 32 + 1);            
+        blurY(im, remainingStdDev/tapSpacing, tapSpacing);
+        blurY(im, 32, 1);
     } else if (filterHeight > 0) {
-	blurY(im, filterHeight, 1);
+        blurY(im, filterHeight, 1);
     }
 
     if (filterFrames > 32) {
-	float remainingStdDev = sqrtf(filterFrames*filterFrames - 32*32);
-	int tapSpacing = (int)(remainingStdDev / 32 + 1);	    
-	blurT(im, remainingStdDev/tapSpacing, tapSpacing);
-	blurT(im, 32, 1);
+        float remainingStdDev = sqrtf(filterFrames*filterFrames - 32*32);
+        int tapSpacing = (int)(remainingStdDev / 32 + 1);            
+        blurT(im, remainingStdDev/tapSpacing, tapSpacing);
+        blurT(im, 32, 1);
     } else if (filterFrames > 0) {
-	blurT(im, filterFrames, 1);
+        blurT(im, filterFrames, 1);
     }
 }
 
@@ -273,55 +273,55 @@ void FastBlur::blurX(Window im, float sigma, int ts) {
     // a backwards pass of our IIR filter to approximate Gaussian blurring
     // in the x-direction
     for (int t = 0; t < im.frames; t++) {
-	for (int y = 0; y < im.height; y++) {
-	    // forward pass
-	    
-	    // use a zero boundary condition in the homogeneous
-	    // sense (ie zero weight outside the image, divide by
-	    // the sum of the weights)
-	    for (int j = 0; j < ts; j++) {
-		for (int c = 0; c < im.channels; c++){
-		    //im(0*ts+j, y, t)[c] = c0*im(0*ts+j, y, t)[c] / c0;
-		    im(ts+j, y, t)[c] = (c0*im(ts+j, y, t)[c] + c1*im(j, y, t)[c]) * invC01;
-		    im(2*ts+j, y, t)[c] = (c0*im(2*ts+j, y, t)[c] + c1*im(ts+j, y, t)[c] + c2*im(j, y, t)[c]) * invC012;
-		}
-	    }
-	    
-	    
-	    // now apply the forward filter
-	    imPtr = im(3*ts, y, t);
-	    int lookBack = -im.xstride*ts;
-	    for (int i = 0; i < (im.width-3*ts)*im.channels; i++) {
-		// our forwards IIR equation
-		imPtr[0] = (c0*imPtr[0] +
-			    c1*imPtr[lookBack] +
-			    c2*imPtr[lookBack*2] + 
-			    c3*imPtr[lookBack*3]);
-		imPtr++;
-	    }
-	    
-	    // use a zero boundary condition in the homogeneous
-	    // sense	       
-	    int x = im.width-3*ts;
-	    for (int j = 0; j < ts; j++) {
-		for (int c = 0; c < im.channels; c++){
-		    //im(x+2*ts+j, y, t)[c] = c0*im(x+2*ts+j, y, t)[c] / c0;
-		    im(x+ts+j, y, t)[c] = (c0*im(x+ts+j, y, t)[c] + c1*im(x+2*ts+j, y, t)[c]) * invC01;
-		    im(x+j, y, t)[c] = (c0*im(x+j, y, t)[c] + c1*im(x+ts+j, y, t)[c] + c2*im(x+2*ts+j, y, t)[c]) * invC012;
-		}				
-	    }
-	    
-	    // backward pass
-	    imPtr = im(im.width-3*ts, y, t);
-	    lookBack = im.xstride*ts;
-	    for (int i = 0; i < (im.width-3*ts)*im.channels; i++) {
-		imPtr--;
-		imPtr[0] = (c0*imPtr[0] +
-			    c1*imPtr[lookBack] +
-			    c2*imPtr[lookBack*2] + 
-			    c3*imPtr[lookBack*3]);
-	    }
-	}
+        for (int y = 0; y < im.height; y++) {
+            // forward pass
+            
+            // use a zero boundary condition in the homogeneous
+            // sense (ie zero weight outside the image, divide by
+            // the sum of the weights)
+            for (int j = 0; j < ts; j++) {
+                for (int c = 0; c < im.channels; c++){
+                    //im(0*ts+j, y, t)[c] = c0*im(0*ts+j, y, t)[c] / c0;
+                    im(ts+j, y, t)[c] = (c0*im(ts+j, y, t)[c] + c1*im(j, y, t)[c]) * invC01;
+                    im(2*ts+j, y, t)[c] = (c0*im(2*ts+j, y, t)[c] + c1*im(ts+j, y, t)[c] + c2*im(j, y, t)[c]) * invC012;
+                }
+            }
+            
+            
+            // now apply the forward filter
+            imPtr = im(3*ts, y, t);
+            int lookBack = -im.xstride*ts;
+            for (int i = 0; i < (im.width-3*ts)*im.channels; i++) {
+                // our forwards IIR equation
+                imPtr[0] = (c0*imPtr[0] +
+                            c1*imPtr[lookBack] +
+                            c2*imPtr[lookBack*2] + 
+                            c3*imPtr[lookBack*3]);
+                imPtr++;
+            }
+            
+            // use a zero boundary condition in the homogeneous
+            // sense               
+            int x = im.width-3*ts;
+            for (int j = 0; j < ts; j++) {
+                for (int c = 0; c < im.channels; c++){
+                    //im(x+2*ts+j, y, t)[c] = c0*im(x+2*ts+j, y, t)[c] / c0;
+                    im(x+ts+j, y, t)[c] = (c0*im(x+ts+j, y, t)[c] + c1*im(x+2*ts+j, y, t)[c]) * invC01;
+                    im(x+j, y, t)[c] = (c0*im(x+j, y, t)[c] + c1*im(x+ts+j, y, t)[c] + c2*im(x+2*ts+j, y, t)[c]) * invC012;
+                }                                
+            }
+            
+            // backward pass
+            imPtr = im(im.width-3*ts, y, t);
+            lookBack = im.xstride*ts;
+            for (int i = 0; i < (im.width-3*ts)*im.channels; i++) {
+                imPtr--;
+                imPtr[0] = (c0*imPtr[0] +
+                            c1*imPtr[lookBack] +
+                            c2*imPtr[lookBack*2] + 
+                            c3*imPtr[lookBack*3]);
+            }
+        }
     } 
 }
 
@@ -341,60 +341,60 @@ void FastBlur::blurY(Window im, float sigma, int ts) {
     //  for cache coherency's sake, first all going in the "forwards"
     //  direction, and then all going in the "backwards" direction
     for (int t = 0; t < im.frames; t++) {
-	// use a zero boundary condition in the homogeneous
-	// sense (ie zero weight outside the image, divide by
-	// the sum of the weights)
-	for (int j = 0; j < ts; j++) {
-	    for (int x = 0; x < im.width; x++) {
-		for (int c = 0; c < im.channels; c++) {		    
-		    //im(x, j, t)[c] = c0*im(x, j, t)[c] / c0;
-		    im(x, ts+j, t)[c] = (c0*im(x, ts+j, t)[c] + c1*im(x, j, t)[c]) * invC01;
-		    im(x, 2*ts+j, t)[c] = (c0*im(x, 2*ts+j, t)[c] + c1*im(x, ts+j, t)[c] + c2*im(x, j, t)[c]) * invC012;
-		}
-	    }
-	}
-	
-	// forward pass
-	
-	int lookBack = -im.ystride*ts;
-	for (int y = 3*ts; y < im.height; y++) {
-	    imPtr = im(0, y, t);
-	    for (int i = 0; i < im.width*im.channels; i++) {
-		imPtr[0] = (c0*imPtr[0] +
-			    c1*imPtr[lookBack] +
-			    c2*imPtr[lookBack*2] + 
-			    c3*imPtr[lookBack*3]);
-		imPtr++;
-	    }
-	}
-	
-	// use a zero boundary condition in the homogeneous
-	// sense (ie zero weight outside the image, divide by
-	// the sum of the weights)
-	int y = im.height-3*ts;
-	for (int j = 0; j < ts; j++) {	       
-	    for (int x = 0; x < im.width; x++) {
-		for (int c = 0; c < im.channels; c++) {		    
-		    //im(x, y+ts*2+j, t)[c] = c0*im(x, y+ts*2+j, t)[c] / c0;
-		    im(x, y+ts+j, t)[c] = (c0*im(x, y+ts+j, t)[c] + c1*im(x, y+ts*2+j, t)[c]) * invC01;
-		    im(x, y+j, t)[c] = (c0*im(x, y+j, t)[c] + c1*im(x, y+ts+j, t)[c] + c2*im(x, y+ts*2+j, t)[c]) * invC012;
-		}
-	    }
-	}
-	
-	// backward pass	  
-	lookBack = im.ystride*ts;
-	for (int y = im.height-3*ts-1; y >= 0; y--) {
-	    imPtr = im(0, y, t);
-	    for (int i = 0; i < im.width*im.channels; i++) {
-		imPtr[0] = (c0*imPtr[0] +
-			    c1*imPtr[lookBack] +
-			    c2*imPtr[lookBack*2] + 
-			    c3*imPtr[lookBack*3]);
-		imPtr++;
-	    }
-	}
-    }	    
+        // use a zero boundary condition in the homogeneous
+        // sense (ie zero weight outside the image, divide by
+        // the sum of the weights)
+        for (int j = 0; j < ts; j++) {
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {                    
+                    //im(x, j, t)[c] = c0*im(x, j, t)[c] / c0;
+                    im(x, ts+j, t)[c] = (c0*im(x, ts+j, t)[c] + c1*im(x, j, t)[c]) * invC01;
+                    im(x, 2*ts+j, t)[c] = (c0*im(x, 2*ts+j, t)[c] + c1*im(x, ts+j, t)[c] + c2*im(x, j, t)[c]) * invC012;
+                }
+            }
+        }
+        
+        // forward pass
+        
+        int lookBack = -im.ystride*ts;
+        for (int y = 3*ts; y < im.height; y++) {
+            imPtr = im(0, y, t);
+            for (int i = 0; i < im.width*im.channels; i++) {
+                imPtr[0] = (c0*imPtr[0] +
+                            c1*imPtr[lookBack] +
+                            c2*imPtr[lookBack*2] + 
+                            c3*imPtr[lookBack*3]);
+                imPtr++;
+            }
+        }
+        
+        // use a zero boundary condition in the homogeneous
+        // sense (ie zero weight outside the image, divide by
+        // the sum of the weights)
+        int y = im.height-3*ts;
+        for (int j = 0; j < ts; j++) {               
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {                    
+                    //im(x, y+ts*2+j, t)[c] = c0*im(x, y+ts*2+j, t)[c] / c0;
+                    im(x, y+ts+j, t)[c] = (c0*im(x, y+ts+j, t)[c] + c1*im(x, y+ts*2+j, t)[c]) * invC01;
+                    im(x, y+j, t)[c] = (c0*im(x, y+j, t)[c] + c1*im(x, y+ts+j, t)[c] + c2*im(x, y+ts*2+j, t)[c]) * invC012;
+                }
+            }
+        }
+        
+        // backward pass          
+        lookBack = im.ystride*ts;
+        for (int y = im.height-3*ts-1; y >= 0; y--) {
+            imPtr = im(0, y, t);
+            for (int i = 0; i < im.width*im.channels; i++) {
+                imPtr[0] = (c0*imPtr[0] +
+                            c1*imPtr[lookBack] +
+                            c2*imPtr[lookBack*2] + 
+                            c3*imPtr[lookBack*3]);
+                imPtr++;
+            }
+        }
+    }            
 }
 
 void FastBlur::blurT(Window im, float sigma, int ts) {
@@ -411,59 +411,59 @@ void FastBlur::blurT(Window im, float sigma, int ts) {
     // this is the same strategy as blurring in y, but we swap t
     // for y everywhere
     for (int y = 0; y < im.height; y++) {
-	// use a zero boundary condition in the homogeneous
-	// sense (ie zero weight outside the image, divide by
-	// the sum of the weights)
-	for (int j = 0; j < ts; j++) {
-	    for (int x = 0; x < im.width; x++) {
-		for (int c = 0; c < im.channels; c++) {		    
-		    //im(x, y, j)[c] = c0*im(x, y, j)[c] / c0;
-		    im(x, y, ts+j)[c] = (c0*im(x, y, ts+j)[c] + c1*im(x, y, j)[c]) * invC01;
-		    im(x, y, 2*ts+j)[c] = (c0*im(x, y, 2*ts+j)[c] + c1*im(x, y, ts+j)[c] + c2*im(x, y, j)[c]) * invC012;
-		}
-	    }
-	}
-	
-	// forward pass
-	
-	int lookBack = -im.tstride*ts;
-	for (int t = 3*ts; t < im.frames; t++) {
-	    imPtr = im(0, y, t);
-	    for (int i = 0; i < im.width*im.channels; i++) {
-		imPtr[0] = (c0*imPtr[0] +
-			    c1*imPtr[lookBack] +
-			    c2*imPtr[lookBack*2] + 
-			    c3*imPtr[lookBack*3]);
-		imPtr++;
-	    }
-	}
-	
-	// use a zero boundary condition in the homogeneous
-	// sense (ie zero weight outside the image, divide by
-	// the sum of the weights)
-	int t = im.frames-3*ts;
-	for (int j = 0; j < ts; j++) {
-	    for (int x = 0; x < im.width; x++) {
-		for (int c = 0; c < im.channels; c++) {		    
-		    //im(x, y, t+2*ts+j)[c] = c0*im(x, y, t+2*ts+j)[c] / c0;
-		    im(x, y, t+ts+j)[c] = (c0*im(x, y, t+ts+j)[c] + c1*im(x, y, t+2*ts+j)[c]) * invC01;
-		    im(x, y, t+j)[c] = (c0*im(x, y, t+j)[c] + c1*im(x, y, t+ts+j)[c] + c2*im(x, y, t+2*ts+j)[c]) * invC012;
-		}
-	    }
-	}
-	
-	// backward pass	  
-	lookBack = im.tstride*ts;
-	for (int t = im.frames-3*ts-1; t >= 0; t--) {
-	    imPtr = im(0, y, t);
-	    for (int i = 0; i < im.width*im.channels; i++) {
-		imPtr[0] = (c0*imPtr[0] +
-			    c1*imPtr[lookBack] +
-			    c2*imPtr[lookBack*2] + 
-			    c3*imPtr[lookBack*3]);
-		imPtr++;
-	    }
-	}	    
+        // use a zero boundary condition in the homogeneous
+        // sense (ie zero weight outside the image, divide by
+        // the sum of the weights)
+        for (int j = 0; j < ts; j++) {
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {                    
+                    //im(x, y, j)[c] = c0*im(x, y, j)[c] / c0;
+                    im(x, y, ts+j)[c] = (c0*im(x, y, ts+j)[c] + c1*im(x, y, j)[c]) * invC01;
+                    im(x, y, 2*ts+j)[c] = (c0*im(x, y, 2*ts+j)[c] + c1*im(x, y, ts+j)[c] + c2*im(x, y, j)[c]) * invC012;
+                }
+            }
+        }
+        
+        // forward pass
+        
+        int lookBack = -im.tstride*ts;
+        for (int t = 3*ts; t < im.frames; t++) {
+            imPtr = im(0, y, t);
+            for (int i = 0; i < im.width*im.channels; i++) {
+                imPtr[0] = (c0*imPtr[0] +
+                            c1*imPtr[lookBack] +
+                            c2*imPtr[lookBack*2] + 
+                            c3*imPtr[lookBack*3]);
+                imPtr++;
+            }
+        }
+        
+        // use a zero boundary condition in the homogeneous
+        // sense (ie zero weight outside the image, divide by
+        // the sum of the weights)
+        int t = im.frames-3*ts;
+        for (int j = 0; j < ts; j++) {
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {                    
+                    //im(x, y, t+2*ts+j)[c] = c0*im(x, y, t+2*ts+j)[c] / c0;
+                    im(x, y, t+ts+j)[c] = (c0*im(x, y, t+ts+j)[c] + c1*im(x, y, t+2*ts+j)[c]) * invC01;
+                    im(x, y, t+j)[c] = (c0*im(x, y, t+j)[c] + c1*im(x, y, t+ts+j)[c] + c2*im(x, y, t+2*ts+j)[c]) * invC012;
+                }
+            }
+        }
+        
+        // backward pass          
+        lookBack = im.tstride*ts;
+        for (int t = im.frames-3*ts-1; t >= 0; t--) {
+            imPtr = im(0, y, t);
+            for (int i = 0; i < im.width*im.channels; i++) {
+                imPtr[0] = (c0*imPtr[0] +
+                            c1*imPtr[lookBack] +
+                            c2*imPtr[lookBack*2] + 
+                            c3*imPtr[lookBack*3]);
+                imPtr++;
+            }
+        }            
     }
 }
 
@@ -477,9 +477,9 @@ void FastBlur::calculateCoefficients(float sigma, float *c0, float *c1, float *c
     assert(sigma >= 0.5, "To use IIR filtering, standard deviation of blur must be >= 0.5\n");
 
     if (sigma < 2.5) {
-	q = (3.97156 - 4.14554*sqrtf(1 - 0.26891*sigma));
+        q = (3.97156 - 4.14554*sqrtf(1 - 0.26891*sigma));
     } else {
-	q = 0.98711*sigma - 0.96330;
+        q = 0.98711*sigma - 0.96330;
     }
     
     float denom = 1.57825 + 2.44413*q + 1.4281*q*q + 0.422205*q*q*q;
@@ -493,14 +493,14 @@ void FastBlur::calculateCoefficients(float sigma, float *c0, float *c1, float *c
 
 void RectFilter::help() {
     pprintf("-rectfilter performs a iterated rectangular filter on the image. The"
-	    " four arguments are the filter width, height, frames, and the number of"
-	    " iterations. If three arguments are given, they are interpreted as"
-	    " frames, width, and height, and the number of iterations is assumed to"
-	    " be one. If two arguments are given they are taken as width and height,"
-	    " and frames is assumed to be one. If one argument is given it is taken"
-	    " as both width and height, with frames and iterations again assumed to"
-	    " be one.\n"
-	    "\n"
+            " four arguments are the filter width, height, frames, and the number of"
+            " iterations. If three arguments are given, they are interpreted as"
+            " frames, width, and height, and the number of iterations is assumed to"
+            " be one. If two arguments are given they are taken as width and height,"
+            " and frames is assumed to be one. If one argument is given it is taken"
+            " as both width and height, with frames and iterations again assumed to"
+            " be one.\n"
+            "\n"
            "Usage: ImageStack -load in.jpg -rectfilter 1 10 10 -save out.jpg\n\n");
 }
 
@@ -519,7 +519,7 @@ void RectFilter::parse(vector<string> args) {
         width = readInt(args[0]);
         height = readInt(args[1]);
         frames = readInt(args[2]);
-	iterations = readInt(args[3]);
+        iterations = readInt(args[3]);
     } else {
         panic("-rectfilter takes four or fewer arguments\n");
     }
@@ -575,7 +575,7 @@ void RectFilter::blurX(Window im, int width, int iterations) {
 
     vector<float> multiplier(width);
     for (int i = 0; i < width; i++) {
-	multiplier[i] = 1.0f/width;
+        multiplier[i] = 1.0f/width;
     }
 
     for (int t = 0; t < im.frames; t++) {
@@ -588,7 +588,7 @@ void RectFilter::blurX(Window im, int width, int iterations) {
                     
                     double sum = 0;
                     int bufferIndex = 0;
-		    int bufferEntries = 0;
+                    int bufferEntries = 0;
                     int stride = im.xstride;
 
                     // initialize the buffer
@@ -598,15 +598,15 @@ void RectFilter::blurX(Window im, int width, int iterations) {
                     for (int j = radius+1; j < width; j++) {
                         buffer[j] = ptr[(j-radius)*stride];
                         sum += buffer[j];
-			bufferEntries++;
+                        bufferEntries++;
                     }
 
-		    double mult = 1.0/bufferEntries;
+                    double mult = 1.0/bufferEntries;
                                      
                     // non boundary cases
                     for (int x = 0; x < im.width-radius-1; x++) {
                         // assign the average to the current position
-			ptr[0] = (float)(sum * mult);
+                        ptr[0] = (float)(sum * mult);
                         
                         // move on to the next pixel
                         ptr += stride;
@@ -618,10 +618,10 @@ void RectFilter::blurX(Window im, int width, int iterations) {
                         bufferIndex++;
                         if (bufferIndex == width) bufferIndex = 0;
 
-			if (bufferEntries < width) {
-			    bufferEntries++;
-			    mult = 1.0/bufferEntries;
-			}
+                        if (bufferEntries < width) {
+                            bufferEntries++;
+                            mult = 1.0/bufferEntries;
+                        }
                     }                    
                     
                     // boundary cases
@@ -638,8 +638,8 @@ void RectFilter::blurX(Window im, int width, int iterations) {
                         bufferIndex++;
                         if (bufferIndex == width) bufferIndex = 0;                        
 
-			bufferEntries--;
-			mult = 1.0/bufferEntries;
+                        bufferEntries--;
+                        mult = 1.0/bufferEntries;
                     }
                 }
             }
@@ -734,28 +734,28 @@ void RectFilter::blurT(Window im, int width, int iterations) {
 
 void LanczosBlur::help() {
     pprintf("-lanczosblur convolves the current image by a three lobed lanczos"
-	    " filter. A lanczos filter is a kind of windowed sinc. The three"
-	    " arguments are filter width, height, and frames. If two arguments are"
-	    " given, frames is assumed to be one. If one argument is given, it is"
-	    " interpreted as both width and height.\n"
-	    "\n"
-	    "Usage: ImageStack -load big.jpg -lanczosblur 2 -subsample 2 2 0 0 -save small.jpg\n\n");
+            " filter. A lanczos filter is a kind of windowed sinc. The three"
+            " arguments are filter width, height, and frames. If two arguments are"
+            " given, frames is assumed to be one. If one argument is given, it is"
+            " interpreted as both width and height.\n"
+            "\n"
+            "Usage: ImageStack -load big.jpg -lanczosblur 2 -subsample 2 2 0 0 -save small.jpg\n\n");
 
 }
 
 void LanczosBlur::parse(vector<string> args) {
     float frames = 0, width = 0, height = 0;
     if (args.size() == 1) {
-	width = height = readFloat(args[0]);
+        width = height = readFloat(args[0]);
     } else if (args.size() == 2) {
-	width = readFloat(args[0]);
-	height = readFloat(args[1]);
+        width = readFloat(args[0]);
+        height = readFloat(args[1]);
     } else if (args.size() == 3) {
-	width  = readFloat(args[0]);
-	height = readFloat(args[1]);
-	frames = readFloat(args[2]);
+        width  = readFloat(args[0]);
+        height = readFloat(args[1]);
+        frames = readFloat(args[2]);
     } else {
-	panic("-lanczosblur takes one, two, or three arguments\n");
+        panic("-lanczosblur takes one, two, or three arguments\n");
     }
 
     Image im = apply(stack(0), width, height, frames);
@@ -767,66 +767,66 @@ Image LanczosBlur::apply(Window im, float filterWidth, float filterHeight, float
     Image out(im);
 
     if (filterFrames != 0) {
-	// make the frames filter
-	int size = (int)(filterFrames * 6 + 1) | 1;
-	int radius = size / 2;
-	Image filter(1, 1, size, 1);
-	float sum = 0;
-	for (int i = 0; i < size; i++) {
-	    float value = lanczos_3((i-radius) / filterFrames);
-	    filter(0, 0, i)[0] = value;
-	    sum += value;
-	}
-	
-	for (int i = 0; i < size; i++) {
-	    filter(0, 0, i)[0] /= sum;
-	}
-	
-	out = Convolve::apply(out, filter);
+        // make the frames filter
+        int size = (int)(filterFrames * 6 + 1) | 1;
+        int radius = size / 2;
+        Image filter(1, 1, size, 1);
+        float sum = 0;
+        for (int i = 0; i < size; i++) {
+            float value = lanczos_3((i-radius) / filterFrames);
+            filter(0, 0, i)[0] = value;
+            sum += value;
+        }
+        
+        for (int i = 0; i < size; i++) {
+            filter(0, 0, i)[0] /= sum;
+        }
+        
+        out = Convolve::apply(out, filter);
     }
 
     if (filterWidth != 0) {
-	// make the width filter
-	int size = (int)(filterWidth * 6 + 1) | 1;
-	int radius = size / 2;
-	Image filter(size, 1, 1, 1);
-	float sum = 0;
-	for (int i = 0; i < size; i++) {
-	    float value = lanczos_3((i-radius) / filterWidth);
-	    filter(i, 0, 0)[0] = value;
-	    sum += value;
-	}
-	
-	for (int i = 0; i < size; i++) {
-	    filter(i, 0, 0)[0] /= sum;
-	}
-	
-	out = Convolve::apply(out, filter);
+        // make the width filter
+        int size = (int)(filterWidth * 6 + 1) | 1;
+        int radius = size / 2;
+        Image filter(size, 1, 1, 1);
+        float sum = 0;
+        for (int i = 0; i < size; i++) {
+            float value = lanczos_3((i-radius) / filterWidth);
+            filter(i, 0, 0)[0] = value;
+            sum += value;
+        }
+        
+        for (int i = 0; i < size; i++) {
+            filter(i, 0, 0)[0] /= sum;
+        }
+        
+        out = Convolve::apply(out, filter);
     }
 
     if (filterHeight != 0) {
-	// make the height filter
-	int size = (int)(filterHeight * 6 + 1) | 1;
-	int radius = size / 2;
-	Image filter(1, size, 1, 1);
-	float sum = 0;
-	for (int i = 0; i < size; i++) {
-	    float value = lanczos_3((i-radius) / filterHeight);
-	    filter(0, i, 0)[0] = value;
-	    sum += value;
-	}
-	
-	for (int i = 0; i < size; i++) {
-	    filter(0, i, 0)[0] /= sum;
-	}
-	
-	out = Convolve::apply(out, filter);
+        // make the height filter
+        int size = (int)(filterHeight * 6 + 1) | 1;
+        int radius = size / 2;
+        Image filter(1, size, 1, 1);
+        float sum = 0;
+        for (int i = 0; i < size; i++) {
+            float value = lanczos_3((i-radius) / filterHeight);
+            filter(0, i, 0)[0] = value;
+            sum += value;
+        }
+        
+        for (int i = 0; i < size; i++) {
+            filter(0, i, 0)[0] /= sum;
+        }
+        
+        out = Convolve::apply(out, filter);
     }
 
     return out;
 
 }
-			
+                        
 
 
 

@@ -4,10 +4,10 @@
 
 void Haar::help() {
     pprintf("-haar performs the standard 2D haar transform of an image. The image"
-	    " size must be a power of two. If given an integer argument k, it only"
-	    " recurses k times, and the image size must be a multiple of 2^k.\n"
-	    "\n"
-	    "Usage: ImageStack -load in.jpg -haar 1 -save out.jpg\n\n");
+            " size must be a power of two. If given an integer argument k, it only"
+            " recurses k times, and the image size must be a multiple of 2^k.\n"
+            "\n"
+            "Usage: ImageStack -load in.jpg -haar 1 -save out.jpg\n\n");
 }
 
 void Haar::parse(vector<string> args) {
