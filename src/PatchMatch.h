@@ -11,9 +11,9 @@ class PatchMatch : public Operation {
 
   private:
     static float distance(Window source, Window target, Window mask,
-			  int st, int sx, int sy,
-			  int tt, int tx, int ty,
-			  int patchSize, float prevDist);
+                          int st, int sx, int sy,
+                          int tt, int tx, int ty,
+                          int patchSize, float prevDist);
     
 };
 
@@ -24,8 +24,8 @@ class BidirectionalSimilarity : public Operation {
     void help();
     void parse(vector<string> args);
     static void apply(Window source, Window target, 
-		      Window sourceMask, Window targetMask,
-		      float alpha, int numIter, int numIterPM = 5);    
+                      Window sourceMask, Window targetMask,
+                      float alpha, int numIter, int numIterPM = 5);    
     
 };
 
@@ -33,7 +33,7 @@ class BidirectionalSimilarity : public Operation {
 class Heal : public Operation {
   public:
     void help();
-    void parse(vector<string> args);		      
+    void parse(vector<string> args);                      
 };
 
 #endif

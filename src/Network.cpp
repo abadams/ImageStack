@@ -28,7 +28,7 @@ bool isReadable(unsigned int fd, int timeout_ = 0) {
     // perform a select to check if the socket has something for us
     if (timeout_ >= 0) {
         fd_set fds;
-	FD_ZERO(&fds);
+        FD_ZERO(&fds);
         FD_SET(fd, &fds);
         struct timeval timeout;
         timeout.tv_sec = timeout_ / 1000000;

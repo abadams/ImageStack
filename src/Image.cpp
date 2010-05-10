@@ -23,7 +23,7 @@ Image::~Image() {
         //debug();
         delete refCount;
         //printf("refCount deleted\n"); fflush(stdout);
-        //debug();	
+        //debug();        
         delete[] memory;
         //printf("data deleted\n"); fflush(stdout);
         //debug();

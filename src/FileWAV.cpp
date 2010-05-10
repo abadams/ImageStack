@@ -13,7 +13,7 @@ namespace FileWAV {
 
 namespace FileWAV {
     void help() {
-	printf(".wav sound files. They are represented as one or two channel images with\n"
+        printf(".wav sound files. They are represented as one or two channel images with\n"
                "height and width of 1, but many frames.\n");
     }
 

@@ -17,7 +17,7 @@ class DisplayWindow {
   public:
     static DisplayWindow *instance();
     void setMode(int width, int height, bool fullscreen = false, bool cursorVisible = true,
-		 float bgRed = 0, float bgGreen = 0, float bgBlue = 0);
+                 float bgRed = 0, float bgGreen = 0, float bgBlue = 0);
 
     int  width() {return width_;}
     int  height() {return height_;}

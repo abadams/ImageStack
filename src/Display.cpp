@@ -9,9 +9,9 @@ Display::~Display() {
 
 void Display::help() {
     printf("\n-display opens a window and displays the current image. Subsequent displays\n"
-	   "will use the same window. The presence of an optional second argument indicates\n"
+           "will use the same window. The presence of an optional second argument indicates\n"
            "that the window should be fullscreen.\n\n"
-	   "Usage: ImageStack -load a.tga -loop 100 --display --gaussianblur 2\n\n");
+           "Usage: ImageStack -load a.tga -loop 100 --display --gaussianblur 2\n\n");
     
 }
 

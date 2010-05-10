@@ -20,9 +20,9 @@ class Subsample : public Operation {
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, int boxWidth, int boxHeight, int boxFrames,
-		       int offsetX, int offsetY, int offsetT);
+                       int offsetX, int offsetY, int offsetT);
     static Image apply(Window im, int boxWidth, int boxHeight, 
-		       int offsetX, int offsetY);
+                       int offsetX, int offsetY);
     static Image apply(Window im, int boxFrames, int offsetT);
 };
 
@@ -108,17 +108,17 @@ class Paste : public Operation {
     void help();
     void parse(vector<string> args);
     static void apply(Window into, Window from,
-		      int xdst, int ydst, 
-		      int xsrc, int ysrc, 
-		      int width, int height);
+                      int xdst, int ydst, 
+                      int xsrc, int ysrc, 
+                      int width, int height);
 
     static void apply(Window into, Window from,
-		      int xdst, int ydst, int tdst = 0);
+                      int xdst, int ydst, int tdst = 0);
 
     static void apply(Window into, Window from, 
-		      int xdst, int ydst, int tdst,
-		      int xsrc, int ysrc, int tsrc, 
-		      int width, int height, int frames);
+                      int xdst, int ydst, int tdst,
+                      int xsrc, int ysrc, int tsrc, 
+                      int width, int height, int frames);
 };
 
 class Tile : public Operation {

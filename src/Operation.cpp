@@ -230,21 +230,21 @@ void loadOperations() {
 void unloadOperations() {
     OperationMapIterator i;
     for (i = operationMap.begin(); i != operationMap.end(); ++i) {
-	delete i->second;
+        delete i->second;
     }
 }
 
 
 void Help::help() {
     pprintf("ImageStack is a stack language for manipulating images. It"
-	    " is appropriate for use on the command line and in scripts."
-	    " Internally, all data is stored as 32 bit floating point, so"
-	    " ImageStack is good for high dynamic range data. ImageStack"
-	    " is also useful for low dynamic range data, which it treats as"
-	    " values between 0 and 1.\n\n"
-	    "-help provides help on a given operation.\n"
-	    "Usage: ImageStack -help scale\n\n"
-	    "Operations available are:\n");
+            " is appropriate for use on the command line and in scripts."
+            " Internally, all data is stored as 32 bit floating point, so"
+            " ImageStack is good for high dynamic range data. ImageStack"
+            " is also useful for low dynamic range data, which it treats as"
+            " values between 0 and 1.\n\n"
+            "-help provides help on a given operation.\n"
+            "Usage: ImageStack -help scale\n\n"
+            "Operations available are:\n");
 
     OperationMapIterator i;
 
@@ -265,9 +265,9 @@ void Help::parse(vector<string> args) {
         if (op == operationMap.end())
             printf("No such operation \"%s\"\n", args[0].c_str());
         else {
-	    printf("\n");
-	    op->second->help();
-	}
+            printf("\n");
+            op->second->help();
+        }
     }
 }
 

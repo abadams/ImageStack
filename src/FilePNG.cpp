@@ -13,12 +13,12 @@ namespace FilePNG {
 #include <png.h>
 
     void help() {
-	printf(".png files. These have a bit depth of 8, and may have 1-4 channels. They may\n"
-	       "only have 1 frame.\n");
+        printf(".png files. These have a bit depth of 8, and may have 1-4 channels. They may\n"
+               "only have 1 frame.\n");
     }
 
     Image load(string filename) {
-        png_byte header[8];	// 8 is the maximum size that can be checked
+        png_byte header[8];        // 8 is the maximum size that can be checked
         png_structp png_ptr;
         png_infop info_ptr;
         int number_of_passes;
@@ -45,16 +45,16 @@ namespace FilePNG {
     
         png_read_info(png_ptr, info_ptr);
     
-	int width = png_get_image_width(png_ptr, info_ptr);
-	int height = png_get_image_height(png_ptr, info_ptr);
-	int channels = png_get_channels(png_ptr, info_ptr);
-	int bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+        int width = png_get_image_width(png_ptr, info_ptr);
+        int height = png_get_image_height(png_ptr, info_ptr);
+        int channels = png_get_channels(png_ptr, info_ptr);
+        int bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 
-	// Expand low-bpp images to have only 1 pixel per byte (As opposed to tight packing)
-	if (bit_depth < 8)
-	    png_set_packing(png_ptr);
+        // Expand low-bpp images to have only 1 pixel per byte (As opposed to tight packing)
+        if (bit_depth < 8)
+            png_set_packing(png_ptr);
 
-	Image im(width, height, 1, channels);
+        Image im(width, height, 1, channels);
 
         number_of_passes = png_set_interlace_handling(png_ptr);
         png_read_update_info(png_ptr, info_ptr);
@@ -71,37 +71,37 @@ namespace FilePNG {
         fclose(f);
     
         // convert the data to floats
-	if (bit_depth <= 8) {
-	    int bit_scale = 8/bit_depth;
-	    for (int y = 0; y < im.height; y++) {
-		png_bytep srcPtr = row_pointers[y];
-		for (int x = 0; x < im.width; x++) {
-		    for (int c = 0; c < im.channels; c++) {
-			im(x, y)[c] = LDRtoHDR(bit_scale* (*srcPtr++) );
-		    }
-		}
-	    }
-	} else if (bit_depth == 16) {
-	    printf("Reading a 16-bit PNG image (Image may be darker than expected!)\n");
-	    for (int y = 0; y < im.height; y++) {
-		png_bytep srcPtr = row_pointers[y];
-		for (int x = 0; x < im.width; x++) {
-		    for (int c = 0; c < im.channels; c++) {
-			im(x, y)[c] = LDR16toHDR(*srcPtr);  // Note: Endian issues may be possible here, seems to work in WinXP
-			srcPtr+=2;					       
-		    }
-		}
-	    }
-	}
+        if (bit_depth <= 8) {
+            int bit_scale = 8/bit_depth;
+            for (int y = 0; y < im.height; y++) {
+                png_bytep srcPtr = row_pointers[y];
+                for (int x = 0; x < im.width; x++) {
+                    for (int c = 0; c < im.channels; c++) {
+                        im(x, y)[c] = LDRtoHDR(bit_scale* (*srcPtr++) );
+                    }
+                }
+            }
+        } else if (bit_depth == 16) {
+            printf("Reading a 16-bit PNG image (Image may be darker than expected!)\n");
+            for (int y = 0; y < im.height; y++) {
+                png_bytep srcPtr = row_pointers[y];
+                for (int x = 0; x < im.width; x++) {
+                    for (int c = 0; c < im.channels; c++) {
+                        im(x, y)[c] = LDR16toHDR(*srcPtr);  // Note: Endian issues may be possible here, seems to work in WinXP
+                        srcPtr+=2;                                               
+                    }
+                }
+            }
+        }
     
         // clean up
         for (int y = 0; y < im.height; y++)
-	    delete[] row_pointers[y];
-	delete[] row_pointers;
+            delete[] row_pointers[y];
+        delete[] row_pointers;
     
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
-	return im;
+        return im;
     }
     
 
@@ -167,8 +167,8 @@ namespace FilePNG {
     
         // clean up
         for (int y = 0; y < im.height; y++)
-	    delete[] row_pointers[y];
-	delete[] row_pointers;
+            delete[] row_pointers[y];
+        delete[] row_pointers;
     
         fclose(f);
     

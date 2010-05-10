@@ -127,24 +127,24 @@ class LocalMaxima : public Operation {
     void parse(vector<string> args);
 
     struct Maximum {
-	float value;
-	float t, x, y;
-	
-	bool operator<(const Maximum &other) const {
-	    return (value < other.value);
-	}
+        float value;
+        float t, x, y;
+        
+        bool operator<(const Maximum &other) const {
+            return (value < other.value);
+        }
 
-	bool operator>(const Maximum &other) const {
-	    return (value > other.value);
-	}
+        bool operator>(const Maximum &other) const {
+            return (value > other.value);
+        }
 
-	bool operator<=(const Maximum &other) const {
-	    return (value <= other.value);
-	}
+        bool operator<=(const Maximum &other) const {
+            return (value <= other.value);
+        }
 
-	bool operator>=(const Maximum &other) const {
-	    return (value >= other.value);
-	}
+        bool operator>=(const Maximum &other) const {
+            return (value >= other.value);
+        }
 
     };
     static vector<Maximum> apply(Window im, bool xCheck, bool yCheck, bool tCheck, float threshold, float minDistance);

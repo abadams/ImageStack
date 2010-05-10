@@ -34,7 +34,7 @@ class LoadBlock : public Operation {
     void help();
     void parse(vector<string> args);
     static Image apply(string filename, int x, int y, int t, int c, 
-		       int width, int height, int frames, int channels);
+                       int width, int height, int frames, int channels);
 };
 
 class SaveBlock : public Operation {

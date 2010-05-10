@@ -11,12 +11,12 @@
 
 void WLS::help() {
     pprintf("-wls filters the image with the wls-filter described in the paper"
-	    " Edge-Preserving Decompositions for Multi-Scale Tone and Detail"
-	    " Manipulation by Farbman et al. The first parameter (alpha) controls"
-	    " the sensitivity to edges, and the second one (lambda) controls the"
-	    " amount of smoothing.\n"
-	    "\n"
-	    "Usage: ImageStack -load in.jpg -wls 1.2 0.25 -save blurry.jpg\n");	    
+            " Edge-Preserving Decompositions for Multi-Scale Tone and Detail"
+            " Manipulation by Farbman et al. The first parameter (alpha) controls"
+            " the sensitivity to edges, and the second one (lambda) controls the"
+            " amount of smoothing.\n"
+            "\n"
+            "Usage: ImageStack -load in.jpg -wls 1.2 0.25 -save blurry.jpg\n");            
 }
 
 
@@ -35,26 +35,26 @@ void WLS::parse(vector<string> args) {
 }
 
 Image WLS::apply(Window im, float alpha, float lambda, float tolerance) {
-	
+        
     Image L;
 
     // Precalculate the log-luminance differences Lx and Ly
     if(im.channels == 3) {
-	L = ColorConvert::apply(im, "rgb", "y");
+        L = ColorConvert::apply(im, "rgb", "y");
     } else {
-	vector<float> mat;
-	for (int c = 0; c < im.channels; c++) {
-	    mat.push_back(1.0f/im.channels);
-	}
-	L = ColorMatrix::apply(im, mat);
+        vector<float> mat;
+        for (int c = 0; c < im.channels; c++) {
+            mat.push_back(1.0f/im.channels);
+        }
+        L = ColorMatrix::apply(im, mat);
     }
     
     Stats s(L);
     // If min(s) is less than zero, chanses are that we already are in the log-domain. 
     // In any case, we cannot take the log of negative numbers..
     if(s.minimum() >= 0) {
-	Offset::apply(L, 0.0001);
-	Log::apply(L);	
+        Offset::apply(L, 0.0001);
+        Log::apply(L);        
     }
     
     Image Lx = L.copy();
@@ -66,17 +66,17 @@ Image WLS::apply(Window im, float alpha, float lambda, float tolerance) {
     // Lx = lambda / (|dl(p)/dx|^alpha + eps)
     // Ly = lambda / (|dl(p)/dy|^alpha + eps)
     for (int t = 0; t < L.frames; t++) {
-	for (int y = 0; y < L.height; y++) {
-	    for (int x = 0; x < L.width; x++) {
-		Lx(x, y, t)[0] = lambda / (powf(fabs(Lx(x, y, t)[0]), alpha) + 0.0001);
-		Ly(x, y, t)[0] = lambda / (powf(fabs(Ly(x, y, t)[0]), alpha) + 0.0001);
-	    }
-	    // Nuke the weights for the boundary condition
-	    Lx(0, y, t)[0] = 0;
-	}
-	for (int x = 0; x < L.width; x++) {
-	    Ly(x, 0, t)[0] = 0;
-	}
+        for (int y = 0; y < L.height; y++) {
+            for (int x = 0; x < L.width; x++) {
+                Lx(x, y, t)[0] = lambda / (powf(fabs(Lx(x, y, t)[0]), alpha) + 0.0001);
+                Ly(x, y, t)[0] = lambda / (powf(fabs(Ly(x, y, t)[0]), alpha) + 0.0001);
+            }
+            // Nuke the weights for the boundary condition
+            Lx(0, y, t)[0] = 0;
+        }
+        for (int x = 0; x < L.width; x++) {
+            Ly(x, 0, t)[0] = 0;
+        }
     }
     
     // Data weights equal to 1 all over...

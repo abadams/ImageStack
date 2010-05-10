@@ -31,9 +31,9 @@ void dup() {
 void pull(size_t n) {
     assert(n < stack_.size(), "Stack underflow\n");
     for (size_t i = stack_.size() - n - 1; i < stack_.size()-1; i++) {
-	Image tmp = stack_[i+1];
-	stack_[i+1] = stack_[i];
-	stack_[i] = tmp;
+        Image tmp = stack_[i+1];
+        stack_[i+1] = stack_[i];
+        stack_[i] = tmp;
     }
 }
 
@@ -96,12 +96,12 @@ int main(int argc, char **argv) {
     start();
 
     if (argc == 1 || argv[1][0] != '-') {
-	operationMap["-help"]->help();
+        operationMap["-help"]->help();
     }
 
     vector<string> args;
     for (int i = 1; i < argc; i++) {
-	args.push_back(argv[i]);
+        args.push_back(argv[i]);
     }
 
     try {
@@ -126,49 +126,49 @@ void parseCommands(vector<string> args) {
     OperationMapIterator op;
 
     while (arg < args.size()) {
-	// dump the stack for debugging
-	/*
-	if (0) {
+        // dump the stack for debugging
+        /*
+        if (0) {
             printf("Stack: \n");
-	    for (size_t i = 0; i < stack_.size(); i++) {
-		stack_[i].debug();
-	    }
-	}
-	*/
+            for (size_t i = 0; i < stack_.size(); i++) {
+                stack_[i].debug();
+            }
+        }
+        */
 
-	// get the operation
-	op = operationMap.find(args[arg]);
+        // get the operation
+        op = operationMap.find(args[arg]);
 
-	// check the op is exists
-	if (op == operationMap.end()) {
-	    panic("Unknown operation \"%s\"\n"
-		  "Try -help for a list of operations.", args[arg].c_str());
-	}
+        // check the op is exists
+        if (op == operationMap.end()) {
+            panic("Unknown operation \"%s\"\n"
+                  "Try -help for a list of operations.", args[arg].c_str());
+        }
 
-	// find the arguments, look ahead till we see -[a-zA-Z]
-	for (opArgs = 1; opArgs + arg < args.size(); opArgs++) {
-	    char first = args[arg + opArgs][0];
-	    assert(first != '\0', "Empty argument!");
-	    if (first != '-') continue;
-	    if (isalpha(args[arg + opArgs][1])) break;
-	}
+        // find the arguments, look ahead till we see -[a-zA-Z]
+        for (opArgs = 1; opArgs + arg < args.size(); opArgs++) {
+            char first = args[arg + opArgs][0];
+            assert(first != '\0', "Empty argument!");
+            if (first != '-') continue;
+            if (isalpha(args[arg + opArgs][1])) break;
+        }
 
-	printf("Performing operation %s ", op->first.c_str()); fflush(stdout);
-	if (opArgs < 8) {
-	    for (size_t i = arg+1; i < arg + opArgs; i++) {
-		printf("%s ", args[i].c_str());
-	    }
-	}
-	printf("...\n");
+        printf("Performing operation %s ", op->first.c_str()); fflush(stdout);
+        if (opArgs < 8) {
+            for (size_t i = arg+1; i < arg + opArgs; i++) {
+                printf("%s ", args[i].c_str());
+            }
+        }
+        printf("...\n");
 
-	vector<string> operationArgs;
-	for (size_t i = arg + 1; i < arg + opArgs; i++) operationArgs.push_back(args[i]);
+        vector<string> operationArgs;
+        for (size_t i = arg + 1; i < arg + opArgs; i++) operationArgs.push_back(args[i]);
 
-	// call the operation
-	(op->second)->parse(operationArgs);
+        // call the operation
+        (op->second)->parse(operationArgs);
 
-	// skip over the args
-	arg += opArgs;
+        // skip over the args
+        arg += opArgs;
     }
 }
 
@@ -182,8 +182,8 @@ float readFloat(string arg) {
     bool needToPop = false;
     Expression e(arg, false);
     if (stack_.size() == 0) {
-	push(Image(1, 1, 1, 1));
-	needToPop = true;
+        push(Image(1, 1, 1, 1));
+        needToPop = true;
     }
     Expression::State s(stack(0));
     float val = e.eval(&s);    
@@ -194,7 +194,7 @@ float readFloat(string arg) {
 
 char readChar(string arg) {
     assert(arg.size() == 1,
-	   "Argument '%s' is not a single character\n", arg.c_str());
+           "Argument '%s' is not a single character\n", arg.c_str());
     return arg[0];
 }
 
@@ -207,40 +207,40 @@ void pprintf(const char *str) {
     char *linePtr;
 
     while (*endOfLine) {
-	// walk ahead to 80 characters or EOL, whichever comes first
-	endOfLine = startOfLine;
-	linePtr = line;
-	while (endOfLine - startOfLine < 80 && *endOfLine && *endOfLine != '\n') {
-	    *linePtr++ = *endOfLine++;
-	}
-	
-	if (!*endOfLine) {
-	    *linePtr = 0;
-	    printf("%s", line);
-	    return;
-	}
+        // walk ahead to 80 characters or EOL, whichever comes first
+        endOfLine = startOfLine;
+        linePtr = line;
+        while (endOfLine - startOfLine < 80 && *endOfLine && *endOfLine != '\n') {
+            *linePtr++ = *endOfLine++;
+        }
+        
+        if (!*endOfLine) {
+            *linePtr = 0;
+            printf("%s", line);
+            return;
+        }
 
-	if (*endOfLine == '\n') {
-	    linePtr[0] = '\n';
-	    linePtr[1] = 0;
-	    printf("%s", line);
-	    startOfLine = endOfLine + 1;
-	    continue;
-	}
+        if (*endOfLine == '\n') {
+            linePtr[0] = '\n';
+            linePtr[1] = 0;
+            printf("%s", line);
+            startOfLine = endOfLine + 1;
+            continue;
+        }
 
-	// walk back to the last space
-	char *lastSpace = linePtr;
-	while (*lastSpace != ' ' && lastSpace > line + 40) {
-	    lastSpace--;
-	}
+        // walk back to the last space
+        char *lastSpace = linePtr;
+        while (*lastSpace != ' ' && lastSpace > line + 40) {
+            lastSpace--;
+        }
 
-	// if we found one, print up to it
-	if (*lastSpace == ' ') {
-	    lastSpace[0] = '\n';
-	    lastSpace[1] = 0;
-	    printf("%s", line);
-	    startOfLine += lastSpace - line + 1;
-	} 
+        // if we found one, print up to it
+        if (*lastSpace == ' ') {
+            lastSpace[0] = '\n';
+            lastSpace[1] = 0;
+            printf("%s", line);
+            startOfLine += lastSpace - line + 1;
+        } 
     }
 }
 
