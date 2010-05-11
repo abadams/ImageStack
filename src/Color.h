@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_COLOR_H
 #define IMAGESTACK_COLOR_H
+#include "header.h"
 
 class ColorMatrix : public Operation {
   public:
@@ -40,4 +41,5 @@ public:
     static Image apply(Window win, int xoff, int yoff, bool awb);
 };
 
+#include "footer.h"
 #endif

@@ -1,4 +1,3 @@
-
 #include "main.h"
 #include "Calculus.h"
 #include "Geometry.h"
@@ -10,6 +9,7 @@
 #include "Display.h"
 #include "LAHBPCG.h"
 #include <sstream>
+#include "header.h"
 
 void Gradient::help() {
     printf("\n-gradient takes the backward differences in the dimension specified by the\n"
@@ -191,3 +191,5 @@ Image Poisson::apply(Window dx, Window dy, float rms) {
     Offset::apply(ones1, 1.0f);
     return LAHBPCG::apply(zerosc, dx, dy, zeros1, ones1, ones1, 999999, rms);
 }
+
+#include "footer.h"

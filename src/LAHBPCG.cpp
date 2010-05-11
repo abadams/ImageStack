@@ -5,6 +5,7 @@
 #include "Arithmetic.h"
 #include "Convolve.h"
 #include <list>
+#include "header.h"
 
 // This is an implementation of "Locally Adaptive Hierachical Basis
 // Preconditioning" by Rick Szeliski. It was written by Eric Chu with
@@ -885,3 +886,4 @@ Image LAHBPCG::apply(Window d, Window gx, Window gy, Window w, Window sx, Window
 
     return out;
 }
+#include "footer.h"

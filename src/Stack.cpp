@@ -1,5 +1,6 @@
 #include "main.h"
 #include "Stack.h"
+#include "header.h"
 
 void Pop::help() {
     printf("\n-pop removes the top image from the stack\n\n"
@@ -59,3 +60,4 @@ void Dup::parse(vector<string> args) {
     dup();
 }
 
+#include "footer.h"

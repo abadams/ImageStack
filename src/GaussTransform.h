@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_GAUSS_TRANSFORM_H
 #define IMAGESTACK_GAUSS_TRANSFORM_H
+#include "header.h"
 
 
 class GaussTransform : public Operation {
@@ -56,5 +57,5 @@ class NLMeans : public Operation {
                       GaussTransform::Method m = GaussTransform::AUTO);
 };
 
-
+#include "footer.h"
 #endif

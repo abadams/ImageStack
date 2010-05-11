@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_PREDICTION_H
 #define IMAGESTACK_PREDICTION_H
+#include "header.h"
 
 class Inpaint : public Operation {
   public:
@@ -8,4 +9,5 @@ class Inpaint : public Operation {
     static Image apply(Window im, Window mask);
 };
 
+#include "footer.h"
 #endif

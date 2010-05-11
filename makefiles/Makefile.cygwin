@@ -1,7 +1,7 @@
-BIN = ../bin
-LIB = ../lib
-SRC = ../src
-INCLUDE = ../include
+BIN = bin
+LIB = lib
+SRC = src
+INCLUDE = include
 
 CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=core2 -msse3 -mfpmath=sse -Wno-uninitialized -enable-auto-import
 
@@ -41,51 +41,59 @@ OPENEXR_CCFLAGS ?= -DNO_OPENEXR
 # Top-level targets      #
 ##########################
 
-# By default, build ImageStack the program
-default: $(BIN)/ImageStack
+BIN_TARGET = $(BIN)/ImageStack.exe
+LIB_TARGET = $(LIB)/cygImageStack.dll
 
-all: $(BIN)/ImageStack library
+# By default, build ImageStack the program
+default: $(BIN_TARGET)
+
+all: $(BIN_TARGET) library
 
 clean:
-	-rm -f *.o *.gch $(BIN)/* $(LIB)/* $(INCLUDE)/*
+	-rm -f $(BIN)/*.* $(LIB)/*.* $(BIN)/build/*.* $(LIB)/build/*.* $(INCLUDE)/*.*
 
 ##########################
 # ImageStack the program #
 ##########################
 
 # Get the list of .o files to generate
-include ../Makefile.common
+include Makefile.common
 
-IMAGESTACK_P_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-IMAGESTACK_P_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(BIN_TARGET): IMAGESTACK_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(BIN_TARGET): IMAGESTACK_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+BIN_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),$(BIN)/build/$f)
 
 # Everything includes main.h. By precompiling that header we can speed up compilation about 30%
-main.h.gch: $(SRC)/main.h
-	g++ $(CCFLAGS) -x c++-header -O3 -o ./main.h.gch $(SRC)/main.h
+$(BIN)/build/main.h.gch: $(SRC)/main.h
+	g++ $(CCFLAGS) -x c++-header -O3 -o $(BIN)/build/main.h.gch $(SRC)/main.h
 
-$(BIN)/ImageStack: $(IMAGESTACK_OBJECTS)
-	g++ $(IMAGESTACK_P_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_P_LIBS) -o $(BIN)/ImageStack 
+$(BIN_TARGET): $(BIN_OBJECTS)
+	g++ $(IMAGESTACK_CCFLAGS) $(BIN_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN_TARGET)
 
-%.o: $(SRC)/%.cpp main.h.gch
-	g++ -include main.h $(IMAGESTACK_P_CCFLAGS) -c $<
+$(BIN)/build/%.o: $(SRC)/%.cpp $(BIN)/build/main.h.gch
+	g++ -include $(BIN)/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
 
-install: $(BIN)/ImageStack
-	cp $(BIN)/* /usr/local/bin
+install: $(BIN_TARGET)
+	cp $(BIN_TARGET) /usr/local/bin
 
 ##########################
 # ImageStack the library #
 ##########################
 
-IMAGESTACK_L_CCFLAGS = $(CCFLAGS) -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-IMAGESTACK_L_LIBS = $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(LIB_TARGET): IMAGESTACK_CCFLAGS = $(CCFLAGS) -DNO_MAIN -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(LIB_TARGET): IMAGESTACK_LIBS = $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+LIB_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),$(LIB)/build/$f)
 
-library: $(LIB)/cygImageStack.dll $(INCLUDE)/ImageStack.h 
+$(LIB)/build/main.h.gch: $(SRC)/main.h
+	g++ $(CCFLAGS) -x c++-header -O3 -o $(LIB)/build/main.h.gch $(SRC)/main.h
 
-$(LIB)/cygImageStack.dll: ImageStack.o
-	g++ $(IMAGESTACK_L_CCFLAGS) -shared -o $(LIB)/cygImageStack.dll -Wl,--out-implib=$(LIB)/libImageStack.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive ImageStack.o -Wl,--no-whole-archive $(IMAGESTACK_L_LIBS)
+$(LIB)/build/%.o: $(SRC)/%.cpp $(LIB)/build/main.h.gch
+	g++ -include $(LIB)/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
 
-ImageStack.o: $(SRC)/ImageStack.cpp
-	g++ $(IMAGESTACK_L_CCFLAGS) -c $<
+library: $(LIB_TARGET) $(INCLUDE)/ImageStack.h 
+
+$(LIB_TARGET): $(LIB_OBJECTS)
+	g++ $(IMAGESTACK_CCFLAGS) -shared -o $(LIB)/cygImageStack.dll -Wl,--out-implib=$(LIB)/libImageStack.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive $(LIB_OBJECTS) -Wl,--no-whole-archive $(IMAGESTACK_LIBS)
 
 $(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
 	cp $(SRC)/*.h $(INCLUDE)

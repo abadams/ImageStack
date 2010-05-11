@@ -3,9 +3,11 @@
 
 #ifdef NO_JPEG
 
+#include "header.h"
 namespace FileJPG {
 #include "FileNotImplemented.h"
 }
+#include "footer.h"
 
 #else
 
@@ -13,6 +15,7 @@ extern "C" {
 #include <jpeglib.h>
 }
 
+#include "header.h"
 namespace FileJPG {
 
     void help() {
@@ -110,5 +113,5 @@ namespace FileJPG {
         return im;
     }
 }
-
+#include "footer.h"
 #endif

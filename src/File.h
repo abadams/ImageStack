@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_FILE_H
 #define IMAGESTACK_FILE_H
+#include "header.h"
 
 class Load : public Operation {
   public:
@@ -146,4 +147,5 @@ namespace FileCSV {
     Image load(string filename);
 }
 
+#include "footer.h"
 #endif

@@ -1,5 +1,6 @@
 #include "main.h"
 #include "Parser.h"
+#include "header.h"
 
 void Expression::skipWhitespace() {
     while (source[sourceIndex] == ' ' || source[sourceIndex] == '\t' || source[sourceIndex] == '\n') sourceIndex++;
@@ -406,3 +407,4 @@ void Expression::help() {
 
 
 
+#include "footer.h"

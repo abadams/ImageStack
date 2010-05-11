@@ -2,6 +2,7 @@
 #define IMAGESTACK_LINEARALGEBRA_H
 #include <stdio.h>
 #include <math.h>
+#include "header.h"
 
 /* 
 
@@ -245,4 +246,5 @@ public:
     }    
 };
 
+#include "footer.h"
 #endif

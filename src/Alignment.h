@@ -1,6 +1,7 @@
 #ifndef IMAGESTACK_ALIGNMENT_H
 #define IMAGESTACK_ALIGNMENT_H
 
+#include "header.h"
 
 class Align : public Operation {
   public:
@@ -20,5 +21,6 @@ class AlignFrames : public Operation {
     static void apply(Window im, Align::Mode m);
 };
 
+#include "footer.h"
 
 #endif

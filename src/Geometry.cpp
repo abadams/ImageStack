@@ -2,6 +2,7 @@
 #include "Geometry.h"
 #include "Stack.h"
 #include "Arithmetic.h"
+#include "header.h"
 
 void Upsample::help() {
     pprintf("-upsample multiplies the width, height, and frames of the current"
@@ -1388,3 +1389,4 @@ Image Reshape::apply(Image im, int x, int y, int t, int c) {
 
 
 
+#include "footer.h"

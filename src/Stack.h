@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_STACK_H
 #define IMAGESTACK_STACK_H
+#include "header.h"
 
 // these operations apply only to the stack, so they have no apply method
 
@@ -27,4 +28,5 @@ class Dup : public Operation {
     void parse(vector<string> args);
 };
 
+#include "footer.h"
 #endif

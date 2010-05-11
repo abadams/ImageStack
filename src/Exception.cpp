@@ -1,6 +1,8 @@
 #include "main.h"
 #include "Exception.h"
 
+#include "header.h"
+
 Exception::Exception(const char *fmt, ...) {
     va_list arglist;
     va_start(arglist, fmt);
@@ -31,3 +33,4 @@ void assert(bool cond, const char *fmt, ...) throw(Exception) {
     }
 }
 
+#include "footer.h"

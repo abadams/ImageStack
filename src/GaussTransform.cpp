@@ -7,6 +7,7 @@
 #include "Geometry.h"
 #include "Color.h"
 #include "Statistics.h"
+#include "header.h"
 
 void GaussTransform::help() {
     pprintf("-gausstransform replaces each pixel in the top image on the stack with"
@@ -743,3 +744,4 @@ void NLMeans::apply(Window image, float patchSize, int dimensions,
     JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);    
 };
 
+#include "footer.h"

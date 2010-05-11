@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_COMPLEX_H
 #define IMAGESTACK_COMPLEX_H
-
+#include "header.h"
 
 class ComplexMultiply : public Operation {
   public:
@@ -58,5 +58,5 @@ class ComplexConjugate : public Operation {
     static void apply(Window im);
 };
 
-
+#include "footer.h"
 #endif

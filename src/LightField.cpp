@@ -9,6 +9,7 @@
 #include "Wavelet.h"
 #include "Filter.h" 
 #include "LinearAlgebra.h"
+#include "header.h"
 
 void LFFocalStack::help() {
     printf("\n-lffocalstack turns a 4d light field into a 3d focal stack. The five arguments\n"
@@ -154,3 +155,5 @@ void LFPoint::apply(LightField lf, float px, float py, float pz) {
         }
     }
 }
+
+#include "footer.h"

@@ -1,6 +1,6 @@
 #include "main.h"
 #include "File.h"
-
+#include "header.h"
 
 namespace FileTGA {
 
@@ -243,3 +243,4 @@ namespace FileTGA {
         fclose(f);
     }
 }
+#include "footer.h"

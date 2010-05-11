@@ -10,6 +10,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "header.h"
 
 const float INF = std::numeric_limits<float>::infinity();
 
@@ -659,5 +660,5 @@ class GKDTree {
 
 };
 
-
+#include "footer.h"
 #endif

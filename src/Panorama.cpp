@@ -2,6 +2,7 @@
 #include "Panorama.h"
 #include "File.h"
 #include "Stack.h"
+#include "header.h"
 
 void LoadPanorama::help() {
     printf("\n-loadpanorama takes a filename as its first argument. The file must be the\n"
@@ -245,3 +246,4 @@ Image PanoramaBackground::apply(Window im) {
 
 
 
+#include "footer.h"

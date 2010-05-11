@@ -1,6 +1,7 @@
 #include "main.h"
 #include "Paint.h"
 #include "Parser.h"
+#include "header.h"
 
 void Eval::help() {
     printf("\n-eval takes a simple expression and evaluates it, writing the result to the\n"
@@ -241,3 +242,4 @@ void Composite::apply(Window dst, Window src, Window mask) {
     }
 }
 
+#include "footer.h"

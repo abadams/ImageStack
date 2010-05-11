@@ -39,6 +39,7 @@ using ::std::list;
 #include "Exception.h"
 #include "Operation.h"
 #include "Image.h"
+#include "header.h"
 
 // Below are the data structures and functions available to operations:
 class Image;
@@ -79,4 +80,5 @@ void pprintf(const char *str);
 extern map<string, Operation *> operationMap;
 typedef map<string, Operation *>::iterator OperationMapIterator;
 
+#include "footer.h"
 #endif

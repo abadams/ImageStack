@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_PERMUTOHEDRAL_LATTICE_H
 #define IMAGESTACK_PERMUTOHEDRAL_LATTICE_H
+#include "header.h"
 
 /*******************************************************************
  * Permutohedral Lattice implementation from:                      *
@@ -471,4 +472,5 @@ public:
     HashTablePermutohedral hashTable;
 };
 
+#include "footer.h"
 #endif

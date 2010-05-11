@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_NETWORKOPS_H
 #define IMAGESTACK_NETWORKOPS_H
+#include "header.h"
 
 #include <stdio.h>
 
@@ -20,4 +21,5 @@ class Receive : public Operation {
     static map<int, TCPServer *> servers;
 };
 
+#include "footer.h"
 #endif

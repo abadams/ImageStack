@@ -3,6 +3,7 @@
 
 #include "tables.h"
 #include <string.h>
+#include "header.h"
 
 class Window {
   public:
@@ -453,4 +454,5 @@ class Image : public Window {
     }
 };
 
+#include "footer.h"
 #endif

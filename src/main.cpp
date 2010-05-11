@@ -5,6 +5,7 @@
 #ifndef WIN32
 #include <sys/time.h>
 #endif
+#include "header.h"
 
 vector<Image> stack_;
 Image &stack(size_t idx) {
@@ -78,48 +79,6 @@ void start() {
 void end() {
     unloadOperations();
 }
-
-#ifndef NO_MAIN
-
-// We need to make sure main gets replaced with SDL_main on OS X, or
-// display won't work properly. On other platforms it's not necessary,
-// and might slow down non-display using ImageStack command lines, so
-// we don't do it.
-#ifdef __APPLE_CC__ 
-#ifndef NO_SDL
-#include <SDL.h>
-#endif
-#endif
-
-int main(int argc, char **argv) {
-
-    start();
-
-    if (argc == 1 || argv[1][0] != '-') {
-        operationMap["-help"]->help();
-    }
-
-    vector<string> args;
-    for (int i = 1; i < argc; i++) {
-        args.push_back(argv[i]);
-    }
-
-    try {
-        parseCommands(args);
-    } catch(Exception &e) {
-        printf("%s", e.message);
-    }
-
-    fflush(stdout);
-    fflush(stderr);
-
-    end();
-
-    return 0;
-
-}
-
-#endif
 
 void parseCommands(vector<string> args) {
     size_t arg = 0, opArgs;
@@ -243,4 +202,48 @@ void pprintf(const char *str) {
         } 
     }
 }
+#include "footer.h"
 
+#ifndef NO_MAIN
+
+// We need to make sure main gets replaced with SDL_main on OS X, or
+// display won't work properly. On other platforms it's not necessary,
+// and might slow down non-display using ImageStack command lines, so
+// we don't do it.
+#ifdef __APPLE_CC__ 
+#ifndef NO_SDL
+#include <SDL.h>
+#endif
+#endif
+
+using namespace ImageStack;
+
+int main(int argc, char **argv) {
+
+    start();
+
+    if (argc == 1 || argv[1][0] != '-') {
+        operationMap["-help"]->help();
+    }
+
+    vector<string> args;
+    for (int i = 1; i < argc; i++) {
+        args.push_back(argv[i]);
+    }
+
+    try {
+        parseCommands(args);
+    } catch(Exception &e) {
+        printf("%s", e.message);
+    }
+
+    fflush(stdout);
+    fflush(stderr);
+
+    end();
+
+    return 0;
+
+}
+
+#endif

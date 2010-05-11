@@ -3,6 +3,7 @@
 #include "Arithmetic.h"
 #include "File.h"
 #include <fstream>
+#include "header.h"
 
 //#define HDR_DEBUG
 
@@ -327,3 +328,4 @@ float AssembleHDR::weightFunc(float *x, int channels, cutoffType cutoff) {
     } 
     return 1.0;
 }
+#include "footer.h"

@@ -1,5 +1,6 @@
 #include "main.h"
 #include "File.h"
+#include "header.h"
 
 namespace FileTMP {
     enum TypeCode {FLOAT32 = 0, FLOAT64, UINT8, INT8, UINT16, INT16, UINT32, INT32, UINT64, INT64};
@@ -196,3 +197,4 @@ namespace FileTMP {
         return im;
     }
 }
+#include "footer.h"

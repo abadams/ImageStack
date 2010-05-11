@@ -1,9 +1,11 @@
 #ifndef IMAGESTACK_EXCEPTION_H
 #define IMAGESTACK_EXCEPTION_H
 
-#define EXCEPTION_LENGTH 1024
-
 #include <stdarg.h>
+
+#include "header.h"
+
+#define EXCEPTION_LENGTH 1024
 
 class Exception {
   public:
@@ -17,5 +19,6 @@ void panic(const char *fmt, ...) throw(Exception);
 #undef assert
 void assert(bool cond, const char *fmt, ...) throw(Exception);
 
+#include "footer.h"
 
 #endif

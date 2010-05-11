@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_DENSE_GRID_H
 #define IMAGESTACK_DENSE_GRID_H
+#include "header.h"
 
 /******************************************************************
  * This is the Bilateral Grid from the paper:                     *
@@ -334,7 +335,7 @@ class DenseGrid {
     int *sizes;
 };
 
-
+#include "footer.h"
 #endif
 
 

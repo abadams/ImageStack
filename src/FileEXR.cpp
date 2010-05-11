@@ -2,21 +2,18 @@
 #include "File.h"
 
 #ifdef NO_OPENEXR
+#include "header.h"
 namespace FileEXR {
     #include "FileNotImplemented.h"
 }
+#include "footer.h"
 #else 
 
-#ifdef IMAGESTACK_NAMESPACE
-}
-#endif
 #include <ImfRgbaFile.h>
 #include <ImfArray.h>
 #include <ImfChannelList.h>
-#ifdef IMAGESTACK_NAMESPACE
-namespace ImageStack {
-#endif
 
+#include "header.h"
 namespace FileEXR {
 
     void help() {
@@ -192,4 +189,6 @@ namespace FileEXR {
 
 }
 
+#include "footer.h"
 #endif
+

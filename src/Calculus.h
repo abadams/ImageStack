@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_CALCULUS_H
 #define IMAGESTACK_CALCULUS_H
+#include "header.h"
 
 class Gradient : public Operation {
   public:
@@ -31,4 +32,5 @@ class Poisson : public Operation {
     static Image apply(Window dx, Window dy, float termination = 0.01);
 };
 
+#include "footer.h"
 #endif

@@ -26,8 +26,6 @@
 
 #include <math.h>
 
-namespace ImageStack {
-
 #include "main.h"
 #include "Operation.h"
 #include "Calculus.h"
@@ -60,8 +58,6 @@ namespace ImageStack {
 #include "WLS.h"
 #include "macros.h"
 #include "tables.h"
-
-}
 
 #undef NO_SDL
 

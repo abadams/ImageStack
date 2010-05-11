@@ -4,6 +4,7 @@
 #include "Geometry.h"
 #include "DFT.h"
 #include "File.h"
+#include "header.h"
 
 void Convolve::help() {
     pprintf("-convolve takes a width, height, and frames and a single-channel 3D"
@@ -623,4 +624,5 @@ void Deconvolve::scaleAdd(Image a, float alpha, Image &b, Image &c) {
     }        
 }
 
+#include "footer.h"
 

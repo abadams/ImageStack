@@ -57,15 +57,15 @@ clean:
 # Get the list of .o files to generate
 include ../Makefile.common
 
-IMAGESTACK_P_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-IMAGESTACK_P_LIBS = -L/opt/local/lib $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(BIN)/ImageStack: IMAGESTACK_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(BIN)/ImageStack: IMAGESTACK_LIBS = -L/opt/local/lib $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 
 # Everything includes main.h. By precompiling that header we can speed up compilation about 30%
 main.h.gch: $(SRC)/main.h
 	g++ $(CCFLAGS) -x c++-header -O3 -o ./main.h.gch $(SRC)/main.h
 
 $(BIN)/ImageStack: $(IMAGESTACK_OBJECTS)
-	g++ $(IMAGESTACK_P_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_P_LIBS) -o $(BIN)/ImageStack 
+	g++ $(IMAGESTACK_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN)/ImageStack 
 
 %.o: $(SRC)/%.cpp main.h.gch
 	g++ -include main.h $(IMAGESTACK_P_CCFLAGS) -c $<
@@ -77,16 +77,16 @@ install: $(BIN)/ImageStack
 # ImageStack the library #
 ##########################
 
-IMAGESTACK_L_CCFLAGS = $(CCFLAGS) -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-IMAGESTACK_L_LIBS = -L/opt/local/lib $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(LIB)/libImageStack.dylib: IMAGESTACK_CCFLAGS = $(CCFLAGS) -DNO_MAIN -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(LIB)/libImageStack.dylib: IMAGESTACK_LIBS = -L/opt/local/lib $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 
 library: $(LIB)/libImageStack.dylib $(INCLUDE)/ImageStack.h 
 
-$(LIB)/libImageStack.dylib: ImageStack.o
-	g++ $(IMAGESTACK_L_CCFLAGS) -dynamiclib -install_name /opt/local/lib/libImageStack.dylib ImageStack.o -o $(LIB)/libImageStack.dylib $(IMAGESTACK_L_LIBS)
+$(LIB)/libImageStack.dylib: $(IMAGESTACK_OBJECTS)
+	g++ $(IMAGESTACK_CCFLAGS) -dynamiclib -install_name /opt/local/lib/libImageStack.dylib $(IMAGESTACK_OBJECTS) -o $(LIB)/libImageStack.dylib $(IMAGESTACK_LIBS)
 
 ImageStack.o: $(SRC)/ImageStack.cpp
-	g++ $(IMAGESTACK_L_CCFLAGS) -c $<
+	g++ $(IMAGESTACK_CCFLAGS) -c $<
 
 $(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
 	cp $(SRC)/*.h $(INCLUDE)

@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_LIGHTFIELD_H
 #define IMAGESTACK_LIGHTFIELD_H
+#include "header.h"
 
 // a LightField is a window which assumes u and v are rolled up into x
 // and y, like an image of the lenslets in a plenoptic camera
@@ -114,4 +115,5 @@ class LFPoint : public Operation {
     static void apply(LightField lf, float x, float y, float z);
 };
 
+#include "footer.h"
 #endif

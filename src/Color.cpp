@@ -1,6 +1,7 @@
 #include "main.h"
 #include "Color.h"
 #include "Arithmetic.h"
+#include "header.h"
 
 void ColorMatrix::help() {
     printf("\n-colormatrix treats each pixel as a vector over its channels and multiplies\n"
@@ -757,3 +758,5 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
 
     return out;
 }
+
+#include "footer.h"

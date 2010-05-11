@@ -1,5 +1,6 @@
 #include "main.h"
 #include "Arithmetic.h"
+#include "header.h"
 
 void Add::help() {
     printf("\n-add adds the second image in the stack to the top image in the stack.\n\n"
@@ -659,3 +660,5 @@ void Quantize::apply(Window a, float increment) {
         }
     }        
 }
+
+#include "footer.h"

@@ -1,5 +1,6 @@
 #include "main.h"
 #include "Image.h"
+#include "header.h"
 
 // The rest of the Image class is inlined.
 // Inlining the destructor makes the compiler unhappy, so it goes here instead
@@ -32,3 +33,4 @@ Image::~Image() {
     //printf("Leaving image desctructor\n"); fflush(stdout);
 }
     
+#include "footer.h"

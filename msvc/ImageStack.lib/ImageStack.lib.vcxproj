@@ -90,8 +90,9 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../include/SDL</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -111,7 +112,8 @@
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>../include;../include/SDL</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -131,8 +133,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../include/SDL</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -155,8 +158,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../include/SDL</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -171,9 +175,6 @@
       <AdditionalLibraryDirectories>../lib</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\src\ImageStack.cpp" />
-  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Alignment.h" />
     <ClInclude Include="..\..\src\Arithmetic.h" />
@@ -217,6 +218,52 @@
     <ClInclude Include="..\..\src\tables.h" />
     <ClInclude Include="..\..\src\Wavelet.h" />
     <ClInclude Include="..\..\src\WLS.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\Alignment.cpp" />
+    <ClCompile Include="..\..\src\Arithmetic.cpp" />
+    <ClCompile Include="..\..\src\Calculus.cpp" />
+    <ClCompile Include="..\..\src\Color.cpp" />
+    <ClCompile Include="..\..\src\Complex.cpp" />
+    <ClCompile Include="..\..\src\Control.cpp" />
+    <ClCompile Include="..\..\src\Convolve.cpp" />
+    <ClCompile Include="..\..\src\DFT.cpp" />
+    <ClCompile Include="..\..\src\Display.cpp" />
+    <ClCompile Include="..\..\src\DisplayWindow.cpp" />
+    <ClCompile Include="..\..\src\Exception.cpp" />
+    <ClCompile Include="..\..\src\File.cpp" />
+    <ClCompile Include="..\..\src\FileCSV.cpp" />
+    <ClCompile Include="..\..\src\FileEXR.cpp" />
+    <ClCompile Include="..\..\src\FileFLO.cpp" />
+    <ClCompile Include="..\..\src\FileHDR.cpp" />
+    <ClCompile Include="..\..\src\FileJPG.cpp" />
+    <ClCompile Include="..\..\src\FilePNG.cpp" />
+    <ClCompile Include="..\..\src\FilePPM.cpp" />
+    <ClCompile Include="..\..\src\FileTGA.cpp" />
+    <ClCompile Include="..\..\src\FileTIFF.cpp" />
+    <ClCompile Include="..\..\src\FileTMP.cpp" />
+    <ClCompile Include="..\..\src\FileWAV.cpp" />
+    <ClCompile Include="..\..\src\Filter.cpp" />
+    <ClCompile Include="..\..\src\GaussTransform.cpp" />
+    <ClCompile Include="..\..\src\Geometry.cpp" />
+    <ClCompile Include="..\..\src\HDR.cpp" />
+    <ClCompile Include="..\..\src\Image.cpp" />
+    <ClCompile Include="..\..\src\LAHBPCG.cpp" />
+    <ClCompile Include="..\..\src\LightField.cpp" />
+    <ClCompile Include="..\..\src\main.cpp" />
+    <ClCompile Include="..\..\src\Network.cpp" />
+    <ClCompile Include="..\..\src\NetworkOps.cpp" />
+    <ClCompile Include="..\..\src\Operation.cpp" />
+    <ClCompile Include="..\..\src\Paint.cpp" />
+    <ClCompile Include="..\..\src\Panorama.cpp" />
+    <ClCompile Include="..\..\src\Parser.cpp" />
+    <ClCompile Include="..\..\src\PatchMatch.cpp" />
+    <ClCompile Include="..\..\src\Prediction.cpp" />
+    <ClCompile Include="..\..\src\Projection.cpp" />
+    <ClCompile Include="..\..\src\Stack.cpp" />
+    <ClCompile Include="..\..\src\Statistics.cpp" />
+    <ClCompile Include="..\..\src\Wavelet.cpp" />
+    <ClCompile Include="..\..\src\WLS.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

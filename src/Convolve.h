@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_CONVOLVE_H
 #define IMAGESTACK_CONVOLVE_H
+#include "header.h"
 
 class Convolve : public Operation {
   public:
@@ -28,4 +29,5 @@ class Deconvolve : public Operation {
     static void scaleAdd(Image out, float alpha, Image &a, Image &b);
 };
 
+#include "footer.h"
 #endif

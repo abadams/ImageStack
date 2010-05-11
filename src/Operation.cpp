@@ -35,6 +35,9 @@
 #include "LAHBPCG.h"
 #include "WLS.h"
 
+#include "header.h"
+
+
 // add your operation to the operations table here
 void loadOperations() {
     operationMap["-help"] = new Help();
@@ -271,3 +274,4 @@ void Help::parse(vector<string> args) {
     }
 }
 
+#include "footer.h"
