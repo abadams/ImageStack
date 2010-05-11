@@ -1,5 +1,6 @@
 #include "main.h"
 #include "File.h"
+#include "header.h"
 
 #ifdef NO_TIFF
 
@@ -219,3 +220,4 @@ namespace FileTIFF {
 }
 
 #endif
+#include "footer.h"

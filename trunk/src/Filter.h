@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_FILTER_H
 #define IMAGESTACK_FILTER_H
+#include "header.h"
 
 class GaussianBlur : public Operation {
   public:
@@ -65,4 +66,5 @@ class CircularFilter : public Operation {
     static Image apply(Window im, int radius);
 };
 
+#include "footer.h"
 #endif

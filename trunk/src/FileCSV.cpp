@@ -1,5 +1,6 @@
 #include "main.h"
 #include "File.h"
+#include "header.h"
 
 namespace FileCSV {
     void help() {
@@ -70,3 +71,4 @@ namespace FileCSV {
         fclose(f);
     }
 }
+#include "footer.h"

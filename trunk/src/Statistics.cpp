@@ -5,6 +5,7 @@
 #include "eigenvectors.h"
 #include <algorithm>
 #include <iostream>
+#include "header.h"
 
 void Dimensions::help() {
     pprintf("-dimensions prints the size of the current image.\n\n"
@@ -1309,3 +1310,4 @@ Image PatchPCA::apply(Window im, float sigma, int newChannels) {
 }
 
 
+#include "footer.h"

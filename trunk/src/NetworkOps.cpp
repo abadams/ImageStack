@@ -3,8 +3,7 @@
 #include "Network.h"
 #include <stdio.h>
 #include <sys/types.h>
-//#include <unistd.h>
-
+#include "header.h"
 
 void Send::help() {
   printf("\n-send sends an image over a TCP connection. It has an optional first and second\n"
@@ -69,3 +68,4 @@ Image Receive::apply(int port) {
 }
 
 map<int, TCPServer *> Receive::servers;
+#include "footer.h"

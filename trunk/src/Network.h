@@ -15,6 +15,7 @@ using ::std::string;
 
 #include "macros.h"
 #include "Image.h"
+#include "header.h"
 
 class Address {
   public:
@@ -76,4 +77,5 @@ class UDPServer {
     int sock;
 };
 
+#include "footer.h"
 #endif

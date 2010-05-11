@@ -3,6 +3,7 @@
 
 #include "Image.h"
 #include "Statistics.h"
+#include "header.h"
 
 #ifndef roundf
 #define roundf(x) floorf(x+0.5);
@@ -398,4 +399,5 @@ class Expression {
 
 };
 
+#include "footer.h"
 #endif

@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_PAINT_H
 #define IMAGESTACK_PAINT_H
+#include "header.h"
 
 class Eval : public Operation {
   public:
@@ -30,4 +31,5 @@ class Composite : public Operation {
     static void apply(Window dst, Window src, Window mask);
 };
 
+#include "footer.h"
 #endif

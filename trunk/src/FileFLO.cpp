@@ -5,6 +5,7 @@
 #define TAG_FLOAT 202021.25  // check for this when READING the file
 #define TAG_STRING "PIEH"    // use this when WRITING the file
 
+#include "header.h"
 namespace FileFLO {
     void help() {
         pprintf(".flo files. This format is used for optical flow evaluation. It stores"
@@ -58,3 +59,4 @@ namespace FileFLO {
 }
 
 
+#include "footer.h"

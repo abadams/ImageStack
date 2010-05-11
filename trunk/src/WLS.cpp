@@ -8,6 +8,7 @@
 #include "Paint.h"
 #include "Statistics.h"
 #include "LAHBPCG.h"
+#include "header.h"
 
 void WLS::help() {
     pprintf("-wls filters the image with the wls-filter described in the paper"
@@ -91,3 +92,4 @@ Image WLS::apply(Window im, float alpha, float lambda, float tolerance) {
     
     return x;
 }
+#include "footer.h"

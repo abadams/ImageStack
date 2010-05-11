@@ -3,7 +3,7 @@
 #include "Color.h"
 #include "Stack.h"
 #include "Arithmetic.h"
-
+#include "header.h"
 
 // used for picking file formats
 bool suffixMatch(string filename, string suffix) {
@@ -669,3 +669,4 @@ void SaveArray::apply(Window im, string filename) {
     delete[] rawData;
     fclose(f);
 }
+#include "footer.h"

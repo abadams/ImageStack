@@ -1,6 +1,7 @@
 #include "main.h"
 #include "Wavelet.h"
 #include "Geometry.h"
+#include "header.h"
 
 void Haar::help() {
     pprintf("-haar performs the standard 2D haar transform of an image. The image"
@@ -430,3 +431,4 @@ void InverseDaubechies::apply(Window im) {
 
 
 
+#include "footer.h"

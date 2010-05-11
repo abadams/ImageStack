@@ -8,6 +8,8 @@
 #include <sys/errno.h>
 #endif
 
+#include "header.h"
+
 void checkInitialized() {    
 #ifdef WIN32
     static bool initialized = false;
@@ -327,3 +329,4 @@ int UDPServer::recv(char *buffer, int maxlen, Address *address, int timeout) {
 
     return received;    
 }
+#include "footer.h"

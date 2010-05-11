@@ -3,6 +3,8 @@
 
 #include <stdarg.h>
 
+#include "header.h"
+
 #ifdef WIN32
 #undef min
 #undef max
@@ -105,4 +107,6 @@ static inline float isinf(float x) {
 }
 #endif
 
+
+#include "footer.h"
 #endif

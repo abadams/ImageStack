@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_PANORAMA_H
 #define IMAGESTACK_PANORAMA_H
+#include "header.h"
 
 class LoadPanorama : public Operation {
  public:
@@ -20,4 +21,5 @@ class PanoramaBackground : public Operation {
     static Image apply(Window im);
 };
 
+#include "footer.h"
 #endif

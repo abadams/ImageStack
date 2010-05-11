@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_PATCHMATCH_H
 #define IMAGESTACK_PATCHMATCH_H
-
+#include "header.h"
 
 class PatchMatch : public Operation {
   public:
@@ -36,4 +36,5 @@ class Heal : public Operation {
     void parse(vector<string> args);                      
 };
 
+#include "footer.h"
 #endif

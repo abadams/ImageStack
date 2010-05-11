@@ -7,8 +7,7 @@
 #include "Complex.h"
 #include "Display.h"
 #include <fftw3.h>
-
-
+#include "header.h"
 
 void DCT::help() {
     pprintf("-dct performs a real discrete cosine transform on the current"
@@ -852,4 +851,6 @@ Image FFTPoisson::apply(Window dx, Window dy, Window target, float targetStrengt
 }
 
 
+#include "footer.h"
 #endif
+

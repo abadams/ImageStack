@@ -12,6 +12,8 @@
 #include <SDL_thread.h>
 #include <SDL_mutex.h>
 
+#include "header.h"
+
 // a singleton SDL window
 class DisplayWindow {
   public:
@@ -60,5 +62,6 @@ class DisplayWindow {
     int stop_;
 };
 
+#include "footer.h"
 #endif
 #endif

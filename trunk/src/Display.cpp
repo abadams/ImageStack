@@ -1,6 +1,7 @@
 #include "main.h"
 #include "Display.h"
 #include "DisplayWindow.h"
+#include "header.h"
 
 #ifndef NO_SDL
 Display::~Display() {
@@ -52,3 +53,4 @@ void Display::apply(Window im, bool fullscreen) {
 }
 
 #endif
+#include "footer.h"

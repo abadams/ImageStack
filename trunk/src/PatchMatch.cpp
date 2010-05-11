@@ -14,7 +14,7 @@
 #include "Filter.h"
 #include "Paint.h"
 #include "Display.h"
-
+#include "header.h"
 // PATCHMATCH =============================================================//
 
 void PatchMatch::help() {
@@ -594,3 +594,4 @@ void Heal::parse(vector<string> args) {
 
     BidirectionalSimilarity::apply(image, image, inverseMask, mask, 0, numIter, numIterPM);
 }
+#include "footer.h"

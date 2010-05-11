@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_WAVELET_H
 #define IMAGESTACK_WAVELET_H
+#include "header.h"
 
 class Haar : public Operation {
  public:
@@ -29,4 +30,5 @@ class InverseDaubechies : public Operation {
     static void apply(Window im);
 };
 
+#include "footer.h"
 #endif

@@ -1,5 +1,6 @@
 #ifndef LAHBPCG_H
 #define LAHBPCG_H
+#include "header.h"
 
 class LAHBPCG : public Operation {
   public:
@@ -10,4 +11,5 @@ class LAHBPCG : public Operation {
   private:
 };
 
+#include "footer.h"
 #endif

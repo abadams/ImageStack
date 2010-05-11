@@ -6,8 +6,8 @@ f = open("tables.h", 'w')
 
 f.write("#ifndef TABLES_H\n")
 f.write("#define TABLES_H\n")
-
 f.write("#include <math.h>\n")
+f.write("#include \"header.h\"\n")
 
 # lanczos filters of various widths
 accuracy = 1024
@@ -45,6 +45,7 @@ f.write("    if (x > 9) return exp(x);")
 f.write("    return _fastexp[(int)(x * 0.05f * %i) + %i];" % (size, size/2))
 f.write("}\n\n")
 
+f.write("#include \"footer.h\"\n")
 f.write("#endif\n")
 
 

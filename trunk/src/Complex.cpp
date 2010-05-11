@@ -1,5 +1,6 @@
 #include "main.h"
 #include "Complex.h"
+#include "header.h"
 
 void ComplexMultiply::help() {
     pprintf("-complexmultiply multiplies the top image in the stack by the second"
@@ -360,3 +361,4 @@ void ComplexConjugate::apply(Window im) {
     }
 }
 
+#include "footer.h"

@@ -10,6 +10,7 @@
 #include "Geometry.h"
 #include "Convolve.h"
 #include "Display.h"
+#include "header.h"
 
 // First we define the various types of transformations we may wish to
 // solve for. All of these classes lean heavily on the least squares
@@ -1060,3 +1061,4 @@ void AlignFrames::apply(Window im, Align::Mode m) {
     }
 }
 
+#include "footer.h"

@@ -4,6 +4,7 @@
 #include "Color.h"
 #include "Geometry.h"
 #include "Arithmetic.h"
+#include "header.h"
 
 void GaussianBlur::help() {
     pprintf("-gaussianblur takes a floating point width, height, and frames, and"
@@ -1035,3 +1036,4 @@ Image CircularFilter::apply(Window im, int radius) {
 
 
 
+#include "footer.h"

@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_CONTROL_H
 #define IMAGESTACK_CONTROL_H
-
+#include "header.h"
 
 class Loop : public Operation {
   public:
@@ -20,4 +20,5 @@ class Time : public Operation {
     void parse(vector<string> args);
 };
 
+#include "footer.h"
 #endif

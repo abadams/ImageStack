@@ -55,8 +55,8 @@ clean:
 # Get the list of .o files to generate
 include ../Makefile.common
 
-IMAGESTACK_P_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-IMAGESTACK_P_LIBS = -L/usr/local/lib $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(BIN)/ImageStack: IMAGESTACK_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(BIN)/ImageStack: IMAGESTACK_LIBS = -L/usr/local/lib $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 
 $(BIN)/ImageStack: $(IMAGESTACK_OBJECTS)
 	g++ $(IMAGESTACK_P_CCFLAGS) $(IMAGESTACK_OBJECTS) $(IMAGESTACK_P_LIBS) -o $(BIN)/ImageStack 
@@ -71,16 +71,16 @@ install: $(BIN)/ImageStack
 # ImageStack the library #
 ##########################
 
-IMAGESTACK_L_CCFLAGS = $(CCFLAGS) -fPIC -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-IMAGESTACK_L_LIBS = -L/usr/local/lib $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(LIB)/libImageStack.so: IMAGESTACK_CCFLAGS = $(CCFLAGS) -fPIC -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(LIB)/libImageStack.so: IMAGESTACK_LIBS = -L/usr/local/lib $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 
 library: $(LIB)/libImageStack.dylib $(INCLUDE)/ImageStack.h 
 
-$(LIB)/libImageStack.dylib: ImageStack.o
-	g++ $(IMAGESTACK_L_CCFLAGS) -shared ImageStack.o -o $(LIB)/libImageStack.so $(IMAGESTACK_L_LIBS)
+$(LIB)/libImageStack.so: ImageStack.o
+	g++ $(IMAGESTACK_CCFLAGS) -shared $(IMAGESTACK_OBJECTS) -o $(LIB)/libImageStack.so $(IMAGESTACK_LIBS)
 
 ImageStack.o: $(SRC)/ImageStack.cpp
-	g++ $(IMAGESTACK_L_CCFLAGS) -c $<
+	g++ $(IMAGESTACK_CCFLAGS) -c $<
 
 $(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
 	cp $(SRC)/*.h $(INCLUDE)

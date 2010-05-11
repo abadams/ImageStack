@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_DISPLAY_H
 #define IMAGESTACK_DISPLAY_H
+#include "header.h"
 
 class Display : public Operation {
   public:
@@ -10,5 +11,5 @@ class Display : public Operation {
 };
 
 
-
+#include "footer.h"
 #endif

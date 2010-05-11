@@ -1,6 +1,7 @@
 #include "main.h"
 #include "File.h"
 
+#include "header.h"
 namespace FileHDR {
 
     void help() {
@@ -383,3 +384,4 @@ namespace FileHDR {
     }
     
 }
+#include "footer.h"

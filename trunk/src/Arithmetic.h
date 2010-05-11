@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_MATH_H
 #define IMAGESTACK_MATH_H
+#include "header.h"
 
 class Add : public Operation {
   public:
@@ -131,4 +132,5 @@ class Quantize : public Operation {
     static void apply(Window a, float increment);
 };
 
+#include "footer.h"
 #endif

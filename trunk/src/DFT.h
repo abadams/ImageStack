@@ -1,6 +1,7 @@
 #ifndef NO_FFTW
 #ifndef DFT_H
 #define DFT_H
+#include "header.h"
 
 class DCT : public Operation {
   public:
@@ -48,5 +49,6 @@ class FFTPoisson : public Operation {
     static Image apply(Window dx, Window dy, Window target, float targetStrength = 0);
 };
 
+#include "footer.h"
 #endif
 #endif

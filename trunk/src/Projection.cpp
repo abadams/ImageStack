@@ -1,6 +1,7 @@
 #include "main.h"
 #include "Projection.h"
 #include "Arithmetic.h"
+#include "header.h"
 
 void Sinugram::help() {
 }
@@ -49,3 +50,4 @@ Image Sinugram::apply(Window im, int directions) {
     return out;
 }
 
+#include "footer.h"

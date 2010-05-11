@@ -2,6 +2,7 @@
 #define IMAGESTACK_EIGENVECTORS_H
 
 #include <math.h>
+#include "header.h"
 
 class Eigenvectors {
   public:
@@ -156,4 +157,5 @@ class Eigenvectors {
     int count;
 };
 
+#include "footer.h"
 #endif

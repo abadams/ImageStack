@@ -1,5 +1,6 @@
 #include "main.h"
 #include "File.h"
+#include "header.h"
 
 /* PPM file format:
 
@@ -108,3 +109,4 @@ namespace FilePPM {
         fclose(f);
     }
 }
+#include "footer.h"

@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_OPERATION_H
 #define IMAGESTACK_OPERATION_H
+#include "header.h"
 
 class Operation {
   public:
@@ -20,4 +21,5 @@ public:
     void parse(vector<string> args);
 };
 
+#include "footer.h"
 #endif

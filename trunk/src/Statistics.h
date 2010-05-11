@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_STATISTICS_H
 #define IMAGESTACK_STATISTICS_H
+#include "header.h"
 
 class Dimensions : public Operation {
   public:
@@ -178,4 +179,5 @@ class PatchPCA : public Operation {
     static Image apply(Window im, float sigma, int newChannels);
 };
 
+#include "footer.h"
 #endif

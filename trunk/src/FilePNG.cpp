@@ -1,5 +1,6 @@
 #include "main.h"
 #include "File.h"
+#include "header.h"
 
 #ifdef NO_PNG
 namespace FilePNG {
@@ -179,3 +180,4 @@ namespace FilePNG {
 }
 
 #endif
+#include "footer.h"

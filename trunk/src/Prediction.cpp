@@ -2,6 +2,7 @@
 #include "Prediction.h"
 #include "Geometry.h"
 #include "DFT.h"
+#include "header.h"
 
 void Inpaint::help() {
     printf("\n-inpaint takes the image on the top of the stack, and a one channel mask of the\n"
@@ -73,3 +74,4 @@ Image Inpaint::apply(Window im, Window mask) {
 
 
 
+#include "footer.h"
