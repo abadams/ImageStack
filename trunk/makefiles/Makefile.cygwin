@@ -1,13 +1,8 @@
-BIN = bin
-LIB = lib
-SRC = src
-INCLUDE = include
-
 CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=core2 -msse3 -mfpmath=sse -Wno-uninitialized -enable-auto-import
 
-##########################
-# Dependencies           #
-##########################
+################
+# Dependencies #
+################
 
 # Comment out any dependencies you do not wish to include, or do not have
 SDL_CCFLAGS = -I/usr/local/include/SDL
@@ -29,80 +24,26 @@ FFTW_LIBS = -lfftw3f
 #OPENEXR_CCFLAGS = -I /usr/local/include/OpenEXR
 #OPENEXR_LIBS = -L/usr/local/lib -lImath -lHalf -lIex -lIlmImf
 
-# This adds the appropriate defines for dependencies not included
-SDL_CCFLAGS ?= -DNO_SDL
-JPEG_CCFLAGS ?= -DNO_JPEG
-TIFF_CCFLAGS ?= -DNO_TIFF
-PNG_CCFLAGS ?= -DNO_PNG
-FFTW_CCFLAGS ?= -DNO_FFTW
-OPENEXR_CCFLAGS ?= -DNO_OPENEXR
+#################################
+# Target names and installation #
+#################################
 
-##########################
-# Top-level targets      #
-##########################
-
-BIN_TARGET = $(BIN)/ImageStack.exe
-LIB_TARGET = $(LIB)/cygImageStack.dll
-
-# By default, build ImageStack the program
+BIN_TARGET = bin/ImageStack.exe
 default: $(BIN_TARGET)
+LIB_TARGET = lib/cygImageStack.dll
 
-all: $(BIN_TARGET) library
-
-clean:
-	-rm -f $(BIN)/*.* $(LIB)/*.* $(BIN)/build/*.* $(LIB)/build/*.* $(INCLUDE)/*.*
-
-##########################
-# ImageStack the program #
-##########################
-
-# Get the list of .o files to generate
-include Makefile.common
-
-$(BIN_TARGET): IMAGESTACK_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-$(BIN_TARGET): IMAGESTACK_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
-BIN_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),$(BIN)/build/$f)
-
-# Everything includes main.h. By precompiling that header we can speed up compilation about 30%
-$(BIN)/build/main.h.gch: $(SRC)/main.h
-	g++ $(CCFLAGS) -x c++-header -O3 -o $(BIN)/build/main.h.gch $(SRC)/main.h
-
-$(BIN_TARGET): $(BIN_OBJECTS)
-	g++ $(IMAGESTACK_CCFLAGS) $(BIN_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN_TARGET)
-
-$(BIN)/build/%.o: $(SRC)/%.cpp $(BIN)/build/main.h.gch
-	g++ -include $(BIN)/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
+LIB_FLAGS = -shared -Wl,--out-implib=lib/libImageStack.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive -Wl,--no-whole-archive 
 
 install: $(BIN_TARGET)
 	cp $(BIN_TARGET) /usr/local/bin
 
-##########################
-# ImageStack the library #
-##########################
-
-$(LIB_TARGET): IMAGESTACK_CCFLAGS = $(CCFLAGS) -DNO_MAIN -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-$(LIB_TARGET): IMAGESTACK_LIBS = $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
-LIB_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),$(LIB)/build/$f)
-
-$(LIB)/build/main.h.gch: $(SRC)/main.h
-	g++ $(CCFLAGS) -x c++-header -O3 -o $(LIB)/build/main.h.gch $(SRC)/main.h
-
-$(LIB)/build/%.o: $(SRC)/%.cpp $(LIB)/build/main.h.gch
-	g++ -include $(LIB)/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
-
-library: $(LIB_TARGET) $(INCLUDE)/ImageStack.h 
-
-$(LIB_TARGET): $(LIB_OBJECTS)
-	g++ $(IMAGESTACK_CCFLAGS) -shared -o $(LIB)/cygImageStack.dll -Wl,--out-implib=$(LIB)/libImageStack.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive $(LIB_OBJECTS) -Wl,--no-whole-archive $(IMAGESTACK_LIBS)
-
-$(INCLUDE)/ImageStack.h: $(SRC)/ImageStack.h
-	cp $(SRC)/*.h $(INCLUDE)
-
 libinstall: library
-	cp $(LIB)/lib*.dll.a /usr/local/lib
-	cp $(LIB)/cyg*.dll /usr/local/bin
+	cp lib/lib*.dll.a /usr/local/lib
+	cp lib/cyg*.dll /usr/local/bin
 	mkdir -p /usr/local/include/ImageStack
-	cp $(INCLUDE)/*.h /usr/local/include/ImageStack/
+	cp include/*.h /usr/local/include/ImageStack/
+
+include Makefile.common
 
 
 
