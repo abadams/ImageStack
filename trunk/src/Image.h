@@ -2,7 +2,6 @@
 #define IMAGESTACK_IMAGE_H
 
 #include "tables.h"
-#include <string.h>
 #include "header.h"
 
 class Window {

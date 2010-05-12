@@ -8,7 +8,6 @@
 #include "File.h"
 #include "Display.h"
 #include "LAHBPCG.h"
-#include <sstream>
 #include "header.h"
 
 void Gradient::help() {

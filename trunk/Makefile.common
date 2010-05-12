@@ -67,13 +67,13 @@ clean:
 # ImageStack the program #
 ##########################
 
-$(BIN_TARGET): IMAGESTACK_CCFLAGS = $(CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(BIN_TARGET): IMAGESTACK_CCFLAGS = $(BIN_CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
 $(BIN_TARGET): IMAGESTACK_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 BIN_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),bin/build/$f)
 
 # Everything includes main.h. By precompiling that header we can speed up compilation about 30%
 bin/build/main.h.gch: src/main.h
-	g++ $(CCFLAGS) -x c++-header -O3 -o bin/build/main.h.gch src/main.h
+	g++ $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o bin/build/main.h.gch src/main.h
 
 $(BIN_TARGET): $(BIN_OBJECTS)
 	g++ $(IMAGESTACK_CCFLAGS) $(BIN_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN_TARGET)
@@ -85,14 +85,14 @@ bin/build/%.o: src/%.cpp bin/build/main.h.gch
 # ImageStack the library #
 ##########################
 
-$(LIB_TARGET): IMAGESTACK_CCFLAGS = $(CCFLAGS) -DNO_MAIN -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(LIB_TARGET): IMAGESTACK_CCFLAGS = $(LIB_CCFLAGS) -DNO_MAIN -DNO_SDL $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
 $(LIB_TARGET): IMAGESTACK_LIBS = $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 LIB_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),lib/build/$f)
 
 library: $(LIB_TARGET) include/ImageStack.h 
 
 lib/build/main.h.gch: src/main.h
-	g++ $(CCFLAGS) -x c++-header -O3 -o lib/build/main.h.gch src/main.h
+	g++ $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o lib/build/main.h.gch src/main.h
 
 $(LIB_TARGET): $(LIB_OBJECTS)
 	g++ $(LIB_FLAGS) $(LIB_OBJECTS) -o $(LIB_TARGET) $(IMAGESTACK_LIBS)

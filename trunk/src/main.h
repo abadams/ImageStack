@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <limits>
 #include <list>
+#include <sstream>
 
 using ::std::string;
 using ::std::vector;
