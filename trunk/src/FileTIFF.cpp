@@ -1,5 +1,12 @@
 #include "main.h"
 #include "File.h"
+
+#ifndef NO_TIFF
+#ifndef NO_OPENEXR
+#include <half.h>
+#endif
+#endif
+
 #include "header.h"
 
 #ifdef NO_TIFF
@@ -10,9 +17,6 @@ namespace FileTIFF {
 
 #else
 #include "Arithmetic.h"
-#ifndef NO_OPENEXR
-#include <half.h>
-#endif
 
 #include <limits>
 
