@@ -1,4 +1,6 @@
-CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=nocona -msse3 -mfpmath=sse -Wno-uninitialized -I /opt/local/include
+BIN_CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=nocona -msse3 -mfpmath=sse -Wno-uninitialized -I /opt/local/include
+
+LIB_CCFLAGS = $(BIN_CCFLAGS)
 
 ################
 # Dependencies #
