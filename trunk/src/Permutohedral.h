@@ -372,6 +372,90 @@ public:
         }
     }
 
+    /* Performs splicing with given position and value vectors. If
+     * slicing using the same vectors used to splat, call the other
+     * version of slice instead. */
+    void slice(float *position, float *value) {
+
+        // first rotate position into the (d+1)-dimensional hyperplane
+        elevated[d] = -d*position[d-1]*scaleFactor[d-1];
+        for (int i = d-1; i > 0; i--)
+            elevated[i] = (elevated[i+1] - 
+                           i*position[i-1]*scaleFactor[i-1] + 
+                           (i+2)*position[i]*scaleFactor[i]);
+        elevated[0] = elevated[1] + 2*position[0]*scaleFactor[0];
+    
+        // prepare to find the closest lattice points
+        float scale = 1.0f/(d+1);        
+        char * myrank = rank;
+        short * mygreedy = greedy;
+
+        // greedily search for the closest zero-colored lattice point
+        int sum = 0;
+        for (int i = 0; i <= d; i++) {
+            float v = elevated[i]*scale;
+            float up = ceilf(v)*(d+1);
+            float down = floorf(v)*(d+1);
+
+            if (up - elevated[i] < elevated[i] - down) mygreedy[i] = (short)up;
+            else mygreedy[i] = (short)down;
+
+            sum += mygreedy[i];
+        }
+        sum /= d+1;
+    
+        // rank differential to find the permutation between this simplex and the canonical one.
+        // (See pg. 3-4 in paper.)
+        memset(myrank, 0, sizeof(char)*(d+1));
+        for (int i = 0; i < d; i++)
+            for (int j = i+1; j <= d; j++)
+                if (elevated[i] - mygreedy[i] < elevated[j] - mygreedy[j]) myrank[i]++; else myrank[j]++;
+
+        if (sum > 0) { 
+            // sum too large - the point is off the hyperplane.
+            // need to bring down the ones with the smallest differential
+            for (int i = 0; i <= d; i++) {
+                if (myrank[i] >= d + 1 - sum) {
+                    mygreedy[i] -= d+1;
+                    myrank[i] += sum - (d+1);
+                } else
+                    myrank[i] += sum;
+            }
+        } else if (sum < 0) {
+            // sum too small - the point is off the hyperplane
+            // need to bring up the ones with largest differential
+            for (int i = 0; i <= d; i++) {
+                if (myrank[i] < -sum) {
+                    mygreedy[i] += d+1;
+                    myrank[i] += (d+1) + sum;
+                } else
+                    myrank[i] += sum;
+            }
+        }
+   
+        // Compute barycentric coordinates (See pg.10 of paper.)
+        memset(barycentric, 0, sizeof(float)*(d+2));
+        for (int i = 0; i <= d; i++) {
+            barycentric[d-myrank[i]] += (elevated[i] - mygreedy[i]) * scale;
+            barycentric[d+1-myrank[i]] -= (elevated[i] - mygreedy[i]) * scale;
+        }
+        barycentric[0] += 1.0f + barycentric[d+1];
+    
+        // Splat the value into each vertex of the simplex, with barycentric weights.
+        for (int remainder = 0; remainder <= d; remainder++) {
+            // Compute the location of the lattice point explicitly (all but the last coordinate - it's redundant because they sum to zero)
+            for (int i = 0; i < d; i++)
+                key[i] = mygreedy[i] + canonical[remainder*(d+1) + myrank[i]];
+  
+            // Retrieve pointer to the value at this vertex.
+            float * val = hashTable.lookup(key, true);
+
+            // Accumulate values with barycentric weight.
+            for (int i = 0; i < vd; i++)
+                value[i] += barycentric[remainder]*val[i];
+        }
+    }
+
     // Prepare for slicing
     void beginSlice() {
         nReplay = 0;
