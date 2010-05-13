@@ -9,7 +9,8 @@ class GaussTransform : public Operation {
     
     void help();
     void parse(vector<string> args);
-    static Image apply(Window positions, Window values, vector<float> sigmas, Method m = AUTO);
+    static Image apply(Window slicePositions, Window splatPositions, Window values, 
+                       vector<float> sigmas, Method m = AUTO);
 };
 
 

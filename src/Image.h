@@ -35,6 +35,14 @@ class Window {
         data = im.data + mint * tstride + miny * ystride + minx * xstride;
     }
 
+    bool operator==(const Window &other) const {
+        return (data == other.data && 
+                width == other.width &&
+                height == other.height &&
+                frames == other.frames &&
+                channels == other.channels);
+    }
+
     float *operator()(int x, int y, int t) {
         return data + x * xstride + y * ystride + t * tstride;
     }
