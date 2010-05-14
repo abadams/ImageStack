@@ -282,22 +282,22 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
             }
         }
 
-        GKDTree tree(ref.channels, &points[0], points.size(), 0.35);
+        GKDTree tree(ref.channels, &points[0], points.size(), 0.15);
 
         tree.finalize();
 
         //printf("Splatting...\n");
 
         int SPLAT_ACCURACY = 16;
-        //int BLUR_ACCURACY = 12800;
+        int BLUR_ACCURACY  = 64;
         int SLICE_ACCURACY = 64;
 
-        //const float SPLAT_STD_DEV = 0.30156;
-        //const float BLUR_STD_DEV = 0.9045;
-        //const float SLICE_STD_DEV = 0.30156;
+        const float SPLAT_STD_DEV = 0.30156;
+        const float BLUR_STD_DEV = 0.9045;
+        const float SLICE_STD_DEV = 0.30156;
 
-        const float SPLAT_STD_DEV = 0.707107;
-        const float SLICE_STD_DEV = 0.707107;
+        //const float SPLAT_STD_DEV = 0.707107;
+        //const float SLICE_STD_DEV = 0.707107;
 
         vector<int> indices(max(SPLAT_ACCURACY, SLICE_ACCURACY));
         vector<float> weights(max(SPLAT_ACCURACY, SLICE_ACCURACY));
@@ -326,10 +326,10 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
     
         //printf("Blurring...\n");
     
-        //tree.blur(BLUR_STD_DEV, leafValues(0, 0), tmpLeafValues(0, 0), leafValues.channels, BLUR_ACCURACY);
-        //Image tmp = tmpLeafValues;
-        //tmpLeafValues = leafValues;
-        //leafValues = tmp;
+        tree.blur(BLUR_STD_DEV, leafValues(0, 0), tmpLeafValues(0, 0), leafValues.channels, BLUR_ACCURACY);
+        Image tmp = tmpLeafValues;
+        tmpLeafValues = leafValues;
+        leafValues = tmp;
     
         //printf("Slicing...\n");  
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
