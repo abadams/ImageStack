@@ -28,7 +28,7 @@ namespace FilePNG {
         /* open file and test for it being a png */
         FILE *f = fopen(filename.c_str(), "rb");
         assert(f, "File %s could not be opened for reading\n", filename.c_str());
-        fread(header, 1, 8, f);
+        assert(fread(header, 1, 8, f) == 8, "File ended before end of header\n");
         assert(!png_sig_cmp(header, 0, 8), "File %s is not recognized as a PNG file\n", filename.c_str());
     
         /* initialize stuff */

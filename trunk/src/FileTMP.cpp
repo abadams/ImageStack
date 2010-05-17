@@ -122,7 +122,7 @@ namespace FileTMP {
 
         Image im(width, height, frames, channels);
 
-        const int chunkSize = 1<<12;
+        const size_t chunkSize = 1<<12;
 
         T buf[chunkSize];
 
@@ -132,8 +132,9 @@ namespace FileTMP {
         T *srcPtr = &buf[0];
         for (int i = 0; i < size; i += chunkSize) {
             srcPtr = &buf[0];
-            fread(srcPtr, sizeof(T), chunkSize, f);
-            for (int j = 0; j < chunkSize && dstPtr != endPtr; j++) {
+            assert(fread(srcPtr, sizeof(T), chunkSize, f) == chunkSize,
+                   "Unexpected end of file\n");
+            for (size_t j = 0; j < chunkSize && dstPtr != endPtr; j++) {
                 *dstPtr++ = (float)(*srcPtr++);
             }
         }
@@ -143,11 +144,12 @@ namespace FileTMP {
 
     template<>
     Image loadData<float>(FILE *f, int frames, int width, int height, int channels) {
-        int size = width * height * channels * frames;
+        size_t size = width * height * channels * frames;
 
         Image im(width, height, frames, channels);
         
-        fread(im(0, 0, 0), sizeof(float), size, f);
+        assert(fread(im(0, 0, 0), sizeof(float), size, f) == size,
+               "Unexpected end of file\n");
         
         return im;
     }
@@ -157,39 +159,38 @@ namespace FileTMP {
         assert(file, "Could not open file %s\n", filename.c_str());
         
         // get the dimensions
-        int frames, width, height, channels, typeCode;
-        fread(&frames, sizeof(int), 1, file);
-        fread(&width, sizeof(int), 1, file);
-        fread(&height, sizeof(int), 1, file);
-        fread(&channels, sizeof(int), 1, file);
-        fread(&typeCode, sizeof(int), 1, file);
+        struct header_t {
+            int frames, width, height, channels, typeCode;
+        } h;
+        assert(fread(&h, sizeof(int), 5, file) == 5,
+               "File ended before end of header\n");
 
         Image im;
 
-        if (typeCode == FLOAT32) {
-            im = loadData<float>(file, frames, width, height, channels);
-        } else if (typeCode == FLOAT64) {
-            im = loadData<double>(file, frames, width, height, channels);
-        } else if (typeCode == UINT8) {
-            im = loadData<unsigned char>(file, frames, width, height, channels);            
-        } else if (typeCode == INT8) {
-            im = loadData<signed char>(file, frames, width, height, channels);            
-        } else if (typeCode == UINT16) {
-            im = loadData<unsigned short>(file, frames, width, height, channels);            
-        } else if (typeCode == INT16) {
-            im = loadData<signed short>(file, frames, width, height, channels);            
-        } else if (typeCode == UINT32) {
-            im = loadData<unsigned long>(file, frames, width, height, channels);            
-        } else if (typeCode == INT32) {
-            im = loadData<signed long>(file, frames, width, height, channels);            
-        } else if (typeCode == UINT64) {
-            im = loadData<unsigned long long>(file, frames, width, height, channels);            
-        } else if (typeCode == INT64) {
-            im = loadData<signed long long>(file, frames, width, height, channels);            
+        if (h.typeCode == FLOAT32) {
+            im = loadData<float>(file, h.frames, h.width, h.height, h.channels);                                                                                    
+        } else if (h.typeCode == FLOAT64) {
+            im = loadData<double>(file, h.frames, h.width, h.height, h.channels);
+        } else if (h.typeCode == UINT8) {
+            im = loadData<unsigned char>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == INT8) {
+            im = loadData<signed char>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == UINT16) {
+            im = loadData<unsigned short>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == INT16) {
+            im = loadData<signed short>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == UINT32) {
+            im = loadData<unsigned long>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == INT32) {
+            im = loadData<signed long>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == UINT64) {
+            im = loadData<unsigned long long>(file, h.frames, h.width, h.height, h.channels);            
+        } else if (h.typeCode == INT64) {
+            im = loadData<signed long long>(file, h.frames, h.width, h.height, h.channels);            
         } else {
-            printf("Unknown type code %d. Possibly trying to load an old-style tmp file.\n", typeCode);
+            printf("Unknown type code %d. Possibly trying to load an old-style tmp file.\n", h.typeCode);
             fseek(file, 16, SEEK_SET);
-            im = loadData<float>(file, frames, width, height, channels);
+            im = loadData<float>(file, h.frames, h.width, h.height, h.channels);
         }
 
         fclose(file);

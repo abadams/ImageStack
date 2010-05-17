@@ -10,7 +10,7 @@ class Convolve : public Operation {
     enum ChannelMode {INNER = 0, OUTER, ELEMENTWISE};
     enum BoundaryCondition {ZERO = 0, HOMOGENEOUS, CLAMP, WRAP};
 
-    static Image apply(Window im, Window filter, BoundaryCondition b = HOMOGENEOUS, ChannelMode m = OUTER);
+    static Image apply(Window im, Window filter, BoundaryCondition b = ZERO, ChannelMode m = OUTER);
 
 };
 

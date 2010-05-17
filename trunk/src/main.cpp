@@ -39,11 +39,11 @@ void pull(size_t n) {
 }
 
 int randomInt(int min, int max) {
-    return (int)(((double)rand()/RAND_MAX) * (max - min + 0.99999) + min);
+    return (int)(((double)rand()/(RAND_MAX+1.0)) * (max - min + 1) + min);
 }
 
 float randomFloat(float min, float max) {
-    return ((float)rand()/RAND_MAX) * (max - min) + min;
+    return ((float)rand()/(RAND_MAX+1.0)) * (max - min) + min;
 }
 
 #ifdef WIN32

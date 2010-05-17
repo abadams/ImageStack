@@ -14,7 +14,7 @@
 
 const float INF = std::numeric_limits<float>::infinity();
 
-#define RAND_FLOAT ((double)(rand()) / RAND_MAX)
+#define RAND_FLOAT ((double)(rand()) / (RAND_MAX+1.0))
 
 class Gaussian {
   public:
