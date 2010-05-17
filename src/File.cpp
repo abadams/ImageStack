@@ -293,6 +293,12 @@ void LoadBlock::parse(vector<string> args) {
 #define fseeko fseek
 #endif
 
+// A wrapper around fread that raises an exception if it runs out of data
+void fread_(void *ptr, size_t size, size_t n, FILE *f) {
+    assert(fread(ptr, size, n, f) == n,
+           "Unexpected end of file\n");
+}
+
 Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff, 
                        int width, int height, int frames, int channels) {
     // peek in the header
@@ -302,7 +308,7 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
     } header;
     FILE *f = fopen(filename.c_str(), "rb"); 
     assert(f, "Could not open file: %s", filename.c_str());
-    fread(&header, sizeof(int), 5, f);    
+    fread_(&header, sizeof(int), 5, f);
     
     if (frames   <= 0) frames   = header.frames;
     if (width    <= 0) width    = header.width;
@@ -346,7 +352,7 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
             for (int y = ymin; y < ymax; y++) {
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
-                fread(out(xmin-xoff, y-yoff, t-toff), sizeof(float), (xmax-xmin)*channels, f);                      
+                fread_(out(xmin-xoff, y-yoff, t-toff), sizeof(float), (xmax-xmin)*channels, f);
             }
         }
     } else {
@@ -356,7 +362,7 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
             for (int y = ymin; y < ymax; y++) {                
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
-                fread(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
+                fread_(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
                 outPtr = out(xmin-xoff, y-yoff, t-toff);
                 for (int x = 0; x < xmax-xmin; x++) {
                     for (int c = cmin; c < cmax; c++) {
@@ -420,7 +426,7 @@ void SaveBlock::apply(Window im, string filename, int xoff, int yoff, int toff, 
     } header;
     FILE *f = fopen(filename.c_str(), "rb+"); 
     assert(f, "Could not open file: %s", filename.c_str());
-    fread(&header, sizeof(int), 5, f);    
+    fread_(&header, sizeof(int), 5, f);    
 
     if (header.type != 0) {
         fclose(f);
@@ -467,7 +473,7 @@ void SaveBlock::apply(Window im, string filename, int xoff, int yoff, int toff, 
             for (int y = ymin; y < ymax; y++) {                
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
-                fread(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
+                fread_(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
                 imPtr = im(xmin-xoff, y-yoff, t-toff);
                 for (int x = 0; x < xmax-xmin; x++) {                    
                     for (int c = cmin; c < cmax; c++) {
@@ -589,7 +595,7 @@ Image LoadArray::apply(string filename, int width, int height, int frames, int c
     Image im(width, height, frames, channels);
 
     T *rawData = new T[size];
-    fread(rawData, sizeof(T), size, f);
+    fread_(rawData, sizeof(T), size, f);
 
     float *dstPtr = im(0, 0, 0);
     T *srcPtr = rawData;
