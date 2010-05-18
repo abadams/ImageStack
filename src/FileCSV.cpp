@@ -41,11 +41,11 @@ namespace FileCSV {
         for (int y = 0; y < height; y++) {
             float *outPtr = out(0, y, 0);
             for (int x = 0; x < width-1; x++) {
-                fscanf(f, "%f,", outPtr);
+                assert(fscanf(f, "%f,", outPtr) == 1, "Failed to parse file\n");
                 printf("%f, ", *outPtr);
                 outPtr++;
             }
-            fscanf(f, "%f", outPtr);
+            assert(fscanf(f, "%f", outPtr) == 1, "Failed to parse file\n");
             printf("%f\n", *outPtr);
         }        
 

@@ -50,7 +50,9 @@ namespace FileFLO {
         
         Image out(width, height, 1, 2);
 
-        fread(out(0, 0, 0), sizeof(float), width * height * out.channels, stream);
+        size_t n = width*height*out.channels;
+        assert(fread(out(0, 0, 0), sizeof(float), n, stream) == n,
+               "Unexpected end of file\n");
 
         fclose(stream);
 
