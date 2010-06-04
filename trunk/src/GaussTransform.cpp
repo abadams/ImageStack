@@ -7,6 +7,7 @@
 #include "Geometry.h"
 #include "Color.h"
 #include "Statistics.h"
+#include "Convolve.h"
 #include "header.h"
 
 void GaussTransform::help() {
@@ -785,7 +786,8 @@ void NLMeans::apply(Window image, float patchSize, int dimensions,
                     float spatialSigma, float patchSigma,
                     GaussTransform::Method method) {
 
-    Image pca = PatchPCA::apply(image, patchSize, dimensions);
+    Image filters = PatchPCA::apply(image, patchSize, dimensions);
+    Image pca = Convolve::apply(image, filters, Convolve::ZERO, Convolve::INNER);
     JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);    
 };
 
