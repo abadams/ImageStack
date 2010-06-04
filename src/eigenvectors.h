@@ -51,6 +51,13 @@ class Eigenvectors {
         }
     }
 
+    // Get the nth eigenvector
+    void getEigenvector(int idx, float *v_out) {
+        for (int i = 0; i < d_in; i++) {
+            v_out[i] = eigenvectors[i*d_out+idx];
+        }
+    }
+
     void save(const char *filename) {
         if (!computed) compute();
         FILE *f = fopen(filename, "wb");
