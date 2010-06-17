@@ -787,7 +787,7 @@ void NLMeans::apply(Window image, float patchSize, int dimensions,
                     GaussTransform::Method method) {
 
     Image filters = PatchPCA::apply(image, patchSize, dimensions);
-    Image pca = Convolve::apply(image, filters, Convolve::ZERO, Convolve::INNER);
+    Image pca = Convolve::apply(image, filters, Convolve::Zero, Multiply::Inner);
     JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);    
 };
 

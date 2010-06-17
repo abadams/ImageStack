@@ -48,56 +48,199 @@ void Add::apply(Window a, Window b) {
 
 
 void Multiply::help() {
-    printf("\n-multiply multiplies the top image in the stack by the second image in the stack.\n\n"
-           "Usage: ImageStack -load a.tga -load b.tga -multiply -save out.tga.\n");
+    pprintf("-multiply multiplies the top image in the stack by the second image in"
+            " the stack. If one or both images are single-channel, then this"
+            " performs a scalar-vector multiplication. If both images have multiple"
+            " channels, there are three different vector-vector multiplications"
+            " possible, selectable with the sole argument. Say the first image has"
+            " k channels and the second image has j channels. \"elementwise\""
+            " performs element-wise multiplication. If k != j then the lesser is"
+            " repeated as necessary. The output has max(k, j) channels. \"inner\""
+            " performs an inner, or matrix, product. It treats the image with more"
+            " channels as containing matrices in row-major order, and the image"
+            " with fewer channels as a column vector, and performs a matrix-vector"
+            " multiplication at every pixel. The output has max(j/k, k/j)"
+            " channels. \"outer\" performs an outer product at each pixel. The"
+            " output image has j*k channels. If no argument is given, the"
+            " multiplication will be \"elementwise\".\n\n"
+            "Usage: ImageStack -load a.tga -load b.tga -multiply -save out.tga.\n");
 }
 
 void Multiply::parse(vector<string> args) {
-    assert(args.size() == 0, "-multiply takes no arguments\n");
-    if (stack(0).channels == 1 && stack(1).channels > 1) {
-      apply(stack(1), stack(0));
-      pop();
+    assert(args.size() < 2, "-multiply takes zero or one arguments\n");
+
+    Mode m = Elementwise;
+    if (args.size() == 0) m = Elementwise;
+    else if (args[0] == "inner") m = Inner;
+    else if (args[0] == "outer") m = Outer;
+    else if (args[0] == "elementwise") m = Elementwise;
+    else {
+        panic("Unknown vector-vector multiplication: %s\n", args[0].c_str());
+    }
+
+    Window a = stack(1);
+    Window b = stack(0);
+    if (a.channels < b.channels) {
+        Window tmp = a;
+        a = b;
+        b = tmp;
+    }
+
+    if (m == Elementwise || b.channels == 1) {
+        applyElementwise(a, b);
+        pop();
     } else {
-      apply(stack(0), stack(1));
-      pull(1);
-      pop();
+        Image im = apply(a, b, m);
+        pop();
+        pop();
+        push(im);
     }
 }
 
-void Multiply::apply(Window a, Window b) {
+Image Multiply::apply(Window a, Window b, Mode m) {
+    if (a.channels < b.channels) return apply(b, a, m);
+
     assert(a.width == b.width &&
            a.height == b.height &&
-           a.frames == b.frames &&
-           (a.channels == b.channels || b.channels == 1), 
-           "Cannot multiply images of different sizes or channel numbers\n");
+           a.frames == b.frames,
+           "Cannot multiply images of different sizes\n");
 
+    assert(a.channels % b.channels == 0,
+           "One input have a number of channels which is a multiple of the other's\n");
 
+    Image out;
 
-    if (a.channels != 1 && b.channels == 1) {
+    // This code is written on the assumption that this op will be
+    // memory-bandwidth limited so too much optimization is foolish
+
+    if (b.channels == 1) { // scalar-vector case
+        out = Image(a.width, a.height, a.frames, a.channels);
+        
         for (int t = 0; t < a.frames; t++) {
             for (int y = 0; y < a.height; y++) {
-                for (int c = 0; c < a.channels; c++) {
-                    float *aPtr = a(0, y, t)+c;
-                    float *bPtr = b(0, y, t);                    
-                    for (int x = 0; x < a.width; x++) {                        
-                        aPtr[x*a.channels] *= bPtr[x];
+                for (int x = 0; x < a.width; x++) {
+                    for (int c = 0; c < a.channels; c++) {
+                        out(x, y, t)[c] = a(x, y, t)[c] * b(x, y, t)[0];
+                    }
+                }
+            }
+        }
+
+    } else if (m == Elementwise) {
+        out = Image(a.width, a.height, a.frames, a.channels);
+        if (a.channels == b.channels) {
+            for (int t = 0; t < a.frames; t++) {
+                for (int y = 0; y < a.height; y++) {
+                    for (int x = 0; x < a.width; x++) {
+                        for (int c = 0; c < a.channels; c++) {
+                            out(x, y, t)[c] = a(x, y, t)[c] * b(x, y, t)[c];
+                        }
+                    }
+                }
+            }            
+        } else {
+            int factor = a.channels / b.channels;
+            for (int t = 0; t < a.frames; t++) {
+                for (int y = 0; y < a.height; y++) {
+                    for (int x = 0; x < a.width; x++) {
+                        int oc = 0;
+                        for (int c = 0; c < factor; c++) {
+                            for (int bc = 0; bc < b.channels; bc++) {
+                                out(x, y, t)[oc] = a(x, y, t)[oc] * b(x, y, t)[bc];
+                                oc++;
+                            }
+                        }
+                    }
+                }
+            }            
+
+        }
+    } else if (m == Inner) {
+        out = Image(a.width, a.height, a.frames, a.channels/b.channels);
+        if (a.channels == b.channels) {
+            for (int t = 0; t < a.frames; t++) {
+                for (int y = 0; y < a.height; y++) {
+                    for (int x = 0; x < a.width; x++) {
+                        for (int c = 0; c < a.channels; c++) {
+                            out(x, y, t)[0] += a(x, y, t)[c] * b(x, y, t)[c];
+                        }
+                    }
+                }
+            }
+        } else {
+            int factor = a.channels / b.channels;
+            for (int t = 0; t < a.frames; t++) {
+                for (int y = 0; y < a.height; y++) {
+                    for (int x = 0; x < a.width; x++) {
+                        int ac = 0;
+                        for (int oc = 0; oc < factor; oc++) {
+                            for (int bc = 0; bc < b.channels; bc++) {
+                                out(x, y, t)[oc] += a(x, y, t)[ac] * b(x, y, t)[bc];
+                                ac++;
+                            }
+                        }
+                    }
+                }
+            }            
+        }
+    } else if (m == Outer) {
+        out = Image(a.width, a.height, a.frames, a.channels*b.channels);
+        for (int t = 0; t < a.frames; t++) {
+            for (int y = 0; y < a.height; y++) {
+                for (int x = 0; x < a.width; x++) {
+                    int oc = 0;
+                    for (int ac = 0; ac < a.channels; ac++) {
+                        for (int bc = 0; bc < b.channels; bc++) {
+                            out(x, y, t)[oc] = a(x, y, t)[ac] * b(x, y, t)[bc];
+                            oc++;
+                        }
+                    }
+                }
+            }
+        }                    
+    } else {
+        panic("Unknown multiplication type: %d\n", m);
+    }
+
+    return out;
+}
+
+void Multiply::applyElementwise(Window a, Window b) {
+    assert(a.width == b.width &&
+           a.height == b.height &&
+           a.frames == b.frames,
+           "Cannot multiply images of different sizes\n");
+
+    assert(a.channels % b.channels == 0,
+           "One input have a number of channels which is a multiple of the other's\n");
+    
+    if (a.channels == b.channels) {
+        for (int t = 0; t < a.frames; t++) {
+            for (int y = 0; y < a.height; y++) {
+                for (int x = 0; x < a.width; x++) {
+                    for (int c = 0; c < a.channels; c++) {
+                        a(x, y, t)[c] *= b(x, y, t)[c];
                     }
                 }
             }
         }
     } else {
+        int factor = a.channels / b.channels;
         for (int t = 0; t < a.frames; t++) {
             for (int y = 0; y < a.height; y++) {
-                float *aPtr = a(0, y, t);
-                float *bPtr = b(0, y, t);
-                for (int x = 0; x < a.width*a.channels; x++) {
-                    aPtr[x] *= bPtr[x];
+                for (int x = 0; x < a.width; x++) {
+                    int oc = 0;
+                    for (int c = 0; c < factor; c++) {
+                        for (int bc = 0; bc < b.channels; bc++) {
+                            a(x, y, t)[oc] *= b(x, y, t)[bc];
+                            oc++;
+                        }
+                    }
                 }
             }
-        }
+        }                    
     }
 }
-
 
 void Subtract::help() {
     printf("\n-subtract subtracts the second image in the stack from the top image in the stack.\n\n"
