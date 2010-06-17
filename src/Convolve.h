@@ -1,5 +1,8 @@
 #ifndef IMAGESTACK_CONVOLVE_H
 #define IMAGESTACK_CONVOLVE_H
+
+#include "Arithmetic.h"
+
 #include "header.h"
 
 class Convolve : public Operation {
@@ -7,10 +10,10 @@ class Convolve : public Operation {
     void help();
     void parse(vector<string> args);
 
-    enum ChannelMode {INNER = 0, OUTER, ELEMENTWISE};
-    enum BoundaryCondition {ZERO = 0, HOMOGENEOUS, CLAMP, WRAP};
+    enum BoundaryCondition {Zero = 0, Homogeneous, Clamp, Wrap};
 
-    static Image apply(Window im, Window filter, BoundaryCondition b = ZERO, ChannelMode m = OUTER);
+    static Image apply(Window im, Window filter, BoundaryCondition b = Zero,
+                       Multiply::Mode m = Multiply::Elementwise);
 
 };
 

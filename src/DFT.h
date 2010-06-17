@@ -30,7 +30,7 @@ class FFTConvolve : public Operation {
   public:
     void help();
     void parse(vector<string> args);
-    static Image apply(Window im, Window filter, Convolve::BoundaryCondition b, Convolve::ChannelMode m);
+    static Image apply(Window im, Window filter, Convolve::BoundaryCondition b, Multiply::Mode m);
 };
 
 class FFTDeconvolve: public Operation {

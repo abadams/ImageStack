@@ -366,30 +366,30 @@ void FFTConvolve::help() {
 }
 
 void FFTConvolve::parse(vector<string> args) {
-    Convolve::ChannelMode m;
+    Multiply::Mode m;
     Convolve::BoundaryCondition b;
 
     if (args.size() > 0) {
-        if (args[0] == "zero") b = Convolve::ZERO;
-        else if (args[0] == "homogeneous") b = Convolve::HOMOGENEOUS;
-        else if (args[0] == "clamp") b = Convolve::CLAMP;
-        else if (args[0] == "wrap") b = Convolve::WRAP;
+        if (args[0] == "zero") b = Convolve::Zero;
+        else if (args[0] == "homogeneous") b = Convolve::Homogeneous;
+        else if (args[0] == "clamp") b = Convolve::Clamp;
+        else if (args[0] == "wrap") b = Convolve::Wrap;
         else {
             panic("Unknown boundary condition: %s\n", args[0].c_str());
         }
     } else {
-        b = Convolve::WRAP;
+        b = Convolve::Wrap;
     }
 
     if (args.size() > 1) {
-        if (args[1] == "inner") m = Convolve::INNER;
-        else if (args[1] == "outer") m = Convolve::OUTER;
-        else if (args[1] == "elementwise") m = Convolve::ELEMENTWISE;
+        if (args[1] == "inner") m = Multiply::Inner;
+        else if (args[1] == "outer") m = Multiply::Outer;
+        else if (args[1] == "elementwise") m = Multiply::Elementwise;
         else {
             panic("Unknown vector-vector multiplication: %s\n", args[1].c_str());
         }
     } else {
-        m = Convolve::OUTER;
+        m = Multiply::Outer;
     }
 
     Image im = apply(stack(0), stack(1), b, m);
@@ -397,21 +397,21 @@ void FFTConvolve::parse(vector<string> args) {
     push(im);
 }
 
-Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b, Convolve::ChannelMode m) {
+Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b, Multiply::Mode m) {
 
     int resultChannels = 0;
 
     // check the number of channels is correct
-    if (m == Convolve::INNER) {
+    if (m == Multiply::Inner) {
         assert(im.channels % filter.channels == 0 || filter.channels % im.channels == 0,
                "For inner-product convolution either the image must have a number of"
                " channels that is a multiple of the number of channels in the filter,"
                " or vice-versa.\n");
         resultChannels = max(im.channels / filter.channels, filter.channels / im.channels);
-    } else if (m == Convolve::OUTER) {
+    } else if (m == Multiply::Outer) {
         // anything goes
         resultChannels = im.channels * filter.channels;
-    } else if (m == Convolve::ELEMENTWISE) {
+    } else if (m == Multiply::Elementwise) {
         assert(im.channels == filter.channels, 
                "For elementwise convolution the filter must have the same number of channels as the image\n");
         resultChannels = im.channels;
@@ -422,11 +422,11 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
     // Deal with the homogeneous case recursively. This is slightly
     // inefficient because we construct and transform the filter
     // twice, but it makes the code much simpler
-    if (b == Convolve::HOMOGENEOUS) {
-        Image result = apply(im, filter, Convolve::ZERO, m);
+    if (b == Convolve::Homogeneous) {
+        Image result = apply(im, filter, Convolve::Zero, m);
         Image weight(im.width, im.height, im.frames, im.channels);
         Offset::apply(weight, 1.0f);
-        Image resultW = apply(weight, filter, Convolve::ZERO, m);
+        Image resultW = apply(weight, filter, Convolve::Zero, m);
         Divide::apply(result, resultW);
         return result;
     }
@@ -440,7 +440,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
     int yPad = filter.height/2;
     int tPad = filter.frames/2;
 
-    if (b == Convolve::WRAP) {
+    if (b == Convolve::Wrap) {
         xPad = yPad = tPad = 0;
     }
 
@@ -451,7 +451,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
     
     //printf("1\n"); fflush(stdout);
     // 1) Make the padded complex image
-    if (b == Convolve::CLAMP) {
+    if (b == Convolve::Clamp) {
         for (int t = 0; t < imT.frames; t++) {
             int st = clamp(t-tPad, 0, im.frames-1);
             for (int y = 0; y < imT.height; y++) {
@@ -467,7 +467,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
                 }
             }
         }
-    } else { // ZERO or WRAP
+    } else { // Zero or Wrap
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 float *imPtr = im(0, y, t);
@@ -518,7 +518,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
             float *resultTPtr = resultT(0, y, t);
             float *filterTPtr = filterT(0, y, t);
             float *imTPtr     = imT(0, y, t);
-            if (m == Convolve::OUTER) {
+            if (m == Multiply::Outer) {
                 for (int x = 0; x < resultT.width; x++) {
                     for (int cf = 0; cf < filterT.channels; cf+=2) {                            
                         for (int ci = 0; ci < imT.channels; ci+=2) {
@@ -529,7 +529,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
                     imTPtr     += imT.channels;
                     filterTPtr += filterT.channels;
                 }
-            } else if (m == Convolve::INNER && filter.channels > im.channels) {
+            } else if (m == Multiply::Inner && filter.channels > im.channels) {
                 for (int x = 0; x < resultT.width; x++) {
                     for (int cr = 0; cr < resultChannels; cr++) {
                         for (int ci = 0; ci < imT.channels; ci+=2) {
@@ -541,7 +541,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
                     }
                     imTPtr += imT.channels;
                 }
-            } else if (m == Convolve::INNER) {
+            } else if (m == Multiply::Inner) {
                 for (int x = 0; x < resultT.width; x++) {
                     for (int cr = 0; cr < resultChannels; cr++) {
                         for (int cf = 0; cf < filterT.channels; cf+=2) {
@@ -600,10 +600,9 @@ void FFTDeconvolve::help() {
             " the filter width, filter height, and filter frames, then the filter"
             " to be deconvolved by in row major form. With only the first argument,"
             " fftdeconvolve will use the next image on the stack as the filter. It"
-            " must be single channel. The output to deconvolve is constrained to be"
-            " positive.\n"
+            " must be single channel.\n"
             "\n"
-            "Usage: ImageStack -load filter.png -load in.jpg -deconvolvefast 0.01 -save dcv.jpg\n\n");
+            "Usage: ImageStack -load filter.png -load in.jpg -fftdeconvolve 0.01 -save dcv.jpg\n\n");
 }
 
 void FFTDeconvolve::parse(vector<string> args) {

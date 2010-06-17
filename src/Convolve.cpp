@@ -92,20 +92,20 @@ void Convolve::parse(vector<string> args) {
         panic("-convolve needs either zero, one, two, or at least four arguments\n");
     }
 
-    ChannelMode m;
+    Multiply::Mode m;
     BoundaryCondition b;
 
-    if (boundaryCondition == "zero") b = ZERO;
-    else if (boundaryCondition == "homogeneous") b = HOMOGENEOUS;
-    else if (boundaryCondition == "clamp") b = CLAMP;
-    else if (boundaryCondition == "wrap") b = WRAP;
+    if (boundaryCondition == "zero") b = Zero;
+    else if (boundaryCondition == "homogeneous") b = Homogeneous;
+    else if (boundaryCondition == "clamp") b = Clamp;
+    else if (boundaryCondition == "wrap") b = Wrap;
     else {
         panic("Unknown boundary condition: %s\n", boundaryCondition.c_str());
     }
 
-    if (channelMode == "inner") m = INNER;
-    else if (channelMode == "outer") m = OUTER;
-    else if (channelMode == "elementwise") m = ELEMENTWISE;
+    if (channelMode == "inner") m = Multiply::Inner;
+    else if (channelMode == "outer") m = Multiply::Outer;
+    else if (channelMode == "elementwise") m = Multiply::Elementwise;
     else {
         panic("Unknown vector-vector multiplication: %s\n", channelMode.c_str());
     }
@@ -182,7 +182,7 @@ static Image Convolve__apply(Window im, Window filter, Image out) {
     // Used by the homogeneous boundary condition
     vector<float> ones(im.channels, 1.0f);
     vector<float> filterSum(out.channels, 0.0f);
-    if (b == Convolve::HOMOGENEOUS) {
+    if (b == Convolve::Homogeneous) {
         // compute the sum of weights in the non-boundary case
         for (int t = 0; t < filter.frames; t++) {
             for (int y = 0; y < filter.height; y++) {
@@ -227,14 +227,14 @@ static Image Convolve__apply(Window im, Window filter, Image out) {
                         }
                     }                    
 
-                    if (b == Convolve::HOMOGENEOUS) {
+                    if (b == Convolve::Homogeneous) {
                         // Renormalize the output to have the right sum of weights
                         for (int c = 0; c < out.channels; c++) {
                             outPtr[c] *= filterSum[c];
                         } 
                     }
-                } else if (b == Convolve::ZERO || b == Convolve::HOMOGENEOUS) {
-                    if (b == Convolve::HOMOGENEOUS) {
+                } else if (b == Convolve::Zero || b == Convolve::Homogeneous) {
+                    if (b == Convolve::Homogeneous) {
                         for (int c = 0; c < out.channels; c++) {
                             weight[c] = 0.0f;
                         }
@@ -260,7 +260,7 @@ static Image Convolve__apply(Window im, Window filter, Image out) {
                                 m(filterPtr, filter.channels,
                                   imPtr, im.channels,
                                   outPtr, out.channels);
-                                if (b == Convolve::HOMOGENEOUS) {
+                                if (b == Convolve::Homogeneous) {
                                     // What would have been the effect if
                                     // I did the same thing for all-ones
                                     m(filterPtr, filter.channels,
@@ -274,13 +274,13 @@ static Image Convolve__apply(Window im, Window filter, Image out) {
                         }
                     }
 
-                    if (b == Convolve::HOMOGENEOUS) {
+                    if (b == Convolve::Homogeneous) {
                         // Renormalize the output to have the right sum of weights
                         for (int c = 0; c < out.channels; c++) {
                             outPtr[c] /= weight[c];
                         } 
                     }
-                } else if (b == Convolve::CLAMP) {
+                } else if (b == Convolve::Clamp) {
                     for (int dt = -toff; dt <= toff; dt++) {
                         int imt = clamp(t + dt, 0, im.frames-1);
                         for (int dy = -yoff; dy <= yoff; dy++) {
@@ -296,7 +296,7 @@ static Image Convolve__apply(Window im, Window filter, Image out) {
                             }
                         }
                     }
-                } else if (b == Convolve::WRAP) {
+                } else if (b == Convolve::Wrap) {
                     for (int dt = -toff; dt <= toff; dt++) {
                         int imt = t + dt;
                         while (imt < 0) imt += im.frames;
@@ -333,20 +333,20 @@ static Image Convolve__apply(Window im, Window filter, Image out) {
 template<Convolve__VectorVectorMult m>
 Image Convolve__apply(Window im, Window filter, Image out, Convolve::BoundaryCondition b) {   
     switch(b) {
-        case Convolve::ZERO:
-            return Convolve__apply<Convolve::ZERO, m>(im, filter, out);
-        case Convolve::HOMOGENEOUS:
-            return Convolve__apply<Convolve::HOMOGENEOUS, m>(im, filter, out);
-        case Convolve::CLAMP:
-            return Convolve__apply<Convolve::CLAMP, m>(im, filter, out);
-        case Convolve::WRAP:
-            return Convolve__apply<Convolve::WRAP, m>(im, filter, out);
+        case Convolve::Zero:
+            return Convolve__apply<Convolve::Zero, m>(im, filter, out);
+        case Convolve::Homogeneous:
+            return Convolve__apply<Convolve::Homogeneous, m>(im, filter, out);
+        case Convolve::Clamp:
+            return Convolve__apply<Convolve::Clamp, m>(im, filter, out);
+        case Convolve::Wrap:
+            return Convolve__apply<Convolve::Wrap, m>(im, filter, out);
     }
     panic("Unknown boundary condition: %d\n", b);
     return Image();
 }
 
-Image Convolve::apply(Window im, Window filter, BoundaryCondition b, ChannelMode m) {
+Image Convolve::apply(Window im, Window filter, BoundaryCondition b, Multiply::Mode m) {
     // This function is a jumping off point for the partially-templatized version above
 
     #ifndef NO_FFTW
@@ -361,7 +361,7 @@ Image Convolve::apply(Window im, Window filter, BoundaryCondition b, ChannelMode
         return Convolve__apply<Convolve__Scalar>(im, filter, out, b);
     }
 
-    if (m == INNER) {
+    if (m == Multiply::Inner) {
         if (im.channels < filter.channels && filter.channels % im.channels == 0) {
             Image out(im.width, im.height, im.frames, filter.channels / im.channels);
             return Convolve__apply<Convolve__Inner1>(im, filter, out, b);
@@ -372,7 +372,7 @@ Image Convolve::apply(Window im, Window filter, BoundaryCondition b, ChannelMode
             panic("For inner products, either the number of channels in the filter must"
                   "be a multiple of the number of channels in the image, or vice-versa\n");
         }
-    } else if (m == OUTER) {
+    } else if (m == Multiply::Outer) {
         Image out(im.width, im.height, im.frames, filter.channels * im.channels);
         if (filter.channels == 1) { // common case optimization
             Convolve__apply<Convolve__Outer1>(im, filter, out, b);
@@ -380,7 +380,7 @@ Image Convolve::apply(Window im, Window filter, BoundaryCondition b, ChannelMode
             Convolve__apply<Convolve__Outer>(im, filter, out, b);
         }
         return out;
-    } else if (m == ELEMENTWISE) {
+    } else if (m == Multiply::Elementwise) {
         Image out(im.width, im.height, im.frames, im.channels);
         if (im.channels != filter.channels) {
             panic("For elementwise multiplication, the filter must have the same"
@@ -512,7 +512,7 @@ Image Deconvolve::apply(Window im, Window filter, Window initialGuess, float max
 
     if (!symmetric || !positiveDefinite) {
         printf("Convolving with filter transpose.\n");
-        target = Convolve::apply(im, filterTranspose, Convolve::CLAMP);
+        target = Convolve::apply(im, filterTranspose, Convolve::Clamp);
     }
 
     // Given that we don't know what the boundary condition was that
@@ -532,8 +532,8 @@ Image Deconvolve::apply(Window im, Window filter, Window initialGuess, float max
 
     // r = b - Ax
     Image r = target.copy();
-    Image q = Convolve::apply(x, filter, Convolve::CLAMP); 
-    if (!symmetric || !positiveDefinite) q = Convolve::apply(q, filterTranspose, Convolve::CLAMP);
+    Image q = Convolve::apply(x, filter, Convolve::Clamp); 
+    if (!symmetric || !positiveDefinite) q = Convolve::apply(q, filterTranspose, Convolve::Clamp);
     //Multiply::apply(q, weight);
     Subtract::apply(r, q);
 
@@ -546,8 +546,8 @@ Image Deconvolve::apply(Window im, Window filter, Window initialGuess, float max
     for (int i = 0; i < maxIterations || maxIterations <= 0; i++) {
 
         // q = Ad
-        q = Convolve::apply(d, filter, Convolve::CLAMP);
-        if (!symmetric || !positiveDefinite) q = Convolve::apply(q, filterTranspose, Convolve::CLAMP);
+        q = Convolve::apply(d, filter, Convolve::Clamp);
+        if (!symmetric || !positiveDefinite) q = Convolve::apply(q, filterTranspose, Convolve::Clamp);
         //Multiply::apply(q, weight);
 
         float alpha = errorNew / dot(d, q);
@@ -559,8 +559,8 @@ Image Deconvolve::apply(Window im, Window filter, Window initialGuess, float max
             // remove accumulated error in the residual
             // r = b - Ax
             r = target.copy();
-            q = Convolve::apply(x, filter, Convolve::CLAMP);
-            if (!symmetric || !positiveDefinite) q = Convolve::apply(q, filterTranspose, Convolve::CLAMP);
+            q = Convolve::apply(x, filter, Convolve::Clamp);
+            if (!symmetric || !positiveDefinite) q = Convolve::apply(q, filterTranspose, Convolve::Clamp);
             //Multiply::apply(q, weight);
             Subtract::apply(r, q);
         } else {

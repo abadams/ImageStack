@@ -13,7 +13,13 @@ class Multiply : public Operation {
   public:
     void help();
     void parse(vector<string> args);
-    static void apply(Window a, Window b);
+    enum Mode {Elementwise = 0, Inner, Outer};
+
+    static Image apply(Window a, Window b, Mode m);
+
+    // Elementwise can be done in-place
+    static void applyElementwise(Window a, Window b);
+
 };
 
 class Subtract : public Operation {
@@ -27,7 +33,8 @@ class Divide : public Operation {
   public:
     void help();
     void parse(vector<string> args);
-    static void apply(Window a, Window b);
+    //enum Mode {Elementwise = 0, Matrix};
+    static void apply(Window a, Window b); //, Mode m = Elementwise);
 };
 
 class Maximum : public Operation {
