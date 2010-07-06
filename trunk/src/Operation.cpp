@@ -202,6 +202,7 @@ void loadOperations() {
     operationMap["-circularfilter"] = new CircularFilter();
     operationMap["-medianfilter"] = new MedianFilter();
     operationMap["-percentilefilter"] = new PercentileFilter();
+    operationMap["-envelope"] = new Envelope();
 
     // Filters that use a Gauss transform
     operationMap["-gausstransform"] = new GaussTransform();

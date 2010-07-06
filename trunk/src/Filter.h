@@ -66,5 +66,14 @@ class CircularFilter : public Operation {
     static Image apply(Window im, int radius);
 };
 
+
+class Envelope : public Operation {
+public:
+    void help();
+    void parse(vector<string> args);
+    enum Mode {Lower = 0, Upper};
+    static Image apply(Window im, Mode m, float smoothness, float edgePreserving);
+};
+
 #include "footer.h"
 #endif
