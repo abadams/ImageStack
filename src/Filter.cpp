@@ -1036,4 +1036,137 @@ Image CircularFilter::apply(Window im, int radius) {
 
 
 
+void Envelope::help() {
+    pprintf("-envelope computes a lower or upper envelope of the input, which is"
+            " smooth, and less than (or greater than) the input. The first argument"
+            " should be \"lower\" or \"upper\". The second argument is the desired"
+            " smoothness, which should be greater than zero and strictly less than"
+            " one. The last argument is the degree of edge preserving. If zero, the"
+            " output will be smooth everywhere. Larger values produce output that is"
+            " permitted to have edges where the input does, in a manner similar to a"
+            " bilateral filter.\n"
+            "\n"
+            "Usage: ImageStack -load a.jpg -envelope upper 0.5 1 -display\n"
+            "\n"
+            "To locally maximize contrast:\n"
+            "ImageStack -load a.jpg -dup -scale 1.1 -envelope lower 0.9 1 -pull 1\n"
+            "           -subtract -envelope upper 0.9 1 -offset 1 -pull 1 -pull 2\n"
+            "           -add -divide -display\n");
+}
+
+void Envelope::parse(vector<string> args) {
+    assert(args.size() == 3, "-envelope takes three arguments\n");
+    Mode m;
+    if (args[0] == "lower") m = Lower;
+    else if (args[0] == "upper") m = Upper;
+    else panic("Unknown mode: %s. Must be lower or upper.\n", args[0].c_str());
+
+    Image envelope = apply(stack(0), m, readFloat(args[1]), readFloat(args[2]));
+    push(envelope);
+        
+}
+
+Image Envelope::apply(Window im, Mode m, float smoothness, float edgePreserving) {
+
+    Image out(im);
+
+    for (int i = 0; i < 3; i++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                for (int c = 0; c < im.channels; c++) {
+                    // forward X pass            
+                    float *refPtr = im(0, y, t) + c;
+                    float *outPtr = out(0, y, t) + c;
+                    float lastIm = *outPtr;
+                    float lastOut = lastIm;
+                    for (int x = 0; x < im.width; x++) {
+                        float thisIm = *outPtr;
+                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
+                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
+                        if (m == Lower) {
+                            if (thisOut > thisIm) thisOut = thisIm;
+                        } else {
+                            if (thisOut < thisIm) thisOut = thisIm;
+                        }
+                        *outPtr = thisOut;
+                        lastOut = thisOut;
+                        lastIm = thisIm;
+                        outPtr += out.channels;
+                        refPtr += im.channels;
+                    }
+                    // backward X pass
+                    refPtr = im(im.width-1, y, t) + c;
+                    outPtr = out(out.width-1, y, t) + c;
+                    lastOut = *outPtr;
+                    lastIm = lastOut;
+                    for (int x = 0; x < im.width; x++) {
+                        float thisIm = *outPtr;
+                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
+                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
+                        if (m == Lower) {
+                            if (thisOut > thisIm) thisOut = thisIm;
+                        } else {
+                            if (thisOut < thisIm) thisOut = thisIm;
+                        }
+                        *outPtr = thisOut;
+                        lastOut = thisOut;
+                        lastIm = thisIm;
+                        outPtr -= out.channels;
+                        refPtr -= im.channels;
+                    }                
+                }
+            }
+            
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {
+                    // forward Y pass
+                    float *outPtr = out(x, 0, t) + c;
+                    float *refPtr = im(x, 0, t) + c;
+                    float lastIm = *outPtr;
+                    float lastOut = lastIm;
+                    for (int y = 0; y < im.height; y++) {
+                        float thisIm = *outPtr;
+                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
+                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
+                        if (m == Lower) {
+                            if (thisOut > thisIm) thisOut = thisIm;
+                        } else {
+                            if (thisOut < thisIm) thisOut = thisIm;
+                        }
+                        *outPtr = thisOut;
+                        lastOut = thisOut;
+                        lastIm = thisIm;
+                        outPtr += out.ystride;
+                        refPtr += im.ystride;
+                    }
+                    
+                    // backward Y pass
+                    outPtr = out(x, out.height-1, t) + c;
+                    refPtr = im(x, im.height-1, t) + c;
+                    lastIm = *outPtr;
+                    lastOut = lastIm;
+                    for (int y = 0; y < im.height; y++) {
+                        float thisIm = *outPtr;
+                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
+                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
+                        if (m == Lower) {
+                            if (thisOut > thisIm) thisOut = thisIm;
+                        } else {
+                            if (thisOut < thisIm) thisOut = thisIm;
+                        }
+                        *outPtr = thisOut;
+                        lastOut = thisOut;
+                        lastIm = thisIm;
+                        outPtr -= out.ystride;
+                        refPtr -= im.ystride;
+                    }
+                }
+            }
+        }
+    }
+
+    return out;
+}
+
+
 #include "footer.h"
