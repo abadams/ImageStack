@@ -131,8 +131,10 @@ namespace FileTMP {
         
         T *srcPtr = &buf[0];
         for (int i = 0; i < size; i += chunkSize) {
-            srcPtr = &buf[0];
-            assert(fread(srcPtr, sizeof(T), chunkSize, f) == chunkSize,
+	    srcPtr = &buf[0];
+	    size_t sizeLeft = size - i - 1;
+	    size_t expectedSize = (sizeLeft < chunkSize) ? sizeLeft : chunkSize;
+	    assert(fread(srcPtr, sizeof(T), expectedSize, f) == expectedSize,
                    "Unexpected end of file\n");
             for (size_t j = 0; j < chunkSize && dstPtr != endPtr; j++) {
                 *dstPtr++ = (float)(*srcPtr++);
