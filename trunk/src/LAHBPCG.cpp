@@ -138,7 +138,6 @@ private:
   
     Image f; // current iterate storate....
     Image hbRes; 
-    //Image aX; // ?? extra storage?
   
     Image AD; // diagonalized A matrix
     const unsigned int max_length;
@@ -795,7 +794,10 @@ void LAHBPCG::help() {
             " weighted least squares solver. This technique is useful for a variety"
             " of problems with constraints expressed in the gradient domain,"
             " including Poisson solves, making a sparse labelling dense, and other"
-            " gradient-domain techniques.\n"
+            " gradient-domain techniques. The problem formulation is from Pravin"
+            " Bhat's \"GradientShop\", and"
+            " the preconditioner is the Locally Adapted Hierarchical Basis"
+            " Preconditioner described by Richard Szeliski.\n"
             "\n"
             "This operator takes two arguments. The first specifies the maximum"
             " number of iterations, and the second specifies the error required for"
@@ -803,14 +805,18 @@ void LAHBPCG::help() {
             "\n"
             "The following example takes a sparse labelling of an image im.jpg, and"
             " expands it to be dense in a manner that respects the boundaries of"
-            " the image. The gradient weights used are uniform.\n"
+            " the image. The target image is the labelling, with weights indicating"
+            " where it is defined. The target gradients are zero, with weights"
+            " inversely proportional to gradient strength in the original image."
+            "\n"
             "Usage: ImageStack -load sparse_labels.tmp \\\n"
-            "                  -load im.jpg -gradient x \\\n"
-            "                  -load im.jpg -gradient y \\\n"
+            "                  -push -dup \\\n"
             "                  -load sparse_weights.tmp \\\n"
-            "                  -push -offset 1 \\\n"
-            "                  -dup \\\n"
-            "                  -lahbpcg 200 0.001 -save out.png\n");
+            "                  -load im.jpg -gradient x -colorconvert rgb gray \\\n"
+            "                  -eval \"1/(100*val^2+0.001)\" \\\n"
+            "                  -load im.jpg -gradient y -colorconvert rgb gray \\\n"
+            "                  -eval \"1/(100*val^2+0.001)\" \\\n"
+            "                  -lahbpcg 5 0.001 -save out.png\n");
 }
 
 void LAHBPCG::parse(vector<string> args) {
