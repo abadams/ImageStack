@@ -33,6 +33,7 @@ IMAGESTACK_OBJECTS = \
 	NetworkOps.o \
 	Network.o \
 	Operation.o \
+	OpticalFlow.o \
 	Paint.o \
 	Panorama.o \
 	PatchMatch.o \

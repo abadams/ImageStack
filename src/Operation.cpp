@@ -34,6 +34,7 @@
 #include "GaussTransform.h"
 #include "LAHBPCG.h"
 #include "WLS.h"
+#include "OpticalFlow.h"
 
 #include "header.h"
 
@@ -228,6 +229,11 @@ void loadOperations() {
     operationMap["-patchmatch"] = new PatchMatch();
     operationMap["-bidirectionalsimilarity"] = new BidirectionalSimilarity();
     operationMap["-heal"] = new Heal();
+
+    // Optical Flow stuff
+    operationMap["-opticalflow"] = new OpticalFlow();
+    operationMap["-opticalflowwarp"] = new OpticalFlowWarp();
+
 }
 
 
