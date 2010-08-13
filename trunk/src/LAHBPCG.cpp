@@ -438,7 +438,7 @@ void PCG::constructPreconditioner() {
             // normalize the redistributed weights
             if (ns || we) {
                 float total = nw_weight + ws_weight + se_weight + en_weight;
-                if (total != 0) {
+                if (fabs(total) > 1e-10) {
                     nw_weight /= total;
                     ws_weight /= total;
                     se_weight /= total;
