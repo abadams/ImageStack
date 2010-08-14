@@ -13,7 +13,7 @@ class Convolve : public Operation {
     enum BoundaryCondition {Zero = 0, Homogeneous, Clamp, Wrap};
 
     static Image apply(Window im, Window filter, BoundaryCondition b = Zero,
-                       Multiply::Mode m = Multiply::Elementwise);
+                       Multiply::Mode m = Multiply::Outer);
 
 };
 
