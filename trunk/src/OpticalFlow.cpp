@@ -111,7 +111,7 @@ Image OpticalFlow::apply(Window source, Window target) {
     Coarse2FineFlow(vx, vy, warpI2, source, target, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations, nCGIterations);
 
     Image flowVector = Adjoin::apply(vx, vy, 'c');
-    Image confidence = evalConfidence(source, target, flowVector, alpha, 1.0);
+    Image confidence = evalConfidence(source, warpI2, flowVector, alpha, 1.0);
     Image output = Adjoin::apply(flowVector, confidence, 'c');
 
     return output;
@@ -128,14 +128,19 @@ Image OpticalFlow::apply(Window source, Window target, Window initial) {
     int nInnerFPIterations = 1;
     int nCGIterations = 50;
 
-    Image vx(source.width, source.height, 1, 1);
-    Image vy(source.width, source.height, 1, 1);
+    printf("Use initial estimate... \n");
+    Image temp = Transpose::apply(initial, 'c', 't');
+    Window vxInit(temp, 0, 0, 0, initial.width, initial.height, 1);
+    Window vyInit(temp, 0, 0, 1, initial.width, initial.height, 1);
+
+    Image vx = Image(vxInit);
+    Image vy = Image(vyInit);
     Image warpI2(source.width, source.height, source.frames, source.channels);
 
     RefineFlow(initial, vx, vy, warpI2, source, target, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations, nCGIterations);
 
     Image flowVector = Adjoin::apply(vx, vy, 'c');
-    Image confidence = evalConfidence(source, target, flowVector, alpha, 1.0);
+    Image confidence = evalConfidence(source, warpI2, flowVector, alpha, 1.0);
     Image output = Adjoin::apply(flowVector, confidence, 'c');
 
     return output;
@@ -189,18 +194,13 @@ void OpticalFlow::RefineFlow(Image initial, Image &vx, Image &vy, Image &warpI2,
 
     Image Image1,Image2,WarpImage2;
 
-    printf("Use initial estimate... \n");
-    Image temp = Transpose::apply(initial, 'c', 't');
-    Window vxInit(temp, 0, 0, 0, initial.width, initial.height, 1);
-    Window vyInit(temp, 0, 0, 1, initial.width, initial.height, 1);
-
     printf("Pyramid level 0 ...\n");
 
     Image1 = im2feature(Im1);
     Image2 = im2feature(Im2);
 
-    warpFL(WarpImage2,Image1,Image2,vxInit,vyInit);
-	
+    warpFL(WarpImage2,Image1,Image2,vx,vy);
+
     SmoothFlowPDE(Image1,Image2,WarpImage2,vx,vy,alpha,nOuterFPIterations,nInnerFPIterations,nCGIterations);
 
     warpFL(warpI2,Im1,Im2,vx,vy);
