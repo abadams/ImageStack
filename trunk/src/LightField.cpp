@@ -35,29 +35,49 @@ Image LFFocalStack::apply(LightField lf, float minAlpha, float maxAlpha, float d
 
     Image out(lf.xSize, lf.ySize, frames, lf.channels);
 
+    Image view(lf.xSize, lf.ySize, 1, lf.channels);
+    Image shifted, prefiltered;
+
     int t = 0;
     for (float alpha = minAlpha; alpha <= maxAlpha; alpha += deltaAlpha) {
         printf("computing frame %i\n", t+1);
-        
-        for (int y = 0; y < lf.ySize; y++) {
-            for (int v = 0; v < lf.vSize; v++) {
-                for (int x = 0; x < lf.xSize; x++) {
-                    for (int u = 0; u < lf.uSize; u++) {
-                        float fx = x + alpha * (u + 0.5 - lf.uSize * 0.5);
-                        float fy = y + alpha * (v + 0.5 - lf.vSize * 0.5);
-                        int ix = (int)(fx + 0.5);
-                        int iy = (int)(fy + 0.5);
-                        if (ix < 0 || iy < 0 || ix >= out.width || iy >= out.height) continue;
-                        for (int c = 0; c < out.channels; c++) {
-                            out(x, y, t)[c] += lf(ix, iy, u, v)[c];
+        Window outFrame(out, 0, 0, t, out.width, out.height, 1);
+
+        // Extract, shift, prefilter, and accumulate each view
+        for (int v = 0; v < lf.vSize; v++) {
+            for (int u = 0; u < lf.uSize; u++) {
+                // Get the view
+                for (int y = 0; y < lf.ySize; y++) {
+                    for (int x = 0; x < lf.xSize; x++) {
+                        for (int c = 0; c < lf.channels; c++) {
+                            view(x, y)[c] = lf(x, y, u, v)[c];
                         }
                     }
                 }
+                
+                // Shift it if necessary
+                if ((alpha*u != 0) || (alpha*v != 0)) {
+                    shifted = Translate::apply(view, (u-(lf.uSize-1)*0.5)*alpha, (v-(lf.vSize-1)*0.5)*alpha);
+                    view = shifted;
+                }
+
+                // Blur it if necessary
+                if (fabs(alpha) > 1) {
+                    prefiltered = LanczosBlur::apply(view, fabs(alpha), fabs(alpha), 0);
+                    view = prefiltered;
+                }
+
+                // Accumulate it into the output
+                Add::apply(outFrame, view);
             }
         }
+        
         t++;
     }
 
+    // renormalize
+    Scale::apply(out, 1.0/(lf.uSize*lf.vSize));
+    
     return out;
 }
 

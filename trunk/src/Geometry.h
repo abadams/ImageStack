@@ -101,7 +101,11 @@ class Translate : public Operation {
   public:
     void help();
     void parse(vector<string> args);
-    static Image apply(Window im, int xoff, int yoff, int toff = 0);
+    static Image apply(Window im, float xoff, float yoff, float toff = 0);
+private:
+    static Image applyX(Window im, float xoff);
+    static Image applyY(Window im, float yoff);
+    static Image applyT(Window im, float toff);
 };
 
 class Paste : public Operation {

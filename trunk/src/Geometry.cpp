@@ -958,21 +958,23 @@ Image Transpose::apply(Window im, char arg1, char arg2) {
 }
 
 void Translate::help() {
-    printf("\n-translate moves the image data, leaving black borders. It takes two or three\n"
-           "arguments. Two arguments are interpreted as a shift in x and a shift in y. Three\n"
-           "arguments indicates a shift in t, x, and y. Negative values shift to the top left\n"
-           "and positive ones to the bottom right. The unit is pixels.\n\n"
-           "Usage: ImageStack -load in.jpg -translate -10 -10 -translate 20 20\n"
-           "                  -translate -10 -10 -save in_border.jpg\n\n");
+    pprintf("\n-translate moves the image data, leaving black borders. It takes two"
+            " or three arguments. Two arguments are interpreted as a shift in x and"
+            " a shift in y. Three arguments indicates a shift in x, y, and"
+            " t. Negative values shift to the top left and positive ones to the"
+            " bottom right. Fractional shifts are permitted; Lanczos sampling is"
+            " used in this case.\n\n"
+            "Usage: ImageStack -load in.jpg -translate -10 -10 -translate 20 20\n"
+            "                  -translate -10 -10 -save in_border.jpg\n\n");
 }
 
 void Translate::parse(vector<string> args) {
     if (args.size() == 2) {
-        Image im = apply(stack(0), readInt(args[0]), readInt(args[1]), 0);
+        Image im = apply(stack(0), readFloat(args[0]), readFloat(args[1]), 0);
         pop();
         push(im);
     } else if (args.size() == 3) {
-        Image im = apply(stack(0), readInt(args[0]), readInt(args[1]), readInt(args[2]));
+        Image im = apply(stack(0), readFloat(args[0]), readFloat(args[1]), readFloat(args[2]));
         pop();
         push(im);
     } else {
@@ -980,8 +982,124 @@ void Translate::parse(vector<string> args) {
     }
 }
 
-Image Translate::apply(Window im, int dx, int dy, int dt) {
-    return Crop::apply(im, -dx, -dy, -dt, im.width, im.height, im.frames);
+Image Translate::apply(Window im, float xoff, float yoff, float toff) {
+    Window current = im;
+    Image out;
+    
+    // First do any non-integer translations
+    if (xoff != floorf(xoff)) {
+        out = applyX(im, xoff);
+        current = out;
+        xoff = 0;
+    }
+
+    if (yoff != floorf(yoff)) {
+        out = applyY(current, yoff);
+        current = out;
+        yoff = 0;
+    }
+
+    if (toff != floorf(toff)) {
+        out = applyT(current, toff);
+        current = out;
+        toff = 0;
+    }
+
+    // Now take care of the integer ones with a crop
+    return Crop::apply(current, -xoff, -yoff, -toff, im.width, im.height, im.frames);        
+}
+
+Image Translate::applyX(Window im, float xoff) {
+    int ix = floorf(xoff);
+    float fx = xoff - ix;
+    // compute a 6-tap lanczos kernel
+    float kernel[6];
+    kernel[0] = lanczos_3(-3 + fx);
+    kernel[1] = lanczos_3(-2 + fx);
+    kernel[2] = lanczos_3(-1 + fx);
+    kernel[3] = lanczos_3(0 + fx);
+    kernel[4] = lanczos_3(1 + fx);
+    kernel[5] = lanczos_3(2 + fx);
+
+    Image out(im.width, im.height, im.frames, im.channels);
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
+                for (int kx = -3; kx < 3; kx++) {
+                    int imx = x - ix + kx;
+                    if (imx < 0) continue;
+                    if (imx >= im.width) continue;
+                    float w = kernel[kx+3];
+                    for (int c = 0; c < im.channels; c++) {
+                        out(x, y, t)[c] += w*im(imx, y, t)[c];
+                    }
+                }
+            }
+        }
+    }
+    return out;
+}
+
+Image Translate::applyY(Window im, float yoff) {
+    int iy = floorf(yoff);
+    float fy = yoff - iy;
+    // compute a 6-tap lanczos kernel
+    float kernel[6];
+    kernel[0] = lanczos_3(-3 + fy);
+    kernel[1] = lanczos_3(-2 + fy);
+    kernel[2] = lanczos_3(-1 + fy);
+    kernel[3] = lanczos_3(0 + fy);
+    kernel[4] = lanczos_3(1 + fy);
+    kernel[5] = lanczos_3(2 + fy);
+
+    Image out(im.width, im.height, im.frames, im.channels);
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int ky = -3; ky < 3; ky++) {
+                int imy = y - iy + ky;
+                if (imy < 0) continue;
+                if (imy >= im.height) continue;
+                float w = kernel[ky+3];
+                for (int x = 0; x < im.width; x++) {
+                    for (int c = 0; c < im.channels; c++) {
+                        out(x, y, t)[c] += w*im(x, imy, t)[c];
+                    }
+                }
+            }
+        }
+    }
+    return out;
+}
+
+Image Translate::applyT(Window im, float toff) {
+    int it = floorf(toff);
+    float ft = toff - it;
+    // compute a 6-tap lanczos kernel
+    float kernel[6];
+    kernel[0] = lanczos_3(-3 + ft);
+    kernel[1] = lanczos_3(-2 + ft);
+    kernel[2] = lanczos_3(-1 + ft);
+    kernel[3] = lanczos_3(0 + ft);
+    kernel[4] = lanczos_3(1 + ft);
+    kernel[5] = lanczos_3(2 + ft);
+
+    Image out(im.width, im.height, im.frames, im.channels);
+    for (int t = 0; t < im.frames; t++) {
+        for (int kt = -3; kt < 3; kt++) {
+            int imt = t - it + kt;
+            if (imt < 0) continue;
+            if (imt >= im.frames) continue;
+            float w = kernel[kt+3];
+            for (int y = 0; y < im.height; y++) {
+                for (int x = 0; x < im.width; x++) {
+                    for (int c = 0; c < im.channels; c++) {
+                        out(x, y, t)[c] += w*im(x, y, imt)[c];
+                    }
+                }
+            }
+        }
+    }
+    return out;
 }
 
 void Paste::help() {
