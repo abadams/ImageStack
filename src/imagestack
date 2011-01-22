@@ -1,0 +1,34 @@
+# bash completion rule
+
+_ImageStack() 
+{
+	local cur prev opts
+	COMPREPLY=()
+	cur="${COMP_WORDS[COMP_CWORD]}"
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
+	opts=$( ImageStack -help | tail -n1 )
+
+
+	if [[ -z ${cur} ]]; then
+		if [[ ${opts} =~ ${prev} ]]; then
+			# save cursor pos
+			echo -e "\033[s"
+			ImageStack -help "${prev/-/}"
+			# restore cursor pos
+			echo
+			echo -e  "${COMP_WORDS[*]}" "\b\c"
+			return 0			
+		fi
+	fi
+
+	case "${cur}" in 		
+		-*)
+			COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+			return 0
+		;;
+		*)
+			COMPREPLY=( $(compgen -o default "${cur}") )
+	esac
+
+}
+complete -o filenames -F _ImageStack ImageStack

@@ -1,4 +1,4 @@
-BIN_CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -fprefetch-loop-arrays -march=nocona -msse3 -mfpmath=sse -Wno-uninitialized -I /usr/local/include
+BIN_CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -fprefetch-loop-arrays -march=core2 -msse3 -mfpmath=sse -Wno-uninitialized -I /usr/local/include
 
 LIB_CCFLAGS = $(BIN_CCFLAGS) -fPIC
 
@@ -36,6 +36,8 @@ LIB_FLAGS = -shared -fPIC
 
 install: $(BIN_TARGET)
 	cp $(BIN_TARGET) /usr/local/bin
+	cp src/imagestack /etc/bash_completion.d/
+	bash -e ./src/imagestack
 
 libinstall: library
 	cp $(LIB_TARGET) /usr/local/lib
