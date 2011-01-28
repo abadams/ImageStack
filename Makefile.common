@@ -17,6 +17,7 @@ IMAGESTACK_OBJECTS = \
 	FilePNG.o \
 	FileTMP.o \
 	FilePPM.o \
+	FilePBA.o \
 	FileTGA.o \
 	FileTIFF.o \
 	FileFLO.o \

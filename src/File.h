@@ -147,5 +147,11 @@ namespace FileCSV {
     Image load(string filename);
 }
 
+namespace FilePBA {
+    void help();
+    void save(Window im, string filename);
+    Image load(string filename);
+}
+
 #include "footer.h"
 #endif

@@ -42,6 +42,8 @@ void Load::help() {
     printf("\n");
     FileCSV::help();
     printf("\n");
+    FilePBA::help();
+    printf("\n");
     printf("Usage: ImageStack -load foo.jpg\n\n");
 }
 
@@ -76,6 +78,8 @@ Image Load::apply(string filename) {
         return FileFLO::load(filename);
     } else if (suffixMatch(filename, ".csv")) {
         return FileCSV::load(filename);
+    } else if (suffixMatch(filename, ".pba")) {
+	return FilePBA::load(filename);
     }
     
     panic("Unknown file format %s\n", filename.c_str());
@@ -153,6 +157,8 @@ void Save::help() {
     printf("\n");
     FileCSV::help();
     printf("\n");
+    FilePBA::help();
+    printf("\n");
 
     printf("Usage: ImageStack -load in.ppm -save out.jpg 98\n"
            "       ImageStack -load in.ppm -save out.jpg\n"
@@ -200,6 +206,8 @@ void Save::apply(Window im, string filename, string arg) {
         FileFLO::save(im, filename);
     } else if (suffixMatch(filename, ".csv")) {
         FileCSV::save(im, filename);
+    } else if (suffixMatch(filename, ".pba")) {
+	FilePBA::save(im, filename);
     } else {
         panic("Unknown file format %s\n", filename.c_str());
     }
