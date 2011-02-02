@@ -19,20 +19,19 @@ void AssembleHDR::help() {
            "Usage: ImageStack -loadframes input*.jpg -gamma 0.45 -assemblehdr -save out.exr\n"
            "   or  ImageStack -loadframes input*.jpg -gamma 0.45 -assemblehdr 1.0 0.5 0.1\n"
            "                  -save output.exr\n\n");
-    
+
 }
 
 void AssembleHDR::parse(vector<string> args) {
-  
+
     assert(args.size() == 0 ||
-           args.size() >= static_cast<unsigned int>(stack(0).frames), 
-           "-assemblehdr takes zero arguments or an exposure value for each frame in the volume (plus an optional gamma adjustment) \n");    
+           args.size() >= static_cast<unsigned int>(stack(0).frames),
+           "-assemblehdr takes zero arguments or an exposure value for each frame in the volume (plus an optional gamma adjustment) \n");
     if (args.size() == 0) {
         Image im = apply(stack(0));
         pop();
         push(im);
-    }
-    else {
+    } else {
         vector<float> exposures(stack(0).frames);
         string gamma = "1.0";
         if (static_cast<unsigned int>(stack(0).frames) < args.size()) {
@@ -57,7 +56,7 @@ struct gammaInfo {
     float B[256];
 };
 
-Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) {    
+Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) {
     assert(frames.frames == (int)exposures.size(), "AssembleHDR::applyKnownExposures - mismatched exposure and frame counts");
     // Figure out gamma conversion
     gammaInfo gi;
@@ -71,7 +70,7 @@ Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) 
             gi.type = gammaInfo::FLOAT;
             printf("Using gamma of %f to reverse the camera response curve\n", gi.gamma);
         }
-    } catch(Exception) {
+    } catch (Exception) {
         // Exposure isn't a float - assume it's a file name for a camera curve as output by HDRShop
         ::std::ifstream curveFile(gamma.c_str());
         assert(curveFile.is_open(), ("Can't open filename "+gamma+" for reading a camera curve").c_str());
@@ -81,10 +80,10 @@ Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) 
         // Parse file - first line is C = [
         // Then there are 256 lines of float triplets in RGB order
         // and the final line is ];
-      
+
         curveFile.ignore(100,'\n');
 
-        for ( unsigned int m =0; m < 256; m++) {
+        for (unsigned int m =0; m < 256; m++) {
             float rr, gg, bb;
             curveFile >> rr >> gg >> bb;
             // curve.m data is in log space, and needs normalization too
@@ -94,7 +93,7 @@ Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) 
             //        printf("%f %f %f\n", gi.R[m], gi.G[m], gi.B[m]);
             //        fflush(stdout);
 
-        }            
+        }
         printf("Using file %s for camera curve\n", gamma.c_str());
         curveFile.close();
     }
@@ -102,12 +101,12 @@ Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) 
 
     Image out(frames.width, frames.height, 1, frames.channels);
     Image weight(frames.width, frames.height, 1, 1);
-  
+
     float maxExpVal = exposures[0];
     float minExpVal = exposures[0];
     for (unsigned int e = 1; e < exposures.size(); e++) {
-        if ( exposures[e] > maxExpVal ) maxExpVal = exposures[e];
-        if ( exposures[e] < minExpVal ) minExpVal = exposures[e];
+        if (exposures[e] > maxExpVal) { maxExpVal = exposures[e]; }
+        if (exposures[e] < minExpVal) { minExpVal = exposures[e]; }
     }
 
 
@@ -116,25 +115,25 @@ Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) 
     int x_debug=1640, y_debug=1045;
 #endif
 
-    for (int t = 0; t < frames.frames; t++) {    
+    for (int t = 0; t < frames.frames; t++) {
         float exposureRatio = 1/exposures[t];
 
         printf("Frame %d: Exposure %f", t, exposures[t]);
-        cutoffType cutoff; 
-        if ( fabs(exposures[t] -maxExpVal) < 0.001 * maxExpVal) { 
+        cutoffType cutoff;
+        if (fabs(exposures[t] -maxExpVal) < 0.001 * maxExpVal) {
             printf("  - Longest exposure");
             cutoff = LONGEST_EXPOSURE;
-        } else if ( fabs(exposures[t] - minExpVal) < 0.001 * minExpVal ) {
+        } else if (fabs(exposures[t] - minExpVal) < 0.001 * minExpVal) {
             printf("  - Shortest exposure");
             cutoff = SHORTEST_EXPOSURE;
         } else {
             cutoff = REGULAR;
         }
         int count=0;
-        for (int y = 0; y < frames.height; y++) {      
+        for (int y = 0; y < frames.height; y++) {
             for (int x = 0; x < frames.width; x++) {
                 float w = weightFunc(frames(x, y, t), frames.channels, cutoff);
-                if (w < 1.0) count++;
+                if (w < 1.0) { count++; }
                 weight(x,y)[0] += w;
                 if (gi.type == gammaInfo::NONE) {
                     for (int c = 0; c < frames.channels; c++) {
@@ -152,9 +151,9 @@ Image AssembleHDR::apply(Window frames, vector<float> &exposures, string gamma) 
 
             }
         }
-        printf(".  %d of %d pixels weighted 1.0 (%f%%)\n", 
+        printf(".  %d of %d pixels weighted 1.0 (%f%%)\n",
                frames.height*frames.width-count,
-               frames.height*frames.width, 
+               frames.height*frames.width,
                100*((float)(frames.height*frames.width-count)/(frames.height*frames.width)));
     }
 
@@ -173,14 +172,14 @@ Image AssembleHDR::apply(Window frames) {
     // Find max and min exposure frames
 
     int maxExpFrame = 0;
-    double minMean = 0;    
+    double minMean = 0;
     int minExpFrame = 0;
     double maxMean = 0;
 
     for (int t = 0; t < frames.frames; t++) {
         double mean = 0;
         for (int y = 0; y < frames.height; y++) {
-              for (int x = 0; x < frames.width; x++) {
+            for (int x = 0; x < frames.width; x++) {
                 mean += static_cast<double>(frames(x, y, t)[0]);
             }
         }
@@ -191,7 +190,7 @@ Image AssembleHDR::apply(Window frames) {
             if (mean < minMean) {
                 minExpFrame = t;
                 minMean = mean;
-            } 
+            }
             if (mean > maxMean) {
                 maxExpFrame = t;
                 maxMean = mean;
@@ -202,10 +201,10 @@ Image AssembleHDR::apply(Window frames) {
     // initialize the output to the first frame
     cutoffType cutoff;
     printf("Frame 0 scale is 1.0");
-    if (0 == maxExpFrame) { 
+    if (0 == maxExpFrame) {
         printf(" - Longest exposure\n");
         cutoff = LONGEST_EXPOSURE;
-    } else if ( 0 == minExpFrame) {
+    } else if (0 == minExpFrame) {
         printf(" - Shortest exposure\n");
         cutoff = SHORTEST_EXPOSURE;
     } else {
@@ -222,32 +221,34 @@ Image AssembleHDR::apply(Window frames) {
             }
         }
     }
-           
+
     for (int t = 0; t < frames.frames - 1; t++) {
 
         // Check for special cutoffs
-        if (t+1 == maxExpFrame) { 
+        if (t+1 == maxExpFrame) {
             cutoff = LONGEST_EXPOSURE;
-        } else if ( t+1 == minExpFrame) {
+        } else if (t+1 == minExpFrame) {
             cutoff = SHORTEST_EXPOSURE;
         } else {
             cutoff = REGULAR;
         }
-    
+
         // find the average ratio between each frame and the current output
         float count = 0;
         float ratio = 0;
         for (int y = 0; y < frames.height; y++) {
             for (int x = 0; x < frames.width; x++) {
                 float weightOld = weight(x, y)[0];
-                if (weightOld < 1.0) 
+                if (weightOld < 1.0) {
                     continue;
-                if (weightFunc(frames(x, y, t+1), frames.channels, cutoff) < 1.0 ) 
+                }
+                if (weightFunc(frames(x, y, t+1), frames.channels, cutoff) < 1.0) {
                     continue;
+                }
                 for (int c = 0; c < frames.channels; c++) {
                     float valOld = out(x, y)[c] / weightOld;
                     float valNew = frames(x, y, t+1)[c];
-                    if (valNew < 0.1 || valOld < 0.1) continue; // Some color channels may be zero even for good pixels
+                    if (valNew < 0.1 || valOld < 0.1) { continue; } // Some color channels may be zero even for good pixels
                     ratio += valOld / valNew;
                     count++;
                 }
@@ -256,7 +257,7 @@ Image AssembleHDR::apply(Window frames) {
         ratio /= count;
 
         printf("Frame %i scale is %f", t+1, ratio);
-        switch(cutoff) {
+        switch (cutoff) {
         case LONGEST_EXPOSURE:
             printf(" - Longest exposure\n");
             break;
@@ -285,9 +286,9 @@ Image AssembleHDR::apply(Window frames) {
 }
 
 float AssembleHDR::weightFunc(float *x, int channels, cutoffType cutoff) {
-    
-    // Weighting function rationale: A pixel is well-captured if its _highest_ 
-    // color channel value is in the linear range of the sensor (varies by the 
+
+    // Weighting function rationale: A pixel is well-captured if its _highest_
+    // color channel value is in the linear range of the sensor (varies by the
     // sensor, of course, but 0.1-0.9 is a likely good range)
     // However, if we are dealing with the longest exposure in the stack of images,
     // there can be no better value for underexposured pixels - so keep weights at 1
@@ -310,22 +311,24 @@ float AssembleHDR::weightFunc(float *x, int channels, cutoffType cutoff) {
     // Find maximum channel value
     float maxVal = x[0];
     for (int c = 1; c < channels; c++) {
-        if (x[c] > maxVal) maxVal = x[c];
+        if (x[c] > maxVal) { maxVal = x[c]; }
     }
 
     // Calculate weight - trapezoidal shape that falls to zero before 0 or 1
     if (cutoff != LONGEST_EXPOSURE) {
-        if (maxVal <= lowCutoffEnd) 
+        if (maxVal <= lowCutoffEnd) {
             return 0.0;
-        else if (maxVal < lowCutoffStart)
+        } else if (maxVal < lowCutoffStart) {
             return (maxVal-lowCutoffEnd)*lowCutoffScale;
-    } 
+        }
+    }
     if (cutoff != SHORTEST_EXPOSURE) {
-        if (maxVal >= highCutoffEnd)
+        if (maxVal >= highCutoffEnd) {
             return 0.0;
-        else if (maxVal > highCutoffStart)
+        } else if (maxVal > highCutoffStart) {
             return 1.0-(maxVal-highCutoffStart)*highCutoffScale;
-    } 
+        }
+    }
     return 1.0;
 }
 #include "footer.h"

@@ -18,7 +18,7 @@ void Add::apply(Window a, Window b) {
     assert(a.width == b.width &&
            a.height == b.height &&
            a.frames == b.frames &&
-           (a.channels == b.channels || b.channels == 1), 
+           (a.channels == b.channels || b.channels == 1),
            "Cannot add images of different sizes or channel numbers\n");
 
     if (a.channels != 1 && b.channels == 1) {
@@ -26,9 +26,9 @@ void Add::apply(Window a, Window b) {
             for (int y = 0; y < a.height; y++) {
                 for (int c = 0; c < a.channels; c++) {
                     float *aPtr = a(0, y, t)+c;
-                    float *bPtr = b(0, y, t);                    
-                    for (int x = 0; x < a.width; x++) {                        
-                        aPtr[x*a.channels] += bPtr[x];
+                    float *bPtr = b(0, y, t);
+                    for (int x = 0; x < a.width; x++) {
+                        aPtr[x *a.channels] += bPtr[x];
                     }
                 }
             }
@@ -70,10 +70,10 @@ void Multiply::parse(vector<string> args) {
     assert(args.size() < 2, "-multiply takes zero or one arguments\n");
 
     Mode m = Elementwise;
-    if (args.size() == 0) m = Elementwise;
-    else if (args[0] == "inner") m = Inner;
-    else if (args[0] == "outer") m = Outer;
-    else if (args[0] == "elementwise") m = Elementwise;
+    if (args.size() == 0) { m = Elementwise; }
+    else if (args[0] == "inner") { m = Inner; }
+    else if (args[0] == "outer") { m = Outer; }
+    else if (args[0] == "elementwise") { m = Elementwise; }
     else {
         panic("Unknown vector-vector multiplication: %s\n", args[0].c_str());
     }
@@ -98,7 +98,7 @@ void Multiply::parse(vector<string> args) {
 }
 
 Image Multiply::apply(Window a, Window b, Mode m) {
-    if (a.channels < b.channels) return apply(b, a, m);
+    if (a.channels < b.channels) { return apply(b, a, m); }
 
     assert(a.width == b.width &&
            a.height == b.height &&
@@ -115,7 +115,7 @@ Image Multiply::apply(Window a, Window b, Mode m) {
 
     if (b.channels == 1) { // scalar-vector case
         out = Image(a.width, a.height, a.frames, a.channels);
-        
+
         for (int t = 0; t < a.frames; t++) {
             for (int y = 0; y < a.height; y++) {
                 for (int x = 0; x < a.width; x++) {
@@ -137,7 +137,7 @@ Image Multiply::apply(Window a, Window b, Mode m) {
                         }
                     }
                 }
-            }            
+            }
         } else {
             int factor = a.channels / b.channels;
             for (int t = 0; t < a.frames; t++) {
@@ -152,7 +152,7 @@ Image Multiply::apply(Window a, Window b, Mode m) {
                         }
                     }
                 }
-            }            
+            }
 
         }
     } else if (m == Inner) {
@@ -181,7 +181,7 @@ Image Multiply::apply(Window a, Window b, Mode m) {
                         }
                     }
                 }
-            }            
+            }
         }
     } else if (m == Outer) {
         out = Image(a.width, a.height, a.frames, a.channels*b.channels);
@@ -197,7 +197,7 @@ Image Multiply::apply(Window a, Window b, Mode m) {
                     }
                 }
             }
-        }                    
+        }
     } else {
         panic("Unknown multiplication type: %d\n", m);
     }
@@ -213,7 +213,7 @@ void Multiply::applyElementwise(Window a, Window b) {
 
     assert(a.channels % b.channels == 0,
            "One input have a number of channels which is a multiple of the other's\n");
-    
+
     if (a.channels == b.channels) {
         for (int t = 0; t < a.frames; t++) {
             for (int y = 0; y < a.height; y++) {
@@ -238,7 +238,7 @@ void Multiply::applyElementwise(Window a, Window b) {
                     }
                 }
             }
-        }                    
+        }
     }
 }
 
@@ -258,7 +258,7 @@ void Subtract::apply(Window a, Window b) {
     assert(a.width == b.width &&
            a.height == b.height &&
            a.frames == b.frames &&
-           (a.channels == b.channels || b.channels == 1), 
+           (a.channels == b.channels || b.channels == 1),
            "Cannot subtract images of different sizes or channel numbers\n");
 
 
@@ -267,9 +267,9 @@ void Subtract::apply(Window a, Window b) {
             for (int y = 0; y < a.height; y++) {
                 for (int c = 0; c < a.channels; c++) {
                     float *aPtr = a(0, y, t)+c;
-                    float *bPtr = b(0, y, t);                    
-                    for (int x = 0; x < a.width; x++) {                        
-                        aPtr[x*a.channels] -= bPtr[x];
+                    float *bPtr = b(0, y, t);
+                    for (int x = 0; x < a.width; x++) {
+                        aPtr[x *a.channels] -= bPtr[x];
                     }
                 }
             }
@@ -303,7 +303,7 @@ void Divide::apply(Window a, Window b) {
     assert(a.width == b.width &&
            a.height == b.height &&
            a.frames == b.frames &&
-           (a.channels == b.channels || b.channels == 1), 
+           (a.channels == b.channels || b.channels == 1),
            "Cannot divide images of different sizes or channel numbers\n");
 
 
@@ -312,9 +312,9 @@ void Divide::apply(Window a, Window b) {
             for (int y = 0; y < a.height; y++) {
                 for (int c = 0; c < a.channels; c++) {
                     float *aPtr = a(0, y, t)+c;
-                    float *bPtr = b(0, y, t);                    
-                    for (int x = 0; x < a.width; x++) {                        
-                        aPtr[x*a.channels] /= bPtr[x];
+                    float *bPtr = b(0, y, t);
+                    for (int x = 0; x < a.width; x++) {
+                        aPtr[x *a.channels] /= bPtr[x];
                     }
                 }
             }
@@ -350,7 +350,7 @@ void Maximum::apply(Window a, Window b) {
     assert(a.width == b.width &&
            a.height == b.height &&
            a.frames == b.frames &&
-           a.channels == b.channels, 
+           a.channels == b.channels,
            "Cannot compare images of different sizes or channel numbers\n");
 
     for (int t = 0; t < a.frames; t++) {
@@ -383,7 +383,7 @@ void Minimum::apply(Window a, Window b) {
     assert(a.width == b.width &&
            a.height == b.height &&
            a.frames == b.frames &&
-           a.channels == b.channels, 
+           a.channels == b.channels,
            "Cannot compare images of different sizes or channel numbers\n");
 
     for (int t = 0; t < a.frames; t++) {
@@ -404,7 +404,7 @@ void Log::help() {
     printf("\n-log takes the natural log of the current image.\n\n"
            "Usage: ImageStack -load a.tga -log -load b.tga -log -add -exp -save product.tga.\n");
 }
-    
+
 void Log::parse(vector<string> args) {
     assert(args.size() == 0, "-log takes no arguments\n");
     apply(stack(0));
@@ -427,11 +427,11 @@ void Exp::help() {
            "it calculates that argument to the power of the current image.\n\n"
            "Usage: ImageStack -load a.tga -log -load b.tga -log -add -exp -save product.tga.\n");
 }
-    
+
 void Exp::parse(vector<string> args) {
-    if (args.size() == 0) apply(stack(0));
-    else if (args.size() == 1) apply(stack(0), readFloat(args[1]));
-    else panic("-exp takes zero or one arguments\n");
+    if (args.size() == 0) { apply(stack(0)); }
+    else if (args.size() == 1) { apply(stack(0), readFloat(args[1])); }
+    else { panic("-exp takes zero or one arguments\n"); }
 }
 
 void Exp::apply(Window a, float base) {
@@ -450,7 +450,7 @@ void Abs::help() {
     printf("\n-abs takes the absolute value of the current image.\n\n"
            "Usage: ImageStack -load a.tga -load b.tga -subtract -abs -save diff.tga\n\n");
 }
-    
+
 void Abs::parse(vector<string> args) {
     assert(args.size() == 0, "-abs takes no arguments\n");
     apply(stack(0));
@@ -473,13 +473,13 @@ void Offset::help() {
            "argument, or with one argument per image channel.\n"
            "Usage: ImageStack -load a.tga -offset 0.5 34 2 -save b.tga\n\n");
 }
-    
+
 void Offset::parse(vector<string> args) {
     vector<float> fargs;
     for (size_t i = 0; i < args.size(); i++) {
         fargs.push_back(readFloat(args[i]));
     }
-        
+
     apply(stack(0), fargs);
 }
 
@@ -492,7 +492,7 @@ void Offset::apply(Window a, float offset) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Offset::apply(Window a, vector<float> args) {
@@ -509,7 +509,7 @@ void Offset::apply(Window a, vector<float> args) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Scale::help() {
@@ -517,13 +517,13 @@ void Scale::help() {
            "argument, or with one argument per image channel.\n"
            "Usage: ImageStack -load a.tga -scale 0.5 34 2 -save b.tga\n\n");
 }
- 
+
 void Scale::parse(vector<string> args) {
     vector<float> fargs;
     for (size_t i = 0; i < args.size(); i++) {
         fargs.push_back(readFloat(args[i]));
     }
-        
+
     apply(stack(0), fargs);
 
 }
@@ -537,7 +537,7 @@ void Scale::apply(Window a, float scale) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Scale::apply(Window a, vector<float> args) {
@@ -554,7 +554,7 @@ void Scale::apply(Window a, vector<float> args) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Gamma::help() {
@@ -568,7 +568,7 @@ void Gamma::parse(vector<string> args) {
     for (size_t i = 0; i < args.size(); i++) {
         fargs.push_back(readFloat(args[i]));
     }
-        
+
     apply(stack(0), fargs);
 }
 
@@ -578,14 +578,15 @@ void Gamma::apply(Window a, float gamma) {
             for (int x = 0; x < a.width; x++) {
                 float *sample = a(x, y, t);
                 for (int c = 0; c < a.channels; c++) {
-                    if (sample[c] > 0)
+                    if (sample[c] > 0) {
                         sample[c] = powf(sample[c], gamma);
-                    else
+                    } else {
                         sample[c] = -powf(-sample[c], gamma);
+                    }
                 }
             }
         }
-    }    
+    }
 }
 
 void Gamma::apply(Window a, vector<float> args) {
@@ -599,14 +600,15 @@ void Gamma::apply(Window a, vector<float> args) {
             for (int x = 0; x < a.width; x++) {
                 float *sample = a(x, y, t);
                 for (int c = 0; c < a.channels; c++) {
-                    if (sample[c] > 0)
+                    if (sample[c] > 0) {
                         sample[c] = powf(sample[c], args[c]);
-                    else
+                    } else {
                         sample[c] = -powf(-sample[c], args[c]);
+                    }
                 }
             }
         }
-    }    
+    }
 }
 
 void Mod::help() {
@@ -614,13 +616,13 @@ void Mod::help() {
            "called with a single argument, or with one argument per image channel.\n"
            "Usage: ImageStack -load a.tga -mod 0.5 34 2 -save b.tga\n\n");
 }
- 
+
 void Mod::parse(vector<string> args) {
     vector<float> fargs;
     for (size_t i = 0; i < args.size(); i++) {
         fargs.push_back(readFloat(args[i]));
     }
-        
+
     apply(stack(0), fargs);
 }
 
@@ -633,7 +635,7 @@ void Mod::apply(Window a, float mod) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Mod::apply(Window a, vector<float> args) {
@@ -650,7 +652,7 @@ void Mod::apply(Window a, vector<float> args) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Clamp::help() {
@@ -659,7 +661,7 @@ void Clamp::help() {
            "to clamping between zero and one.\n\n"
            "Usage: ImageStack -load a.exr -clamp 0 1 -save a.tga\n\n");
 }
-    
+
 void Clamp::parse(vector<string> args) {
     if (args.size() == 0) {
         apply(stack(0), 0, 1);
@@ -681,7 +683,7 @@ void Clamp::apply(Window a, float lower, float upper) {
                 }
             }
         }
-    }        
+    }
 }
 
 void DeNaN::help() {
@@ -705,11 +707,11 @@ void DeNaN::apply(Window a, float replacement) {
         for (int y = 0; y < a.height; y++) {
             for (int x = 0; x < a.width; x++) {
                 for (int c = 0; c < a.channels; c++) {
-                    if (isnan(a(x, y, t)[c])) a(x, y, t)[c] = replacement;
+                    if (isnan(a(x, y, t)[c])) { a(x, y, t)[c] = replacement; }
                 }
             }
         }
-    }        
+    }
 }
 
 void Threshold::help() {
@@ -717,7 +719,7 @@ void Threshold::help() {
            "sets it to one where it is greater than or equal to the argument.\n\n"
            "Usage: ImageStack -load a.exr -threshold 0.5 -save monochrome.tga\n\n");
 }
-    
+
 void Threshold::parse(vector<string> args) {
     assert(args.size() == 1, "-threshold takes exactly one argument\n");
     apply(stack(0), readFloat(args[0]));
@@ -733,7 +735,7 @@ void Threshold::apply(Window a, float threshold) {
                 }
             }
         }
-    }        
+    }
 }
 
 void Normalize::help() {
@@ -741,7 +743,7 @@ void Normalize::help() {
            "by rescaling and shifting it.\n\n"
            "Usage: ImageStack -load a.exr -normalize -save a.tga\n\n");
 }
-    
+
 void Normalize::parse(vector<string> args) {
     assert(args.size() == 0, "-normalize takes no arguments\n");
     apply(stack(0));
@@ -761,7 +763,7 @@ void Normalize::apply(Window a) {
                 }
             }
         }
-    }    
+    }
 
     float invDelta = 1.0f/(maxValue - minValue);
     for (int t = 0; t < a.frames; t++) {
@@ -773,7 +775,7 @@ void Normalize::apply(Window a) {
                 }
             }
         }
-    }            
+    }
 }
 
 
@@ -786,10 +788,10 @@ void Quantize::help() {
 
 void Quantize::parse(vector<string> args) {
     assert(args.size() <= 1, "-quantize takes zero or one arguments\n");
- 
-    if (args.size()) apply(stack(0), readFloat(args[0]));
-    else apply(stack(0), 1);
-                           
+
+    if (args.size()) { apply(stack(0), readFloat(args[0])); }
+    else { apply(stack(0), 1); }
+
 }
 
 void Quantize::apply(Window a, float increment) {
@@ -801,7 +803,7 @@ void Quantize::apply(Window a, float increment) {
                 }
             }
         }
-    }        
+    }
 }
 
 #include "footer.h"

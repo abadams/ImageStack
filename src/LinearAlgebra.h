@@ -4,7 +4,7 @@
 #include <math.h>
 #include "header.h"
 
-/* 
+/*
 
 This class takes a set of vectors of length N and vectors of length M,
 and computes the best (least-squares) matrix that maps from the first
@@ -50,7 +50,7 @@ float x[3], y[2];
 
 while (there are more examples) {
    // do something to fill in x[0], x[1], y[0], y[1] with the next example input and output
-   
+
    // set x[2] to 1, because we're computing an affine transformation using a matrix
    x[2] = 1;
 
@@ -75,7 +75,7 @@ float x[6], y[2];
 
 while (there are more examples) {
    // do something to fill in x[0], x[1], y[0], y[1] with the next example
-   
+
    // fill in the rest of the quadratic terms
    x[2] = 1;
    x[3] = x[0]*x[0];
@@ -109,10 +109,10 @@ if (!solver.solve(m)) {
 
 template<int N, int M>
 class LeastSquaresSolver {
-public:    
+public:
     // stored row major
-    double AtA[N*N];
-    double Atb[N*M];
+    double AtA[N *N];
+    double Atb[N *M];
 
     LeastSquaresSolver() {
         reset();
@@ -131,64 +131,64 @@ public:
         // update AtA
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                AtA[i*N+j] += in[i]*in[j]*weight;
+                AtA[i *N+j] += in[i]*in[j]*weight;
             }
-        }        
+        }
 
         // update Atb
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
-                Atb[i*M+j] += in[i]*out[j]*weight;
+                Atb[i *M+j] += in[i]*out[j]*weight;
             }
-        }        
+        }
     }
 
     void addCorrespondence(float *in, float *out) {
         // update AtA
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                AtA[i*N+j] += in[i]*in[j];
+                AtA[i *N+j] += in[i]*in[j];
             }
-        }        
+        }
 
         // update Atb
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
-                Atb[i*M+j] += in[i]*out[j];
+                Atb[i *M+j] += in[i]*out[j];
             }
-        }        
+        }
     }
 
     void addCorrespondence(double *in, double *out, double weight) {
         // update AtA
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                AtA[i*N+j] += in[i]*in[j]*weight;
+                AtA[i *N+j] += in[i]*in[j]*weight;
             }
-        }        
+        }
 
         // update Atb
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
-                Atb[i*M+j] += in[i]*out[j]*weight;
+                Atb[i *M+j] += in[i]*out[j]*weight;
             }
-        }        
+        }
     }
 
     void addCorrespondence(double *in, double *out) {
         // update AtA
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                AtA[i*N+j] += in[i]*in[j];
+                AtA[i *N+j] += in[i]*in[j];
             }
-        }        
+        }
 
         // update Atb
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
-                Atb[i*M+j] += in[i]*out[j];
+                Atb[i *M+j] += in[i]*out[j];
             }
-        }        
+        }
     }
 
     // returns whether or not it succeeded
@@ -207,43 +207,45 @@ public:
                 for (int i = 0; i < k; i++) {
                     s += L[k*N+i]*L[j*N+i];
                 }
-                L[j*N+k] = s = (AtA[j*N+k] - s)/L[k*N+k];
+                L[j *N+k] = s = (AtA[j*N+k] - s)/L[k*N+k];
                 d = d + s*s;
-                isspd = isspd && (AtA[k*N+j] == AtA[j*N+k]); 
+                isspd = isspd && (AtA[k *N+j] == AtA[j*N+k]);
             }
             d = AtA[j*N+j] - d;
             isspd = isspd && (d > 0.0);
-            L[j*N+j] = sqrt(d > 0.0 ? d : 0.0);
+            L[j *N+j] = sqrt(d > 0.0 ? d : 0.0);
             for (int k = j+1; k < N; k++) {
-                L[j*N+k] = 0.0;
+                L[j *N+k] = 0.0;
             }
-        }                
+        }
 
         // bail if not symmetric positive definite
-        if (!isspd) return false;
+        if (!isspd) { return false; }
 
-        for (int i = 0; i < M*N; i++) solution[i] = Atb[i];
+        for (int i = 0; i < M*N; i++) { solution[i] = Atb[i]; }
 
         // apply the decomposition to produce a solution
         // Solve L*y = b;
         for (int j = 0; j < M; j++) {
             for (int k = 0; k < N; k++) {
-                for (int i = 0; i < k; i++) 
-                    solution[j+k*M] -= solution[j+i*M]*L[k*N+i];
-                solution[j+k*M] /= L[k*N+k];            
+                for (int i = 0; i < k; i++) {
+                    solution[j+k *M] -= solution[j+i*M]*L[k*N+i];
+                }
+                solution[j+k *M] /= L[k*N+k];
             }
 
             // Solve L'*X = Y;
             for (int k = N-1; k >= 0; k--) {
-                for (int i = k+1; i < N; i++) 
-                    solution[j+k*M] -= solution[j+i*M]*L[i*N+k];
-                solution[j+k*M] /= L[k*N+k];
+                for (int i = k+1; i < N; i++) {
+                    solution[j+k *M] -= solution[j+i*M]*L[i*N+k];
+                }
+                solution[j+k *M] /= L[k*N+k];
             }
         }
 
 
         return true;
-    }    
+    }
 };
 
 #include "footer.h"

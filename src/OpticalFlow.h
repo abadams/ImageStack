@@ -3,13 +3,13 @@
 #include "header.h"
 
 class OpticalFlow : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
-    static Image apply(Window source, Window target, Window initial);    
-    static Image apply(Window source, Window target);    
+    static Image apply(Window source, Window target, Window initial);
+    static Image apply(Window source, Window target);
 
-  private:
+private:
     static bool IsDisplay;
     static void Coarse2FineFlow(Image &vx, Image &vy, Image &warpI2, const Image Im1, const Image Im2, double alpha, double ratio, int minWidth, int nOuterFPIterations, int nInnerFPIterations, int nCGIterations);
     static void RefineFlow(Image initial, Image &vx, Image &vy, Image &warpI2, const Image Im1, const Image Im2, double alpha, double ratio, int minWidth, int nOuterFPIterations, int nInnerFPIterations, int nCGIterations);
@@ -34,10 +34,10 @@ class OpticalFlow : public Operation {
 };
 
 class OpticalFlowWarp : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
-    static Image apply(Window input, Window from, Window to);    
+    static Image apply(Window input, Window from, Window to);
 };
 
 #include "footer.h"

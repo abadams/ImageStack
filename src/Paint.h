@@ -3,28 +3,28 @@
 #include "header.h"
 
 class Eval : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, string expression);
 };
 
 class EvalChannels : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, vector<string> expressions);
 };
 
 class Plot : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, int width, int height, float lineThickness);
 };
 
 class Composite : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window dst, Window src);

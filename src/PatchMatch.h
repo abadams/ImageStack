@@ -3,37 +3,37 @@
 #include "header.h"
 
 class PatchMatch : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
-    static Image apply(Window source, Window target, int iterations, int patchSize);    
-    static Image apply(Window source, Window target, Window mask, int iterations, int patchSize);    
+    static Image apply(Window source, Window target, int iterations, int patchSize);
+    static Image apply(Window source, Window target, Window mask, int iterations, int patchSize);
 
-  private:
+private:
     static float distance(Window source, Window target, Window mask,
                           int st, int sx, int sy,
                           int tt, int tx, int ty,
                           int patchSize, float prevDist);
-    
+
 };
 
 
 
 class BidirectionalSimilarity : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
-    static void apply(Window source, Window target, 
+    static void apply(Window source, Window target,
                       Window sourceMask, Window targetMask,
-                      float alpha, int numIter, int numIterPM = 5);    
-    
+                      float alpha, int numIter, int numIterPM = 5);
+
 };
 
 
 class Heal : public Operation {
-  public:
+public:
     void help();
-    void parse(vector<string> args);                      
+    void parse(vector<string> args);
 };
 
 #include "footer.h"

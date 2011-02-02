@@ -1,4 +1,4 @@
-#ifndef IMAGESTACK_GKDTREE_H 
+#ifndef IMAGESTACK_GKDTREE_H
 #define IMAGESTACK_GKDTREE_H
 
 /******************************************************************
@@ -17,11 +17,11 @@ const float INF = std::numeric_limits<float>::infinity();
 #define RAND_FLOAT ((double)(rand()) / (RAND_MAX+1.0))
 
 class Gaussian {
-  public:
+public:
     Gaussian(float sigma_) : sigma(sigma_) {
         alpha = 0.5f/sigma;
     }
-        
+
     // sample the gaussian using a cubic bezier approximation
     inline float sample(float x) const {
         x *= alpha;
@@ -46,7 +46,7 @@ class Gaussian {
     }
 
     // sample the gaussian using x^2 as the argument instead of x
-    // uses a different 
+    // uses a different
     inline float sampleSquared(float x2) {
         x2 *= alpha * alpha;
         return expf(-2*x2);
@@ -75,7 +75,7 @@ class Gaussian {
             x = x-2;
             x *= x;
             x *= x;
-            return -x + 24;            
+            return -x + 24;
         }
         return 24;
     }
@@ -84,14 +84,14 @@ class Gaussian {
         return sigma;
     }
 
-  private:
+private:
 
     float alpha, sigma;
 };
 
 
 class GKDTree {
-  public:
+public:
     static Image filter(Image im, Image ref, float accuracy, size_t *memory) {
 
         printf("Building...\n");
@@ -122,8 +122,8 @@ class GKDTree {
 
         int *indices = new int[BLUR_ACCURACY];
         float *weights = new float[BLUR_ACCURACY];
-        float *values = new float[tree.getLeaves() * (im.channels+1)];
-        float *tmpValues = new float[tree.getLeaves() * (im.channels+1)];
+        float *values = new float[tree.getLeaves() *(im.channels+1)];
+        float *tmpValues = new float[tree.getLeaves() *(im.channels+1)];
         memset(values, 0, sizeof(float)*tree.getLeaves()*(im.channels+1));
         memset(tmpValues, 0, sizeof(float)*tree.getLeaves()*(im.channels+1));
 
@@ -146,17 +146,17 @@ class GKDTree {
                 }
             }
         }
-    
+
         printf("Blurring...\n");
-    
+
         tree.blur(BLUR_STD_DEV, values, tmpValues, im.channels+1, BLUR_ACCURACY);
         float *tmp = tmpValues;
         tmpValues = values;
         values = tmp;
-    
-        printf("Slicing...\n");  
+
+        printf("Slicing...\n");
         Image out = im.copy();
-        
+
         float *outPtr = out(0, 0, 0);
         refPtr = ref(0, 0, 0);
 
@@ -188,15 +188,15 @@ class GKDTree {
         delete values;
         delete tmpValues;
         delete indices;
-        delete weights;        
+        delete weights;
 
-        *memory = (tree.getLeaves()*(sizeof(Leaf) + ref.channels*sizeof(float)) + 
-                   (tree.getLeaves()-1)*(sizeof(Split)) + 
-                   sizeof(tree) + 
+        *memory = (tree.getLeaves()*(sizeof(Leaf) + ref.channels*sizeof(float)) +
+                   (tree.getLeaves()-1)*(sizeof(Split)) +
+                   sizeof(tree) +
                    2*tree.getLeaves() * (im.channels+1));
-        
+
         return out;
-        
+
     };
 
 
@@ -208,22 +208,22 @@ class GKDTree {
 
     // At least one point from data lies in any given leaf.
 
-    GKDTree(int dims, float **data, int nData, float sBound) : 
+    GKDTree(int dims, float **data, int nData, float sBound) :
         dimensions(dims), sizeBound(sBound), leaves(0) {
 
         // Allocate space to store a data bounding box while we build
-        // the tree 
+        // the tree
         dataMins = new float[dims];
         dataMaxs = new float[dims];
 
-        root = build(data, nData);        
+        root = build(data, nData);
 
         gaussian = NULL;
 
         delete dataMins;
         delete dataMaxs;
-    }               
-        
+    }
+
     ~GKDTree() {
         delete root;
     }
@@ -240,13 +240,13 @@ class GKDTree {
             kdtreeMins[i] = -INF;
             kdtreeMaxs[i] = +INF;
         }
-        
-        root->computeBounds(kdtreeMins, kdtreeMaxs);
-        
-        delete kdtreeMins;
-        delete kdtreeMaxs;                
 
-        printf("Constructed a gkdtree with %i leaves\n", leaves);        
+        root->computeBounds(kdtreeMins, kdtreeMaxs);
+
+        delete kdtreeMins;
+        delete kdtreeMaxs;
+
+        printf("Constructed a gkdtree with %i leaves\n", leaves);
     }
 
     int getLeaves() {
@@ -272,7 +272,7 @@ class GKDTree {
     // assign some data to each leaf node and do a gaussian blur
     void blur(float sigma, float *oldValues, float *newValues, int dataDimensions, int nSamples) {
         int *ids = new int[nSamples];
-        float *weights = new float[nSamples];        
+        float *weights = new float[nSamples];
 
         memset(newValues, 0, sizeof(float)*leaves*dataDimensions);
         root->blur(this, sigma, oldValues, newValues, dataDimensions, ids, weights, nSamples);
@@ -280,11 +280,11 @@ class GKDTree {
         delete ids;
         delete weights;
     }
-        
-        
 
 
-  private:
+
+
+private:
 
     Gaussian *makeGaussian(float sigma) {
         if (gaussian) {
@@ -298,8 +298,8 @@ class GKDTree {
         return gaussian;
     }
 
-    class Node {        
-      public:
+    class Node {
+    public:
         virtual ~Node() {}
 
         // Returns a list of samples from the kdtree distributed
@@ -321,9 +321,9 @@ class GKDTree {
         virtual void computeBounds(float *mins, float *maxs) = 0;
 
     };
-    
+
     class Split : public Node {
-      public:
+    public:
         virtual ~Split() {
             delete left;
             delete right;
@@ -331,12 +331,12 @@ class GKDTree {
 
 
         // for a given gaussian and a given value, the probability of splitting left at this node
-        inline float pLeft(Gaussian *gaussian, float value) {            
-            // Coarsely approximate the cumulative normal distribution 
+        inline float pLeft(Gaussian *gaussian, float value) {
+            // Coarsely approximate the cumulative normal distribution
             float val = gaussian->sampleCDF(cut_val - value);
             float minBound = gaussian->sampleCDF(min_val - value);
-            float maxBound = gaussian->sampleCDF(max_val - value);            
-            return (val - minBound) / (maxBound - minBound);            
+            float maxBound = gaussian->sampleCDF(max_val - value);
+            return (val - minBound) / (maxBound - minBound);
         }
 
         int gaussianLookup(float *value, Gaussian *gaussian, int **ids, float **weights, int nSamples, float p) {
@@ -352,7 +352,7 @@ class GKDTree {
 
             // Send some samples to the right of the split
             int rightSamples = (int)((1-val)*nSamples);
-            
+
             // There's probably one sample left over by the rounding
             if (leftSamples + rightSamples != nSamples) {
                 float fval = val*nSamples - rightSamples;
@@ -362,7 +362,7 @@ class GKDTree {
                 } else {
                     rightSamples++;
                 }
-            }            
+            }
 
             int samplesFound = 0;
             // Get the left samples
@@ -381,11 +381,11 @@ class GKDTree {
                 } else {
                     samplesFound += right->singleGaussianLookup(value, gaussian, ids, weights, p*(1-val));
                 }
-            }                        
+            }
 
             return samplesFound;
         }
-        
+
         // a special case optimization of the above for when nSamples is 1
         int singleGaussianLookup(float *value, Gaussian *gaussian, int **ids, float **weights, float p) {
             float val = pLeft(gaussian, value[cut_dim]);
@@ -399,13 +399,13 @@ class GKDTree {
         // which leaf does a given value lie within? Equivalent to a
         // gaussian lookup with std dev = 0
         int nearestLookup(float *value) {
-            if (value[cut_dim] < cut_val) return left->nearestLookup(value);
-            else return right->nearestLookup(value);
+            if (value[cut_dim] < cut_val) { return left->nearestLookup(value); }
+            else { return right->nearestLookup(value); }
         }
-        
+
         void blur(GKDTree *tree, float sigma, float *oldValues, float *newValues, int dataDimensions, int *ids, float *weights, int nSamples) {
             left->blur(tree, sigma, oldValues, newValues, dataDimensions, ids, weights, nSamples);
-            right->blur(tree, sigma, oldValues, newValues, dataDimensions, ids, weights, nSamples);            
+            right->blur(tree, sigma, oldValues, newValues, dataDimensions, ids, weights, nSamples);
         }
 
         void computeBounds(float *mins, float *maxs) {
@@ -416,7 +416,7 @@ class GKDTree {
             left->computeBounds(mins, maxs);
             maxs[cut_dim] = max_val;
 
-            mins[cut_dim] = cut_val;                
+            mins[cut_dim] = cut_val;
             right->computeBounds(mins, maxs);
             mins[cut_dim] = min_val;
         }
@@ -429,8 +429,8 @@ class GKDTree {
             }
             */
 
-            if (value[cut_dim] < cut_val) left = left->include(value, sizeBound, leaves);
-            else right = right->include(value, sizeBound, leaves);
+            if (value[cut_dim] < cut_val) { left = left->include(value, sizeBound, leaves); }
+            else { right = right->include(value, sizeBound, leaves); }
             return this;
         }
 
@@ -438,29 +438,29 @@ class GKDTree {
         float cut_val, min_val, max_val;
         Node *left, *right;
     };
-    
+
     class Leaf : public Node {
-      public:
-        Leaf(int id_, float **data, int nData, int dimensions_) 
+    public:
+        Leaf(int id_, float **data, int nData, int dimensions_)
             : id(id_), dimensions(dimensions_) {
             position = new float[dimensions];
             for (int i = 0; i < dimensions; i++) {
                 position[i] = 0;
                 for (int j = 0; j < nData; j++) {
-                    position[i] += data[j][i];                    
+                    position[i] += data[j][i];
                 }
                 position[i] /= nData;
             }
         }
-            
+
         ~Leaf() {
             delete position;
         }
-        
+
         int gaussianLookup(float *query, Gaussian *g, int **ids, float **weights, int nSamples, float p) {
             // p is the probability with which one sample arrived here
             // calculate the correct probability, q
-            
+
             // TODO: sse?
             float q = 0;
             for (int i = 0; i < dimensions; i++) {
@@ -473,20 +473,20 @@ class GKDTree {
 
             *(*ids)++ = id;
             *(*weights)++ = nSamples * q / p;
-            
+
             return 1;
         }
-        
+
         int singleGaussianLookup(float *query, Gaussian *g, int **ids, float **weights, float p) {
             return gaussianLookup(query, g, ids, weights, 1, p);
         }
-        
+
         int nearestLookup(float *) {
             return id;
         }
-        
+
         void blur(GKDTree *tree, float sigma, float *oldValues, float *newValues, int dataDimensions, int *ids, float *weights, int nSamples) {
-            // do a gaussian gather            
+            // do a gaussian gather
             int results = tree->gaussianLookup(position, sigma, ids, weights, nSamples);
             int newIdx = id*dataDimensions;
             for (int i = 0; i < results; i++) {
@@ -495,7 +495,7 @@ class GKDTree {
                     newValues[newIdx+d] += weights[i] * oldValues[oldIdx+d];
                 }
             }
-            
+
         }
 
         Node *include(float *value, float sizeBound, int *leaves) {
@@ -514,7 +514,7 @@ class GKDTree {
                 printf("\nIs too far from this node:\n");
                 for (int i = 0; i < dimensions; i++) {
                     printf("%f ", position[i]);
-                }                
+                }
                 printf("\n");
                 */
                 // this value isn't well represented by this tree -
@@ -578,12 +578,12 @@ class GKDTree {
             }
             */
         }
-        
-      private:
+
+    private:
         int id, dimensions;
         float *position;
     };
-    
+
     Node *root;
     int dimensions;
     float sizeBound;
@@ -602,8 +602,8 @@ class GKDTree {
             }
             for (int j = 1; j < nData; j++) {
                 for (int i = 0; i < dimensions; i++) {
-                    if (data[j][i] < dataMins[i]) dataMins[i] = data[j][i];
-                    if (data[j][i] > dataMaxs[i]) dataMaxs[i] = data[j][i];
+                    if (data[j][i] < dataMins[i]) { dataMins[i] = data[j][i]; }
+                    if (data[j][i] > dataMaxs[i]) { dataMaxs[i] = data[j][i]; }
                 }
             }
 
@@ -613,8 +613,9 @@ class GKDTree {
             for (int i = 1; i < dimensions; i++) {
                 float delta = dataMaxs[i] - dataMins[i];
                 diagonal += delta*delta;
-                if (delta > dataMaxs[longest] - dataMins[longest]) 
+                if (delta > dataMaxs[longest] - dataMins[longest]) {
                     longest = i;
+                }
             }
 
             // if it's large enough, cut in that dimension
@@ -623,22 +624,22 @@ class GKDTree {
                 n->cut_dim = longest;
                 n->cut_val = (dataMaxs[longest] + dataMins[longest])/2;
 
-                // these get computed later                
-                n->min_val = -INF; 
-                n->max_val = INF; 
-                
+                // these get computed later
+                n->min_val = -INF;
+                n->max_val = INF;
+
                 // resort the input over the split
                 int pivot = 0;
                 for (int i = 0; i < nData; i++) {
                     // The next value is larger than the pivot
-                    if (data[i][longest] >= n->cut_val) continue;
-                    
+                    if (data[i][longest] >= n->cut_val) { continue; }
+
                     // We haven't seen anything larger than the pivot yet
                     if (i == pivot) {
                         pivot++;
                         continue;
                     }
-                
+
                     // The current value is smaller than the pivot
                     float *tmp = data[i];
                     data[i] = data[pivot];
@@ -651,7 +652,7 @@ class GKDTree {
                 n->right = build(data+pivot, nData-pivot);
 
                 return n;
-            } else { 
+            } else {
                 return new Leaf(leaves++, data, nData, dimensions);
             }
         }

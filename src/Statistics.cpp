@@ -9,7 +9,7 @@
 
 void Dimensions::help() {
     pprintf("-dimensions prints the size of the current image.\n\n"
-           "Usage: ImageStack -load a.tga -dimensions\n");
+            "Usage: ImageStack -load a.tga -dimensions\n");
 }
 
 void Dimensions::parse(vector<string> args) {
@@ -57,9 +57,9 @@ void Stats::computeBasicStats() {
                 for (int c = 0; c < im_.channels; c++) {
                     float val = im_(x, y, t)[c];
                     if (!isfinite(val)) {
-                        if (isnan(val)) nans_++;
-                        else if (val > 0) posinfs_++;
-                        else neginfs_++;
+                        if (isnan(val)) { nans_++; }
+                        else if (val > 0) { posinfs_++; }
+                        else { neginfs_++; }
                         continue;
                     };
                     counts[c]++;
@@ -67,10 +67,10 @@ void Stats::computeBasicStats() {
                     sum_ += val;
                     sums[c] += val;
                     // printf("%.5lf |",val);
-                    if (val < min_) min_ = val;
-                    if (val < mins[c]) mins[c] = val;
-                    if (val > max_) max_ = val;
-                    if (val > maxs[c]) maxs[c] = val;
+                    if (val < min_) { min_ = val; }
+                    if (val < mins[c]) { mins[c] = val; }
+                    if (val > max_) { max_ = val; }
+                    if (val > maxs[c]) { maxs[c] = val; }
                 }
             }
         }
@@ -95,15 +95,15 @@ void Stats::computeMoments() {
             for (int x = 0; x < im_.width; x++) {
                 for (int c = 0; c < im_.channels; c++) {
                     float val = im_(x, y, t)[c];
-                    if (!isfinite(val)) continue;
+                    if (!isfinite(val)) { continue; }
                     counts[c]++;
                     count++;
                     float diff = (float)(val - means[c]);
                     for (int c2 = 0; c2 < im_.channels; c2++) {
                         float val2 = im_(x, y, t)[c2];
-                        if (!isfinite(val2)) continue;
+                        if (!isfinite(val2)) { continue; }
                         float diff2 = (float)(val2 - means[c2]);
-                        covarianceMatrix[c * channels + c2] += diff * diff2;
+                        covarianceMatrix[c *channels + c2] += diff * diff2;
                         covarianceCounts[c * channels + c2]++;
                     }
                     float power = diff * diff;
@@ -125,24 +125,24 @@ void Stats::computeMoments() {
     }
 
     variance_ /= (count - 1);
-        skew_ /= (count - 1) * variance_ * ::sqrt(variance_);
+    skew_ /= (count - 1) * variance_ * ::sqrt(variance_);
     kurtosis_ /= (count - 1) * variance_ * variance_;
     for (int c = 0; c < im_.channels; c++) {
         for (int c2 = 0; c2 < im_.channels; c2++) {
-            covarianceMatrix[c * channels + c2] /= covarianceCounts[c * channels + c2] - 1;
+            covarianceMatrix[c *channels + c2] /= covarianceCounts[c * channels + c2] - 1;
         }
         variances[c] /= (counts[c] - 1);
-                skews[c] /= (counts[c] - 1) * variances[c] * ::sqrt(variances[c]);
+        skews[c] /= (counts[c] - 1) * variances[c] * ::sqrt(variances[c]);
         kurtoses[c] /= (counts[c] - 1) * variances[c] * variances[c];
     }
-    
+
     for (int c = 0; c < im_.channels; c++) {
         barycenters[c*2] /= sums[c];
         barycenters[c*2+1] /= sums[c];
         spatialvariances[c*2] /= sums[c];
         spatialvariances[c*2] -= barycenters[c*2] * barycenters[c*2];
         spatialvariances[c*2+1] /= sums[c];
-        spatialvariances[c*2+1] -= barycenters[c*2+1] * barycenters[c*2+1];        
+        spatialvariances[c*2+1] -= barycenters[c*2+1] * barycenters[c*2+1];
     }
     momentsComputed = true;
 }
@@ -167,7 +167,7 @@ void Statistics::apply(Window im) {
     printf("Minima:  \t\t");
     for (int i = 0; i < im.channels; i++) {
         printf("%3.6f\t", stats.minimum(i));
-    }        
+    }
     printf("\n");
 
     printf("Maxima:  \t\t");
@@ -203,7 +203,7 @@ void Statistics::apply(Window im) {
         printf("\n");
     }
     printf("\n");
-    
+
     printf("Skewness:\t\t");
     for (int i = 0; i < im.channels; i++) {
         printf("%3.6f\t", stats.skew(i));
@@ -219,25 +219,25 @@ void Statistics::apply(Window im) {
 
     printf("Barycenter (X):\t\t");
     for (int i = 0; i < im.channels; i++) {
-      printf("%3.6f\t", stats.barycenterX(i));
+        printf("%3.6f\t", stats.barycenterX(i));
     }
     printf("\n");
 
     printf("Barycenter (Y):\t\t");
     for (int i = 0; i < im.channels; i++) {
-      printf("%3.6f\t", stats.barycenterX(i));
+        printf("%3.6f\t", stats.barycenterX(i));
     }
     printf("\n");
 
     printf("Spatial variance (X):\t");
     for (int i = 0; i < im.channels; i++) {
-      printf("%3.6f\t", stats.spatialvarianceX(i));
+        printf("%3.6f\t", stats.spatialvarianceX(i));
     }
     printf("\n");
 
     printf("Spatial variance (Y):\t");
     for (int i = 0; i < im.channels; i++) {
-      printf("%3.6f\t", stats.spatialvarianceY(i));
+        printf("%3.6f\t", stats.spatialvarianceY(i));
     }
     printf("\n");
     printf("\n");
@@ -335,8 +335,8 @@ Image Histogram::apply(Window im, int buckets, float minVal, float maxVal) {
                         continue;
                     } else {
                         bucket = (int)((value - minVal) * invBucketWidth);
-                        if (bucket >= buckets) bucket = buckets-1;
-                        if (bucket < 0) bucket = 0;
+                        if (bucket >= buckets) { bucket = buckets-1; }
+                        if (bucket < 0) { bucket = 0; }
                     }
                     hg(bucket, 0, 0)[c] += inc;
                 }
@@ -362,7 +362,7 @@ void Equalize::help() {
 void Equalize::parse(vector<string> args) {
     assert(args.size() < 3, "-equalize takes zero, one, or two arguments\n");
     float lower = 0, upper = 1;
-    if (args.size() == 1) upper = readFloat(args[0]);
+    if (args.size() == 1) { upper = readFloat(args[0]); }
     else if (args.size() == 2) {
         lower = readFloat(args[0]);
         upper = readFloat(args[1]);
@@ -388,13 +388,13 @@ void Equalize::apply(Window im, float lower, float upper) {
                 for (int c = 0; c < im.channels; c++) {
                     float alpha = im(x, y, t)[c] * buckets;
                     int bucket = (int)alpha; // which bucket am I in?
-                    if (bucket < 0) bucket = 0;
-                    if (bucket >= buckets) bucket = buckets-1;
+                    if (bucket < 0) { bucket = 0; }
+                    if (bucket >= buckets) { bucket = buckets-1; }
                     alpha -= bucket; // how far along am I in this bucket?
-                    
+
                     // how many pixels are probably less than me?
                     float lesser = 0;
-                    if (bucket > 0) lesser = cdf(bucket-1, 0)[c];
+                    if (bucket > 0) { lesser = cdf(bucket-1, 0)[c]; }
                     float equal = cdf(bucket, 0)[c] - lesser;
 
                     // use the estimate to set the value
@@ -402,7 +402,7 @@ void Equalize::apply(Window im, float lower, float upper) {
                 }
             }
         }
-    } 
+    }
 }
 
 
@@ -428,7 +428,7 @@ void HistogramMatch::apply(Window im, Window model) {
     Stats s1(im), s2(model);
     int buckets = 4096;
     Image cdf1 = Histogram::apply(im, buckets, s1.minimum(), s1.maximum());
-    Image cdf2 = Histogram::apply(model, buckets, s2.minimum(), s2.maximum()); 
+    Image cdf2 = Histogram::apply(model, buckets, s2.minimum(), s2.maximum());
     Integrate::apply(cdf1, 'x');
     Integrate::apply(cdf2, 'x');
 
@@ -437,18 +437,19 @@ void HistogramMatch::apply(Window im, Window model) {
     for (int c = 0; c < inverseCDF2.channels; c++) {
         int xi = 0;
         float invWidth = 1.0f / cdf2.width;
-        for (int x = 0; x < inverseCDF2.width; x++) {            
-            while (cdf2(xi, 0)[c] < x * invWidth && xi < cdf2.width) xi++;
+        for (int x = 0; x < inverseCDF2.width; x++) {
+            while (cdf2(xi, 0)[c] < x * invWidth && xi < cdf2.width) { xi++; }
             // cdf2(xi, 0)[c] is now just greater than x / inverseCDF2.width
             float lower = xi > 0 ? cdf2(xi-1, 0)[c] : 0;
             float upper = xi < cdf2.width ? cdf2(xi, 0)[c] : lower;
 
             // where is x*invWidth between lower and upper?
             float alpha = 0;
-            if (upper > lower && x*invWidth >= lower && x*invWidth <= upper)
+            if (upper > lower && x *invWidth >= lower && x *invWidth <= upper) {
                 alpha = (x*invWidth - lower)/(upper - lower);
-            
-            inverseCDF2(x, 0)[c] = xi + alpha;            
+            }
+
+            inverseCDF2(x, 0)[c] = xi + alpha;
         }
     }
 
@@ -460,13 +461,13 @@ void HistogramMatch::apply(Window im, Window model) {
                 for (int c = 0; c < im.channels; c++) {
                     float alpha = (im(x, y, t)[c] - s1.minimum()) * invBucketWidth;
                     int bucket = (int)alpha; // which bucket am I in?
-                    if (bucket < 0) bucket = 0;
-                    if (bucket >= buckets) bucket = buckets-1;
+                    if (bucket < 0) { bucket = 0; }
+                    if (bucket >= buckets) { bucket = buckets-1; }
                     alpha -= bucket; // how far along am I in this bucket?
-                    
+
                     // how many pixels are probably less than me?
                     float lesser = 0;
-                    if (bucket > 0) lesser = cdf1(bucket-1, 0)[c];
+                    if (bucket > 0) { lesser = cdf1(bucket-1, 0)[c]; }
                     float equal = cdf1(bucket, 0)[c] - lesser;
 
                     // use the estimate to get the percentile
@@ -474,24 +475,24 @@ void HistogramMatch::apply(Window im, Window model) {
 
                     //im(x, y, t)[c] = percentile;
 
-                    
+
                     // look up the percentile in inverseCDF2 in the same way
                     alpha = percentile * buckets;
                     bucket = (int)alpha;
-                    if (bucket < 0) bucket = 0;
-                    if (bucket >= buckets) bucket = buckets-1;
+                    if (bucket < 0) { bucket = 0; }
+                    if (bucket >= buckets) { bucket = buckets-1; }
                     alpha -= bucket;
-                        
+
                     lesser = 0;
-                    if (bucket > 0) lesser = inverseCDF2(bucket-1, 0)[c];
+                    if (bucket > 0) { lesser = inverseCDF2(bucket-1, 0)[c]; }
                     equal = inverseCDF2(bucket, 0)[c] - lesser;
-                    
+
                     im(x, y, t)[c] = (lesser + alpha * equal) * (s2.maximum() - s2.minimum()) / buckets + s2.minimum();
-                    
+
                 }
             }
         }
-    }     
+    }
 }
 
 
@@ -515,14 +516,16 @@ void Shuffle::apply(Window im) {
                 // pick a random new location after this one
                 int ot, ox, oy;
                 ot = randomInt(t, im.frames-1);
-                if (ot > t)
+                if (ot > t) {
                     oy = randomInt(0, im.height-1);
-                else 
+                } else {
                     oy = randomInt(y, im.height-1);
-                if (oy > y || ot > t) 
+                }
+                if (oy > y || ot > t) {
                     ox = randomInt(0, im.width-1);
-                else
+                } else {
                     ox = randomInt(x+1, im.width-1);
+                }
 
                 float *ptr2 = im(ox, oy, ot);
                 for (int c = 0; c < im.channels; c++) {
@@ -569,7 +572,7 @@ void KMeans::apply(Window im, int clusters) {
         // wipe the newCluster
         for (int i = 0; i < clusters; i++) {
             newClusterMembers[i] = 0;
-            for (int c = 0; c < im.channels; c++) {           
+            for (int c = 0; c < im.channels; c++) {
                 newCluster[c][i] = 0;
             }
         }
@@ -605,8 +608,8 @@ void KMeans::apply(Window im, int clusters) {
         for (int i = 0; i < clusters; i++) {
             if (newClusterMembers[i] == 0) {
                 float *pixel = im(randomInt(0, im.width-1),
-                                         randomInt(0, im.height-1),
-                                         randomInt(0, im.frames-1));
+                                  randomInt(0, im.height-1),
+                                  randomInt(0, im.frames-1));
                 for (int c = 0; c < im.channels; c++) {
                     newCluster[c][i] = pixel[c] + randomFloat(-0.0001f, 0.0001f);
                 }
@@ -618,7 +621,7 @@ void KMeans::apply(Window im, int clusters) {
         }
 
         // break if the clusters are unchanged
-        if (cluster == newCluster) break;
+        if (cluster == newCluster) { break; }
 
         // swap over the pointers
         cluster.swap(newCluster);
@@ -649,7 +652,7 @@ void KMeans::apply(Window im, int clusters) {
                 }
             }
         }
-    }    
+    }
 }
 
 void Sort::help() {
@@ -672,7 +675,7 @@ void Sort::apply(Window im, char dimension) {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
-                                        ::std::sort(im(x, y, t), im(x, y, t)+im.channels);
+                    ::std::sort(im(x, y, t), im(x, y, t)+im.channels);
                 }
             }
         }
@@ -696,7 +699,7 @@ void Sort::apply(Window im, char dimension) {
         for (int t = 0; t < im.frames; t++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    for (int y = 0; y < im.height; y++) {                        
+                    for (int y = 0; y < im.height; y++) {
                         tmp[y] = im(x, y, t)[c];
                     }
                     sort(tmp.begin(), tmp.end());
@@ -709,10 +712,10 @@ void Sort::apply(Window im, char dimension) {
 
     } else if (dimension == 't') {
         vector<float> tmp(im.frames);
-        for (int y = 0; y < im.height; y++) {                        
-            for (int x = 0; x < im.width; x++) {                                
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    for (int t = 0; t < im.frames; t++) {                        
+                    for (int t = 0; t < im.frames; t++) {
                         tmp[t] = im(x, y, t)[c];
                     }
                     sort(tmp.begin(), tmp.end());
@@ -743,7 +746,7 @@ void DimensionReduction::parse(vector<string> args) {
 }
 
 void DimensionReduction::apply(Window im, int dimensions) {
-    assert(dimensions < im.channels && dimensions > 0, 
+    assert(dimensions < im.channels && dimensions > 0,
            "dimensions must be greater than zero and less than the current number of channels\n");
 
     // get some statistics (mostly for the covariance matrix)
@@ -753,16 +756,16 @@ void DimensionReduction::apply(Window im, int dimensions) {
     // use them as the basis for our subspace
     vector<float> subspace(dimensions * im.channels), newsubspace(dimensions * im.channels);
 
-    for (int i = 0; i < dimensions * im.channels; i++) subspace[i] = randomFloat(0, 1);
+    for (int i = 0; i < dimensions * im.channels; i++) { subspace[i] = randomFloat(0, 1); }
 
     float delta = 1;
     while (delta > 0.00001) {
         // multiply the subspace by the covariance matrix
         for (int d = 0; d < dimensions; d++) {
             for (int c1 = 0; c1 < im.channels; c1++) {
-                newsubspace[d * im.channels + c1] = 0;
+                newsubspace[d *im.channels + c1] = 0;
                 for (int c2 = 0; c2 < im.channels; c2++) {
-                    newsubspace[d * im.channels + c1] += (float)(subspace[d * im.channels + c2] * stats.covariance(c1, c2));
+                    newsubspace[d *im.channels + c1] += (float)(subspace[d * im.channels + c2] * stats.covariance(c1, c2));
                 }
             }
         }
@@ -776,8 +779,8 @@ void DimensionReduction::apply(Window im, int dimensions) {
                     dot += newsubspace[d * im.channels + c] * newsubspace[d2 * im.channels + c];
                 }
                 for (int c = 0; c < im.channels; c++) {
-                    newsubspace[d * im.channels + c] -= dot * newsubspace[d2 * im.channels + c];
-                }                
+                    newsubspace[d *im.channels + c] -= dot * newsubspace[d2 * im.channels + c];
+                }
             }
             // then normalize it
             float sum = 0;
@@ -787,7 +790,7 @@ void DimensionReduction::apply(Window im, int dimensions) {
             }
             float factor = 1.0f / sqrt(sum);
             for (int c = 0; c < im.channels; c++) {
-                newsubspace[d * im.channels + c] *= factor;
+                newsubspace[d *im.channels + c] *= factor;
             }
             // if the sum is negative, flip it
             sum = 0;
@@ -796,8 +799,8 @@ void DimensionReduction::apply(Window im, int dimensions) {
             }
             if (sum < -0.01) {
                 for (int c = 0; c < im.channels; c++) {
-                    newsubspace[d * im.channels + c] *= -1;
-                }                
+                    newsubspace[d *im.channels + c] *= -1;
+                }
             }
         }
 
@@ -819,18 +822,18 @@ void DimensionReduction::apply(Window im, int dimensions) {
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) output[c] = 0;
+                for (int c = 0; c < im.channels; c++) { output[c] = 0; }
                 // project this pixel onto each vector, and add the results
                 for (int d = 0; d < dimensions; d++) {
                     float dot = 0;
                     for (int c = 0; c < im.channels; c++) {
-                        dot += im(x, y, t)[c] * subspace[d * im.channels + c];                        
+                        dot += im(x, y, t)[c] * subspace[d * im.channels + c];
                     }
                     for (int c = 0; c < im.channels; c++) {
                         output[c] += dot * subspace[d * im.channels + c];
                     }
                 }
-                for (int c = 0; c < im.channels; c++) im(x, y, t)[c] = output[c];
+                for (int c = 0; c < im.channels; c++) { im(x, y, t)[c] = output[c]; }
             }
         }
     }
@@ -842,7 +845,7 @@ void DimensionReduction::apply(Window im, int dimensions) {
             printf("%f \t", newsubspace[d * im.channels + c]);
         }
         printf("\n");
-    }        
+    }
 
 
 
@@ -870,11 +873,11 @@ void LocalMaxima::parse(vector<string> args) {
 
     // first make sure file can be opened
     FILE *f = fopen(args[3].c_str(), "w");
-    assert(f, "Could not open file %s\n", args[2].c_str());    
-    
-    for(unsigned int i=0; i < args[0].size(); i++) {
-        switch(args[0][i]) {
-        case 't': 
+    assert(f, "Could not open file %s\n", args[2].c_str());
+
+    for (unsigned int i=0; i < args[0].size(); i++) {
+        switch (args[0][i]) {
+        case 't':
             tCheck=true;
             break;
         case 'x':
@@ -895,19 +898,19 @@ void LocalMaxima::parse(vector<string> args) {
                 maxima[i].t,
                 maxima[i].x,
                 maxima[i].y,
-                maxima[i].value);        
+                maxima[i].value);
     }
-   
+
     fclose(f);
 }
 
 struct LocalMaximaCollision {
     // a is the index of stronger of the two
     unsigned a, b;
-    
+
     float disparity;
-    
-    
+
+
     // define an operator so that std::sort will sort them from
     // maximum strength disparity to minimum strength disparity
     bool operator<(const LocalMaximaCollision &other) const {
@@ -918,11 +921,11 @@ struct LocalMaximaCollision {
 vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCheck, bool yCheck, float threshold, float minDistance) {
 
     vector<LocalMaxima::Maximum> results;
-    
+
     // float values for locations
     float ft, fx, fy;
     float value; // the actual image value
-    
+
     // select bounds for search
     int tStart, tEnd, yStart, yEnd, xStart, xEnd;
     if (tCheck) {
@@ -947,30 +950,30 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCh
         yEnd = im.height;
     }
     // now do a search
-    for(int t = tStart; t<tEnd; t++) {
-        for(int y = yStart; y<yEnd; y++) {
-            for(int x = xStart; x<xEnd; x++) {
+    for (int t = tStart; t<tEnd; t++) {
+        for (int y = yStart; y<yEnd; y++) {
+            for (int x = xStart; x<xEnd; x++) {
                 fx = x; fy = y; ft = t;
                 value  =  im(x, y, t)[0];
                 // eliminate if not a x maximum
-                if( xCheck && (im(x, y, t)[0] <= im(x-1, y, t)[0] ||
-                               im(x, y, t)[0] <= im(x+1, y, t)[0]) ) {
+                if (xCheck && (im(x, y, t)[0] <= im(x-1, y, t)[0] ||
+                               im(x, y, t)[0] <= im(x+1, y, t)[0])) {
                     continue;
                 } else if (xCheck) {
                     // fine tune x coordinate by taking local centroid
                     fx += (im(x+1, y, t)[0]-im(x-1, y, t)[0])/(im(x, y, t)[0]+im(x-1, y, t)[0]+im(x+1, y, t)[0]);
                 }
                 // eliminate if not a y maximum
-                if( yCheck && (im(x, y, t)[0] <= im(x, y-1, t)[0] ||
-                               im(x, y, t)[0] <= im(x, y+1, t)[0]) ) {
+                if (yCheck && (im(x, y, t)[0] <= im(x, y-1, t)[0] ||
+                               im(x, y, t)[0] <= im(x, y+1, t)[0])) {
                     continue;
                 } else if (yCheck) {
                     // fine tune y coordinate by taking local centroid
                     fy += (im(x, y+1, t)[0]-im(x, y-1, t)[0])/(im(x, y, t)[0]+im(x, y-1, t)[0]+im(x, y+1, t)[0]);
                 }
                 // eliminate if not a t maximum
-                if( tCheck && (im(x, y, t)[0] <= im(x, y, t-1)[0] ||
-                               im(x, y, t)[0] <= im(x, y, t+1)[0]) ) {
+                if (tCheck && (im(x, y, t)[0] <= im(x, y, t-1)[0] ||
+                               im(x, y, t)[0] <= im(x, y, t+1)[0])) {
                     continue;
                 } else if (tCheck) {
                     // fine tune t coordinate by taking local centroid
@@ -981,29 +984,29 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCh
                 if (xCheck) {
                     strength = min(strength, value - im(x-1, y, t)[0]);
                     strength = min(strength, value - im(x+1, y, t)[0]);
-                } 
+                }
                 if (yCheck) {
                     strength = min(strength, value - im(x, y+1, t)[0]);
                     strength = min(strength, value - im(x, y-1, t)[0]);
-                } 
+                }
                 if (tCheck) {
                     strength = min(strength, value - im(x, y, t+1)[0]);
                     strength = min(strength, value - im(x, y, t-1)[0]);
-                } 
-                if (strength < threshold) continue;
+                }
+                if (strength < threshold) { continue; }
 
                 // output if it is a candidate
                 Maximum m;
                 m.t = ft;
                 m.x = fx;
                 m.y = fy;
-                m.value = value; 
+                m.value = value;
                 results.push_back(m);
             }
         }
     }
 
-    if (minDistance < 1) return results;
+    if (minDistance < 1) { return results; }
 
 
     vector<LocalMaximaCollision> collisions;
@@ -1021,12 +1024,12 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCh
             if (yCheck) {
                 d = results[i].y - results[j].y;
                 dist += d*d;
-            } 
+            }
             if (tCheck) {
                 d = results[i].t - results[j].t;
                 dist += d*d;
             }
-            
+
             if (dist < minDistance*minDistance) {
                 LocalMaximaCollision c;
                 if (results[i].value > results[j].value) {
@@ -1036,7 +1039,7 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCh
                 } else {
                     c.disparity = results[j].value - results[i].value;
                     c.a = j;
-                    c.b = i;                    
+                    c.b = i;
                 }
                 collisions.push_back(c);
             }
@@ -1044,14 +1047,14 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCh
             // Early bailout. The +2 is because results may have
             // shifted by up to 1 each from their original sorted
             // locations due to the centroid finding above.
-            if ((results[j].t - results[i].t) > (minDistance+2)) break;
-            if (!tCheck && (results[j].y - results[i].y) > (minDistance+2)) break;
-            if (!yCheck && !tCheck && (results[j].x - results[i].x) > (minDistance+2)) break;
+            if ((results[j].t - results[i].t) > (minDistance+2)) { break; }
+            if (!tCheck && (results[j].y - results[i].y) > (minDistance+2)) { break; }
+            if (!yCheck && !tCheck && (results[j].x - results[i].x) > (minDistance+2)) { break; }
         }
     }
 
-    // Order the collisions from maximum strength disparity to minimum (i.e from easy decisions to hard ones)    
-        ::std::sort(collisions.begin(), collisions.end());
+    // Order the collisions from maximum strength disparity to minimum (i.e from easy decisions to hard ones)
+    ::std::sort(collisions.begin(), collisions.end());
 
     // Start by accepting them all, and knock some out greedily using
     // the collisions. This is a heurstic. To do this perfectly is a
@@ -1067,24 +1070,25 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Window im, bool tCheck, bool xCh
     // return only the accepted points
     vector<LocalMaxima::Maximum> goodResults;
     for (unsigned i = 0; i < results.size(); i++) {
-        if (accepted[i])
+        if (accepted[i]) {
             goodResults.push_back(results[i]);
+        }
     }
 
     /*
-    // draw the results on an image for debugging 
+    // draw the results on an image for debugging
     for (unsigned i = 0; i < results.size(); i++) {
         int t = (int)(results[i].t+0.5);
         int y = (int)(results[i].y+0.5);
         int x = (int)(results[i].x+0.5);
-        if (x < 0) x = 0; 
+        if (x < 0) x = 0;
         if (x >= im.width) x = im.width-1;
         if (y < 0) y = 0;
         if (y >= im.height) y = im.height-1;
         if (t < 0) t = 0;
         if (t >= im.frames) t = im.frames-1;
         if (accepted[i]) im(x, y, t)[0] = 100;
-        else im(x, y, t)[0] = -100;        
+        else im(x, y, t)[0] = -100;
     }
     */
 
@@ -1120,7 +1124,7 @@ void Printf::apply(Window im, string fmt, vector<float> a) {
         args[i] = a[i];
     }
 
-    printf(fmt.c_str(), 
+    printf(fmt.c_str(),
            args[0], args[1], args[2], args[3],
            args[4], args[5], args[6], args[7],
            args[8], args[9], args[10], args[11],
@@ -1157,7 +1161,7 @@ void FPrintf::apply(Window im, string filename, string fmt, vector<float> a) {
         args[i] = a[i];
     }
 
-    fprintf(f, fmt.c_str(), 
+    fprintf(f, fmt.c_str(),
             args[0], args[1], args[2], args[3],
             args[4], args[5], args[6], args[7],
             args[8], args[9], args[10], args[11],
@@ -1214,7 +1218,7 @@ Image PCA::apply(Window im, int newChannels) {
     }
 
     return out;
-    
+
 }
 
 
@@ -1238,7 +1242,7 @@ void PatchPCA::parse(vector<string> args) {
 
 
 Image PatchPCA::apply(Window im, float sigma, int newChannels) {
-    
+
     int patchSize = ((int)(sigma*6+1)) | 1;
 
     printf("Using %dx%d patches\n", patchSize, patchSize);
@@ -1251,7 +1255,7 @@ Image PatchPCA::apply(Window im, float sigma, int newChannels) {
         sum += mask[i];
         printf("%f ", mask[i]);
     }
-    for (int i = 0; i < patchSize; i++) mask[i] /= sum;
+    for (int i = 0; i < patchSize; i++) { mask[i] /= sum; }
     printf("\n");
 
     vector<float> vec(patchSize*patchSize*im.channels);
@@ -1279,14 +1283,14 @@ Image PatchPCA::apply(Window im, float sigma, int newChannels) {
     e.compute();
 
     Image filters(patchSize, patchSize, 1, im.channels * newChannels);
-    
+
     for (int i = 0; i < newChannels; i++) {
         e.getEigenvector(i, &vec[0]);
         int j = 0;
         for (int y = 0; y < patchSize; y++) {
             for (int x = 0; x < patchSize; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    filters(x, y)[i*im.channels+c] = vec[j];
+                    filters(x, y)[i *im.channels+c] = vec[j];
                     j++;
                 }
             }

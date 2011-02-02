@@ -18,7 +18,7 @@
 class Transform {
 public:
     virtual ~Transform() {}
-    
+
     // Add a new constraint (ie (x1,y1) must warp to (x2, y2))
     virtual void addCorrespondence(float x1, float y1, float x2, float y2) = 0;
 
@@ -132,7 +132,7 @@ public:
         *y2 = params[0]*y1 - params[1]*x1 + params[3];
     }
 
-    void adjustDownsampleScale(int s1, int s2){
+    void adjustDownsampleScale(int s1, int s2) {
         params[2] /= s1;
         params[3] /= s1;
         params[2] *= s2;
@@ -144,7 +144,7 @@ protected:
     double params[4];
 
     // the internal state
-    LeastSquaresSolver<4, 1> solver;        
+    LeastSquaresSolver<4, 1> solver;
 };
 
 // Solving for a 2D rigid transformation (rotation and translation but
@@ -210,7 +210,7 @@ private:
     double params[6];
 
     // the internal state
-    LeastSquaresSolver<3, 2> solver;        
+    LeastSquaresSolver<3, 2> solver;
 };
 
 // Solving for 2D perspective warps involves some algebraic
@@ -231,9 +231,9 @@ public:
     }
 
     virtual ~Perspective() {}
- 
+
     void reset() {
-        for (int i = 0; i < 8; i++) params[i] = 0;
+        for (int i = 0; i < 8; i++) { params[i] = 0; }
         solver.reset();
     }
 
@@ -243,12 +243,12 @@ public:
         x2 /= 1000;
         y2 /= 1000;
         {
-            float in[8] = {-x1*x2, -y1*x2, x1, y1, 1, 0, 0, 0};
+            float in[8] = {-x1 *x2, -y1 *x2, x1, y1, 1, 0, 0, 0};
             float out[1] = {x2};
             solver.addCorrespondence(in, out);
         }
         {
-            float in[8] = {-x1*y2, -y1*y2, 0, 0, 0, x1, y1, 1};
+            float in[8] = {-x1 *y2, -y1 *y2, 0, 0, 0, x1, y1, 1};
             float out[1] = {y2};
             solver.addCorrespondence(in, out);
         }
@@ -264,26 +264,26 @@ public:
 
     void apply(float x1, float y1, float *x2, float *y2) {
         x1 /= 1000;
-        y1 /= 1000;        
-        float w = 1.0f/(params[0]*x1 + params[1]*y1 + 1);        
+        y1 /= 1000;
+        float w = 1.0f/(params[0]*x1 + params[1]*y1 + 1);
         *x2 = 1000*(params[2]*x1 + params[3]*y1 + params[4])*w;
         *y2 = 1000*(params[5]*x1 + params[6]*y1 + params[7])*w;
     }
 
-    void getParams(double* p) {
-        for(int i=0;i<8;i++) {
+    void getParams(double *p) {
+        for (int i=0; i<8; i++) {
             p[i] = params[i];
         }
     }
-    
-    void setParams(double* p) {
+
+    void setParams(double *p) {
         double *Ptr = p;
-        for(int i=0;i<8;i++) {
+        for (int i=0; i<8; i++) {
             params[i] = *Ptr++;
         }
     }
 
-    void adjustDownsampleScale(int s1, int s2){
+    void adjustDownsampleScale(int s1, int s2) {
 
         params[0]/=s1; params[1]/=s1; params[2]/=s1;
         params[3]/=s1; params[5]/=s1; params[6]/=s1;
@@ -320,7 +320,7 @@ private:
     double params[8];
 
     // the internal state
-    LeastSquaresSolver<8, 1> solver;            
+    LeastSquaresSolver<8, 1> solver;
 };
 
 // A Digest is a data structure that gathers together all the features
@@ -328,29 +328,29 @@ private:
 class Digest {
 public:
 
-    void findOrientations(LocalMaxima::Maximum m, 
-                          Image* magPyramid, Image* ornPyramid, 
+    void findOrientations(LocalMaxima::Maximum m,
+                          Image *magPyramid, Image *ornPyramid,
                           vector<float> *sigma, vector<float> *orientations) {
 
         //printf("Start finding orientations..\n");
 
         int it = (int)(m.t + 0.5);
-        if (it < 1) it = 1;
+        if (it < 1) { it = 1; }
 
         // Find major orientation in 16x16 patch
         // Each sample is weighted by its gradient magnitude and falloff mask
         float hist[36];
-        for(int i=0;i<36;i++) {
+        for (int i=0; i<36; i++) {
             hist[i] = 0;
         }
-        for(int i=0;i<16;i++) {
-            for(int j=0;j<16;j++) {
+        for (int i=0; i<16; i++) {
+            for (int j=0; j<16; j++) {
                 float gridX = m.x + i - 7.5;
                 float gridY = m.y + j - 7.5;
-                float weight = fastexp(-((i-7.5)*(i-7.5)+(j-7.5)*(j-7.5)) / ( 2*(1.5*(*sigma)[it+1])*(1.5*(*sigma)[it+1]) ));
+                float weight = fastexp(-((i-7.5)*(i-7.5)+(j-7.5)*(j-7.5)) / (2*(1.5*(*sigma)[it+1])*(1.5*(*sigma)[it+1])));
                 float value;
                 ornPyramid[it-1].sample2DLinear(gridX, gridY, &value);
-                int index = floor(( value + M_PI) * 36 / (2 * M_PI));
+                int index = floor((value + M_PI) * 36 / (2 * M_PI));
                 magPyramid[it-1].sample2DLinear(gridX, gridY, &value);
                 hist[index] += value * weight;
             }
@@ -359,35 +359,35 @@ public:
         // Find local maxima of histogram with local refinement
         vector<LocalMaxima::Maximum> maxima;
         LocalMaxima::Maximum h;
-        if(hist[0]>hist[1] && hist[0]>hist[35]) {
+        if (hist[0]>hist[1] && hist[0]>hist[35]) {
             h.value = hist[0];
             h.x = (hist[1]-hist[35])/(hist[35]+hist[1]+hist[0]);
             maxima.push_back(h);
         }
-        for(int i=1;i<35;i++) {
-            if(hist[i]>hist[i-1] && hist[i]>hist[i+1]) {
+        for (int i=1; i<35; i++) {
+            if (hist[i]>hist[i-1] && hist[i]>hist[i+1]) {
                 h.value = hist[i];
                 h.x = i + (hist[i+1]-hist[i-1])/(hist[i-1]+hist[i+1]+hist[i]);
                 maxima.push_back(h);
             }
         }
-        if(hist[35]>hist[34] && hist[35]>hist[0]) {
+        if (hist[35]>hist[34] && hist[35]>hist[0]) {
             h.value = hist[35];
             h.x = 35 + (hist[0]-hist[34])/(hist[34]+hist[0]+hist[35]);
             maxima.push_back(h);
         }
         ::std::sort(maxima.begin(), maxima.end());
-        
+
 
         // Pick major orientation
         // Include all local maxima that are over 80% of the maximum peak
         int idx = maxima.size()-1;
         float max_hist = maxima[idx].value;
-        while(maxima[idx].value >= 0.8 * max_hist) {
+        while (maxima[idx].value >= 0.8 * max_hist) {
             float orientation = maxima[idx].x/36*2*M_PI - M_PI;
             (*orientations).push_back(orientation);
             idx--;
-            if(idx<0) {break;}
+            if (idx<0) {break;}
         }
 
         //printf("Orientation asigned..\n");
@@ -398,50 +398,50 @@ public:
     struct Descriptor {
     public:
         Descriptor() {}
-        
+
         Descriptor(LocalMaxima::Maximum m,
-                   Image* magPyramid, Image* ornPyramid,
+                   Image *magPyramid, Image *ornPyramid,
                    vector<float> *sigma, float orientation) {
-    
+
             length = 128;
 
             int it = (int)(m.t + 0.5);
-            if (it < 1) it = 1;
+            if (it < 1) { it = 1; }
 
             // Find 128-sift-like descriptor in 16x16 patch
             // Rotate sampling grid by major orientation to achieve rotation invariance
             // Each sample is weighted by its gradient magnitude and falloff mask
             float *dPtr = &(desc[0]);
-            for(int i=0;i<4;i++) {
-                for(int j=0;j<4;j++) {
-                    
-                    float hist[8];
-                    for(int h=0;h<8;h++) {hist[h]=0;}
+            for (int i=0; i<4; i++) {
+                for (int j=0; j<4; j++) {
 
-                    for(int k=0;k<4;k++) {
-                        for(int l=0;l<4;l++) {
+                    float hist[8];
+                    for (int h=0; h<8; h++) {hist[h]=0;}
+
+                    for (int k=0; k<4; k++) {
+                        for (int l=0; l<4; l++) {
 
                             float gridX = (4*j-6) + (l-1.5);
                             float gridY = (4*i-6) + (k-1.5);
-                            
+
                             float rotX = cos(orientation)*gridX  - sin(orientation)*gridY;
                             float rotY = sin(orientation)*gridX  + cos(orientation)*gridY;
 
-                            float weight = fastexp(-(gridX*gridX+gridY*gridY) / ( 2*(1.5*(*sigma)[it+1])*(1.5*(*sigma)[it+1]) ));
+                            float weight = fastexp(-(gridX*gridX+gridY*gridY) / (2*(1.5*(*sigma)[it+1])*(1.5*(*sigma)[it+1])));
                             float value;
                             ornPyramid[it-1].sample2DLinear(m.x+rotX, m.y+rotY, &value);
                             value -= orientation;
                             value = value<-M_PI ? value+2*M_PI : value>M_PI ? value-2*M_PI : value;
-                            
+
                             int ivalue = floor((value+M_PI) * 8 / (2 * M_PI));
                             magPyramid[it-1].sample2DLinear(m.x+rotX, m.y+rotY, &value);
-                            
+
                             hist[ivalue] += value * weight;
-                            
+
                         }
                     }
-                    
-                    for(int h=0;h<8;h++) {
+
+                    for (int h=0; h<8; h++) {
                         *dPtr++ = hist[h];
                     }
                 }
@@ -451,20 +451,20 @@ public:
             // Limit maximum component to 0.2 in the first stage and normalize again
             // to favor orientation distribution rather than peak matching
             float norm=0;
-            for(int i=0;i<128;i++) {
+            for (int i=0; i<128; i++) {
                 norm += desc[i]*desc[i];
             }
             norm = sqrt(norm);
-            for(int i=0;i<128;i++) {
+            for (int i=0; i<128; i++) {
                 desc[i] /= norm;
                 desc[i] = desc[i]>0.2 ? 0.2 : desc[i];
             }
             norm=0;
-            for(int i=0;i<128;i++) {
+            for (int i=0; i<128; i++) {
                 norm += desc[i]*desc[i];
             }
             norm = sqrt(norm);
-            for(int i=0;i<128;i++) {
+            for (int i=0; i<128; i++) {
                 desc[i] /= norm;
             }
 
@@ -477,33 +477,33 @@ public:
 
     struct Feature : public LocalMaxima::Maximum {
     public:
-        Feature(LocalMaxima::Maximum m, Image* magPyramid, Image* ornPyramid, vector<float> *sigma, float orientation) {
+        Feature(LocalMaxima::Maximum m, Image *magPyramid, Image *ornPyramid, vector<float> *sigma, float orientation) {
             x = m.x;
             y = m.y;
             t = floor(m.t + 0.5);
-            
+
             value = m.value;
             descriptor = Descriptor(m, magPyramid, ornPyramid, sigma, orientation);
             usage = 0;
         }
-        
+
         // Distance between two features is the sum of squared differences between the two descriptors
         float distance(Feature *other) {
             float dist = 0;
-            
+
             float *thisPtr = &(descriptor.desc[0]);
             float *otherPtr = &(other->descriptor.desc[0]);
-            for(int i = 0; i < descriptor.length; i++){
+            for (int i = 0; i < descriptor.length; i++) {
                 float d = *thisPtr++ - *otherPtr++;
                 dist += d*d;
             }
             return dist;
         }
-        
+
         // It's useful to keep track of how many times any one given
         // features is used, so we don't depend too heavily on a
         // single feature.
-        int usage;        
+        int usage;
 
         bool usePatch;
         Window patch;
@@ -526,7 +526,7 @@ public:
             return distance < other.distance;
         }
     };
-    
+
     Digest(Window im) {
 
         // Convert to grayscale
@@ -534,7 +534,7 @@ public:
         for (int i = 0; i < im.channels; i++) {
             grayMatrix.push_back(1.0f/im.channels);
         }
-         Image gray = ColorMatrix::apply(im, grayMatrix);
+        Image gray = ColorMatrix::apply(im, grayMatrix);
 
         // Gaussian Pyramid
         // k1: first sigma, k: scale factor between each level
@@ -549,7 +549,7 @@ public:
         Image gPyramid = Upsample::apply(gray, 1, 1, gaussianLevels);
 
         float sig = k1;
-        for(int i = 0; i < gaussianLevels; i++) {
+        for (int i = 0; i < gaussianLevels; i++) {
             sigma.push_back(sig);
             Window level(gPyramid, 0, 0, i, gPyramid.width, gPyramid.height, 1);
             FastBlur::apply(level, sig, sig, 0);
@@ -557,12 +557,12 @@ public:
         }
 
         // Magnitude and phase of gradient images
-        for(int i=0;i<gaussianLevels-3;i++) {
+        for (int i=0; i<gaussianLevels-3; i++) {
             ornPyramid[i] = Image(gray.width, gray.height, gray.frames, gray.channels);
             magPyramid[i] = Image(gray.width, gray.height, gray.frames, gray.channels);
 
-            for(int y=1;y<gray.height-1;y++) {
-                
+            for (int y=1; y<gray.height-1; y++) {
+
                 Window level(gPyramid, 0, 0, i+2, gPyramid.width, gPyramid.height, 1);
                 float *mPtr = magPyramid[i](1,y);
                 float *oPtr = ornPyramid[i](1,y);
@@ -570,8 +570,8 @@ public:
                 float *dx2Ptr = level(2,y);
                 float *dy1Ptr = level(1,y-1);
                 float *dy2Ptr = level(1,y+1);
-                
-                for(int x=1;x<gray.width-1;x++) {
+
+                for (int x=1; x<gray.width-1; x++) {
                     float dx = *dx1Ptr++ - *dx2Ptr++;
                     float dy = *dy1Ptr++ - *dy2Ptr++;
                     *mPtr++ = sqrt(dx*dx + dy*dy);
@@ -581,7 +581,7 @@ public:
         }
 
         // DoG Pyramid
-        for(int i = 0; i < gaussianLevels-1; i++) {
+        for (int i = 0; i < gaussianLevels-1; i++) {
             Window thisLevel(gPyramid, 0, 0, i, gPyramid.width, gPyramid.height, 1);
             Window nextLevel(gPyramid, 0, 0, i+1, gPyramid.width, gPyramid.height, 1);
             Subtract::apply(thisLevel, nextLevel);
@@ -606,17 +606,17 @@ public:
 
             // Reject maxima that are located along edges
             int mt = (int)(maxima[i].t + 0.5);
-            float mx = maxima[i].x; 
+            float mx = maxima[i].x;
             float my = maxima[i].y;
             Image patch(3,3,1,1);
             float *ptr = patch(0,0,0);
-            if(mt < 0 || mt >= gaussianLevels) {
+            if (mt < 0 || mt >= gaussianLevels) {
                 j--;
                 continue;
             }
 
-            for(int y=-1;y<=1;y++) {
-                for(int x=-1;x<=1;x++) {
+            for (int y=-1; y<=1; y++) {
+                for (int x=-1; x<=1; x++) {
                     dogPyramid.sample2DLinear(mx+x, my+y, mt, ptr++);
                 }
             }
@@ -624,7 +624,7 @@ public:
             float Dxx = patch(0,1)[0] - 2 * patch(1,1)[0] + patch(2,1)[0];
             float Dyy = patch(1,0)[0] - 2 * patch(1,1)[0] + patch(1,2)[0];
             float Dxy = (patch(0,0)[0] - patch(0,2)[0] + patch(2,2)[0] - patch(2,0)[0])/4;
-            float ratio = (Dxx+Dyy)*(Dxx+Dyy)/(Dxx*Dyy-Dxy*Dxy);            
+            float ratio = (Dxx+Dyy)*(Dxx+Dyy)/(Dxx*Dyy-Dxy*Dxy);
             if (ratio > 10 || ratio < 0) {
                 j--;
                 continue;
@@ -633,10 +633,10 @@ public:
             //printf("Find descriptor %d..\n",j);
 
             // Find descriptor
-            // Assign multiple descriptors if has multiple major orientations 
+            // Assign multiple descriptors if has multiple major orientations
             vector<float> orientations;
             findOrientations(maxima[i], magPyramid, ornPyramid, &sigma, &orientations);
-            for(int k=0;k<(int)orientations.size();k++) {
+            for (int k=0; k<(int)orientations.size(); k++) {
                 corners.push_back(Feature(maxima[i], magPyramid, ornPyramid, &sigma, orientations[k]));
             }
 
@@ -649,7 +649,7 @@ public:
     // Once we have computed a digest for each of the images to align,
     // we can attempt to solve for the best alignment using RANSAC and
     // least squares
-    Transform *align(Digest &other, Align::Mode m, int* inliers) {
+    Transform *align(Digest &other, Align::Mode m, int *inliers) {
         Transform *transform = NULL, *refined = NULL;
         if (m == Align::TRANSLATE) {
             transform = new Translation();
@@ -685,7 +685,7 @@ public:
         // this list. This is a little inefficient, given that we're
         // going to throw out most of these, but compared to the image
         // processing steps, everything is cheap.
-        ::std::sort(allCorrespondences.begin(), allCorrespondences.end());        
+        ::std::sort(allCorrespondences.begin(), allCorrespondences.end());
 
         // Select up to 1024 of the best correspondences.
         for (unsigned i = 0; i < allCorrespondences.size() && correspondences.size() < 1024; i++) {
@@ -704,7 +704,7 @@ public:
         /*
         // Print out the correspondences found for debugging.
         for (unsigned i = 0; i < correspondences.size(); i++) {
-            printf("%f %f -> %f %f (%f)\n", 
+            printf("%f %f -> %f %f (%f)\n",
                    correspondences[i].a->x,
                    correspondences[i].a->y,
                    correspondences[i].b->x,
@@ -759,8 +759,8 @@ public:
                 bestSeed = seed;
                 //printf("%i %f\n", bestSeed, bestScore);
             }
-            
-            if (bestScore > transform->constraintsRequired()*20) break;
+
+            if (bestScore > transform->constraintsRequired()*20) { break; }
 
         }
 
@@ -781,7 +781,7 @@ public:
                                          correspondences[j].b->x,
                                          correspondences[j].b->y);
         }
-        transform->solve();        
+        transform->solve();
 
         // Now we're going to throw in all the inliers under that
         // model into a single big least squares solve to refine the
@@ -810,7 +810,7 @@ public:
                                            correspondences[i].b->y);
             }
         }
-        refined->solve();        
+        refined->solve();
 
         // Done! Return the refined solution.
 
@@ -834,20 +834,20 @@ public:
     // Visualize feature locations
     void displayFeatures(Window out) {
 
-        for (int i=0;i<(int)corners.size(); i++) {
-        
+        for (int i=0; i<(int)corners.size(); i++) {
+
             int t, x, y;
             t = 0;
             x = (int)corners[i].x;
             y = (int)corners[i].y;
-            
-            for(int j=-4;j<=4;j++) {
-                if(x+j >= 0 && x+j < out.width) {
+
+            for (int j=-4; j<=4; j++) {
+                if (x+j >= 0 && x+j < out.width) {
                     out(x+j, y, t)[0] = 1;
                     out(x+j, y, t)[1] = 0;
                     out(x+j, y, t)[2] = 0;
                 }
-                if(y+j >= 0 && y+j < out.height) {
+                if (y+j >= 0 && y+j < out.height) {
                     out(x, y+j, t)[0] = 1;
                     out(x, y+j, t)[1] = 0;
                     out(x, y+j, t)[2] = 0;
@@ -899,7 +899,7 @@ void Align::parse(vector<string> args) {
 Image Align::apply(Window a, Window b, Mode m) {
 
     // Iterative scale pyramid alignment
-    #define SCALE_LEVELS 3
+#define SCALE_LEVELS 3
 
     Transform *transform = NULL;
     Transform *bestTransform = NULL;
@@ -910,9 +910,9 @@ Image Align::apply(Window a, Window b, Mode m) {
     int indexB[] = {0,1,2,2,1,0,1,0,2};
     int thresh[] = {50,30,12,12,12,12,12,12,12};
 
-    for(int i=0;i<SCALE_LEVELS*SCALE_LEVELS;i++) {
-        
-        if(done==true) {break;}
+    for (int i=0; i<SCALE_LEVELS*SCALE_LEVELS; i++) {
+
+        if (done==true) {break;}
 
         int downA = 1 << indexA[i];
         int downB = 1 << indexB[i];
@@ -922,23 +922,23 @@ Image Align::apply(Window a, Window b, Mode m) {
 
         Image aa = Downsample::apply(a, downA, downA);
         Image bb = Downsample::apply(b, downB, downB);
-        
+
         Digest digestA(aa);
 
         Digest digestB(bb);
 
-        if (transform) delete transform;
+        if (transform) { delete transform; }
         transform = digestA.align(digestB, m, &score);
         (*transform).adjustDownsampleScale(downA, downB);
 
         //done = true;
 
-        if(score > bestScore){
+        if (score > bestScore) {
             bestScore = score;
-            if (bestTransform) delete bestTransform;
+            if (bestTransform) { delete bestTransform; }
             bestTransform = transform;
             transform = NULL;
-            if (score >= thresh[i]) break;
+            if (score >= thresh[i]) { break; }
         }
     }
 
@@ -953,8 +953,8 @@ Image Align::apply(Window a, Window b, Mode m) {
         }
     }
 
-    if (bestTransform) delete bestTransform;
-    if (transform) delete transform;
+    if (bestTransform) { delete bestTransform; }
+    if (transform) { delete transform; }
 
     return out;
 
@@ -994,11 +994,11 @@ void AlignFrames::apply(Window im, Align::Mode m) {
 
     printf("Extracting features...\n");
     for (int t = 0; t < im.frames; t++) {
-        digests.push_back(new Digest(Window(im, 0, 0, t, 
+        digests.push_back(new Digest(Window(im, 0, 0, t,
                                             im.width, im.height, 1)));
 
     }
-    
+
     printf("Matching features...\n");
 
     float bestScore = 0;
@@ -1008,16 +1008,16 @@ void AlignFrames::apply(Window im, Align::Mode m) {
         printf("Aligning everything to frame %d\n", t1);
         float score = 100000;
         for (int t2 = 0; t2 < im.frames; t2++) {
-            if (t1 == t2) continue;
+            if (t1 == t2) { continue; }
 
             int inliers = 0;
             Transform *t = digests[t1]->align(*digests[t2], m, &inliers);
 
-            if (inliers < score) score = inliers;
+            if (inliers < score) { score = inliers; }
 
-            transforms[make_pair(t1, t2)] = t;            
+            transforms[make_pair(t1, t2)] = t;
 
-            if (score < bestScore) break;
+            if (score < bestScore) { break; }
         }
 
         printf("\nScore %d = %f\n\n", t1, score);
@@ -1027,13 +1027,13 @@ void AlignFrames::apply(Window im, Align::Mode m) {
         }
     }
 
-    // We did the best when we aligned everything to frame bestT        
+    // We did the best when we aligned everything to frame bestT
     //Image out(im);
 
     printf("Warping");
     for (int t = 0; t < im.frames; t++) {
         printf("."); fflush(stdout);
-        if (t == bestT) continue;
+        if (t == bestT) { continue; }
         Image tmp = Image(Window(im, 0, 0, t, im.width, im.height, 1));
 
         for (int y = 0; y < im.height; y++) {
@@ -1046,7 +1046,7 @@ void AlignFrames::apply(Window im, Align::Mode m) {
         }
     }
     printf("\n");
-    
+
     //Display::apply(out);
 
     for (size_t i = 0; i < digests.size(); i++) {
@@ -1055,7 +1055,7 @@ void AlignFrames::apply(Window im, Align::Mode m) {
 
     for (int t1 = 0; t1 < im.frames; t1++) {
         for (int t2 = 0; t2 < im.frames; t2++) {
-            if (t1 == t2) continue;
+            if (t1 == t2) { continue; }
             delete transforms[make_pair(t1, t2)];
         }
     }

@@ -5,7 +5,7 @@
 #include "header.h"
 
 class Window {
-  public:
+public:
     Window() {
         xstride = ystride = tstride = width = height = frames = channels = 0;
         data = NULL;
@@ -14,7 +14,7 @@ class Window {
     operator bool() {
         return (data != NULL);
     }
-    
+
     Window(Window im, int minx_, int miny_, int mint_, int width_, int height_, int frames_) {
         int mint = max(0, mint_);
         int maxt = min(im.frames, mint_ + frames_);
@@ -36,7 +36,7 @@ class Window {
     }
 
     bool operator==(const Window &other) const {
-        return (data == other.data && 
+        return (data == other.data &&
                 width == other.width &&
                 height == other.height &&
                 frames == other.frames &&
@@ -98,7 +98,7 @@ class Window {
         }
 
         if (boundary == NEUMANN) {
-        
+
             float *yWeightPtr = weightY;
             for (int y = minY; y <= maxY; y++) {
                 float *xWeightPtr = weightX;
@@ -113,7 +113,7 @@ class Window {
                     xWeightPtr++;
                 }
                 yWeightPtr++;
-            }              
+            }
         } else {
             float *weightYBase = weightY;
             float *weightXBase = weightX;
@@ -125,8 +125,8 @@ class Window {
                 weightXBase -= minX;
                 minX = 0;
             }
-            if (maxX > width-1) maxX = width-1;
-            if (maxY > height-1) maxY = height-1;
+            if (maxX > width-1) { maxX = width-1; }
+            if (maxY > height-1) { maxY = height-1; }
             float *yWeightPtr = weightYBase;
             for (int y = minY; y <= maxY; y++) {
                 float *xWeightPtr = weightXBase;
@@ -139,7 +139,7 @@ class Window {
                     xWeightPtr++;
                 }
                 yWeightPtr++;
-            }              
+            }
 
         }
     }
@@ -164,7 +164,7 @@ class Window {
             float s1 = (1-fx) * ptr[c] + fx * ptr[c + xstride];
             float s2 = (1-fx) * ptr[c + ystride] + fx * ptr[c + xstride + ystride];
             result[c] = (1-fy) * s1 + fy * s2;
-            
+
         }
 
     }
@@ -187,9 +187,9 @@ class Window {
             float s22 = (1-fx) * ptr[c + ystride + tstride] + fx * ptr[c + xstride + ystride + tstride];
             float s2 = (1-fy) * s21 + fy * s22;
 
-            result[c] = (1-ft) * s1 + ft * s2;           
+            result[c] = (1-ft) * s1 + ft * s2;
         }
-        
+
     }
 
     void sample3D(float fx, float fy, float ft, float *result, BoundaryCondition boundary = ZERO) {
@@ -257,7 +257,7 @@ class Window {
                     float tyWeight = (*yWeightPtr) * (*tWeightPtr);
                     float *xWeightPtr = weightX;
                     for (int x = minX; x <= maxX; x++) {
-                        int sampleX = clamp(x, 0, width-1);                                                          
+                        int sampleX = clamp(x, 0, width-1);
                         float tyxWeight = tyWeight * (*xWeightPtr);
                         float *ptr = (*this)(sampleX, sampleY, sampleT);
                         for (int c = 0; c < channels; c++) {
@@ -268,8 +268,8 @@ class Window {
                     yWeightPtr++;
                 }
                 tWeightPtr++;
-            }    
-            
+            }
+
         } else {
 
             float *weightTBase = weightT;
@@ -288,9 +288,9 @@ class Window {
                 weightTBase -= minT;
                 minT = 0;
             }
-            if (maxX > width-1) maxX = width-1;
-            if (maxY > height-1) maxY = height-1;
-            if (maxT > frames-1) maxT = frames-1;
+            if (maxX > width-1) { maxX = width-1; }
+            if (maxY > height-1) { maxY = height-1; }
+            if (maxT > frames-1) { maxT = frames-1; }
 
             float *tWeightPtr = weightTBase;
             for (int t = minT; t <= maxT; t++) {
@@ -306,7 +306,7 @@ class Window {
                         xWeightPtr++;
                     }
                     yWeightPtr++;
-                }              
+                }
                 tWeightPtr++;
             }
         }
@@ -315,25 +315,25 @@ class Window {
 
     int width, height, frames, channels;
     int xstride, ystride, tstride;
-    float *data;    
+    float *data;
 
 };
 
 class Image : public Window {
-  protected:
+protected:
     float *memory;
-  public:
+public:
     Image() : refCount(NULL) {
         width = frames = height = channels = 0;
         xstride = ystride = tstride = 0;
         memory = data = NULL;
     }
-    
-        
+
+
     void debug() {
         printf("%llx(%d@%llx): %d %d %d %d\n", (unsigned long long)data, refCount[0], (unsigned long long)refCount, width, height, frames, channels);
     }
-            
+
 
     Image(int width_, int height_, int frames_, int channels_, const float *data_ = NULL) {
         width = width_;
@@ -341,31 +341,32 @@ class Image : public Window {
         frames = frames_;
         channels = channels_;
 
-        long long size = ((long long)frames_ * 
+        long long size = ((long long)frames_ *
                           (long long)height_ *
-                          (long long)width_ * 
+                          (long long)width_ *
                           (long long)channels_);
-        
+
 
         // guarantee 16-byte alignment in case people want to use SSE
         memory = new float[size+3];
-        if ((long long)memory & 0xf)
+        if ((long long)memory & 0xf) {
             data = memory + 4 - (((long long)memory & 0xf) >> 2);
-        else
+        } else {
             data = memory;
-        if (!data_) memset(data, 0, size * sizeof(float));
-        else memcpy(data, data_, size * sizeof(float));
-        
+        }
+        if (!data_) { memset(data, 0, size * sizeof(float)); }
+        else { memcpy(data, data_, size * sizeof(float)); }
+
         xstride = channels;
         ystride = xstride * width;
         tstride = ystride * height;
         refCount = new int;
         *refCount = 1;
-        
-        //printf("Making new image "); 
+
+        //printf("Making new image ");
         //debug();
     }
-    
+
     // does not copy data
 
     Image &operator=(const Image &im) {
@@ -381,35 +382,35 @@ class Image : public Window {
         height = im.height;
         channels = im.channels;
         frames = im.frames;
-        
+
         data = im.data;
         memory = im.memory;
-        
+
         xstride = channels;
         ystride = xstride * width;
-        tstride = ystride * height;        
-        
-        refCount = im.refCount;       
-        if (refCount) refCount[0]++;
-        
+        tstride = ystride * height;
+
+        refCount = im.refCount;
+        if (refCount) { refCount[0]++; }
+
         return *this;
     }
-    
+
     Image(const Image &im) {
         width = im.width;
         height = im.height;
         channels = im.channels;
         frames = im.frames;
-        
+
         memory = im.memory;
-        data = im.data;       
+        data = im.data;
 
         xstride = channels;
         ystride = xstride * width;
-        tstride = ystride * height;        
-        
-        refCount = im.refCount;        
-        if (refCount) refCount[0]++;       
+        tstride = ystride * height;
+
+        refCount = im.refCount;
+        if (refCount) { refCount[0]++; }
     }
 
     // copies data from the window
@@ -418,10 +419,10 @@ class Image : public Window {
         height = im.height;
         channels = im.channels;
         frames = im.frames;
-        
+
         xstride = channels;
         ystride = xstride * width;
-        tstride = ystride * height;        
+        tstride = ystride * height;
 
         refCount = new int;
         *refCount = 1;
@@ -432,11 +433,12 @@ class Image : public Window {
 
         // guarantee 16-byte alignment in case people want to use SSE
         memory = new float[size+3];
-        if ((long long)memory & 0xf)
+        if ((long long)memory & 0xf) {
             data = memory + 4 - (((long long)memory & 0xf) >> 2);
-        else
+        } else {
             data = memory;
-        
+        }
+
         for (int t = 0; t < frames; t++) {
             for (int y = 0; y < height; y++) {
                 float *thisPtr = (*this)(0, y, t);
@@ -444,18 +446,18 @@ class Image : public Window {
                 memcpy(thisPtr, imPtr, sizeof(float)*width*channels);
             }
         }
-    }    
+    }
 
     // makes a new copy of this image
     Image copy() {
         return Image(width, height, frames, channels, data);
     }
-    
+
     ~Image();
 
     int *refCount;
-    
-  protected:
+
+protected:
     Image &operator=(Window im) {
         return *this;
     }

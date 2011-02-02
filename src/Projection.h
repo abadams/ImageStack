@@ -3,7 +3,7 @@
 #include "header.h"
 
 class Sinugram : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, int directions);

@@ -53,7 +53,7 @@ void GaussTransform::parse(vector<string> args) {
 
     vector<float> sigmas;
     if (args.size() == 1) {
-        sigmas = vector<float>(stack(0).channels, 1.0);        
+        sigmas = vector<float>(stack(0).channels, 1.0);
     } else if (args.size() == 2) {
         sigmas = vector<float>(stack(0).channels, readFloat(args[1]));
     } else if ((int)args.size() == 1 + stack(1).channels) {
@@ -71,13 +71,13 @@ void GaussTransform::parse(vector<string> args) {
 }
 
 Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window values,
-                            vector<float> sigmas, 
+                            vector<float> sigmas,
                             GaussTransform::Method method) {
     assert(splatPositions.width == values.width &&
            splatPositions.height == values.height &&
            splatPositions.frames == values.frames,
            "Weights and locations of the Gaussians must be the same size\n");
-    assert(slicePositions.channels == splatPositions.channels, 
+    assert(slicePositions.channels == splatPositions.channels,
            "The evaluation locations and the locations of the Gaussians must have"
            " the same number of channels.\n");
 
@@ -89,7 +89,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
         invSigma[i] = 1.0f/sigmas[i];
     }
 
-    switch(method) {
+    switch (method) {
     case EXACT: {
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
         for (int t1 = 0; t1 < slicePositions.frames; t1++) {
@@ -112,7 +112,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                                 for (int c = 0; c < values.channels; c++) {
                                     vptr1[c] += weight * vptr2[c];
                                 }
-                                
+
                                 pptr2 += splatPositions.channels;
                                 vptr2 += values.channels;
                             }
@@ -125,16 +125,16 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
         }
         return out;
     }
-    case PERMUTOHEDRAL: {        
+    case PERMUTOHEDRAL: {
         // Create lattice
         PermutohedralLattice lattice(splatPositions.channels, values.channels,
                                      values.width*values.height*values.frames);
-        
+
         // Splat into the lattice
         //printf("Splatting...\n");
 
         vector<float> pos(splatPositions.channels);
-        
+
         for (int t = 0; t < splatPositions.frames; t++) {
             for (int y = 0; y < splatPositions.height; y++) {
                 float *valuesPtr = values(0, y, t);
@@ -149,16 +149,16 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
-        
+
         // Blur the lattice
         //printf("Blurring...\n");
         lattice.blur();
-        
+
         // Slice from the lattice
-        //printf("Slicing...\n");  
-        
+        //printf("Slicing...\n");
+
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
-        
+
         if (slicePositions == splatPositions) {
             lattice.beginSlice();
             for (int t = 0; t < slicePositions.frames; t++) {
@@ -184,16 +184,16 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                         slicePositionsPtr += slicePositions.channels;
                     }
                 }
-            }            
+            }
         }
 
-    
+
         return out;
     }
     case GRID: {
         // Create grid
         DenseGrid grid(splatPositions.channels, values.channels, 5);
-        
+
         // Splat into the grid
 
         vector<float> pos(splatPositions.channels);
@@ -225,7 +225,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
-        
+
         //printf("Splatting...\n");
         for (int t = 0; t < splatPositions.frames; t++) {
             for (int y = 0; y < splatPositions.height; y++) {
@@ -241,15 +241,15 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
-        
+
         // Blur the grid
         grid.blur();
-        
+
         // Slice from the grid
-        //printf("Slicing...\n");  
-        
+        //printf("Slicing...\n");
+
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
-        
+
         for (int t = 0; t < slicePositions.frames; t++) {
             for (int y = 0; y < slicePositions.height; y++) {
                 float *outPtr = out(0, y, t);
@@ -264,9 +264,9 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
-    
+
         return out;
-    } 
+    }
     case GKDTREE: {
         //printf("Building...\n");
 
@@ -324,17 +324,17 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
-    
+
         //printf("Blurring...\n");
-    
+
         tree.blur(BLUR_STD_DEV, leafValues(0, 0), tmpLeafValues(0, 0), leafValues.channels, BLUR_ACCURACY);
         Image tmp = tmpLeafValues;
         tmpLeafValues = leafValues;
         leafValues = tmp;
-    
-        //printf("Slicing...\n");  
+
+        //printf("Slicing...\n");
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
-        
+
         float *outPtr = out(0, 0, 0);
         float *slicePtr = slicePositions(0, 0, 0);
 
@@ -346,7 +346,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                     for (int c = 0; c < slicePositions.channels; c++) {
                         pos[c] = slicePtr[c] * invSigma[c];
                     }
-                    int results = tree.gaussianLookup(&pos[0], SLICE_STD_DEV, 
+                    int results = tree.gaussianLookup(&pos[0], SLICE_STD_DEV,
                                                       &indices[0], &weights[0], SLICE_ACCURACY);
 
                     for (int i = 0; i < results; i++) {
@@ -397,8 +397,8 @@ void JointBilateral::parse(vector<string> args) {
     colorSigma = readFloat(args[0]);
     filterWidth = filterHeight = readFloat(args[1]);
 
-    if (args.size() > 2) filterHeight = readFloat(args[2]);
-    if (args.size() > 3) filterFrames = readFloat(args[3]);
+    if (args.size() > 2) { filterHeight = readFloat(args[2]); }
+    if (args.size() > 3) { filterFrames = readFloat(args[3]); }
     if (args.size() > 4) {
         if (args[4] == "exact") {
             m = GaussTransform::EXACT;
@@ -416,17 +416,17 @@ void JointBilateral::parse(vector<string> args) {
     apply(stack(0), stack(1), filterWidth, filterHeight, filterFrames, colorSigma, m);
 }
 
-void JointBilateral::apply(Window im, Window ref, 
-                           float filterWidth, float filterHeight, float filterFrames, float colorSigma, 
+void JointBilateral::apply(Window im, Window ref,
+                           float filterWidth, float filterHeight, float filterFrames, float colorSigma,
                            GaussTransform::Method method) {
     assert(im.width == ref.width &&
            im.height == ref.height &&
-           im.frames == ref.frames, 
+           im.frames == ref.frames,
            "Image and reference must be the same size\n");
-    
-    if (im.width == 1) filterWidth = 0;
-    if (im.height == 1) filterHeight = 0;
-    if (im.frames == 1) filterFrames = 0;
+
+    if (im.width == 1) { filterWidth = 0; }
+    if (im.height == 1) { filterHeight = 0; }
+    if (im.frames == 1) { filterFrames = 0; }
 
     if (im.width > 1 && filterWidth == 0) {
         // filter each column independently
@@ -454,18 +454,18 @@ void JointBilateral::apply(Window im, Window ref,
             Window im2(im, 0, 0, t, im.width, im.height, 1);
             Window ref2(ref, 0, 0, t, im.width, im.height, 1);
             apply(im2, ref2, filterWidth, filterHeight, 0, colorSigma, method);
-        }       
+        }
         return;
     }
 
     int posChannels = ref.channels;
     bool filterX = true, filterY = true, filterT = true;
-    if (im.width == 1 || isinf(filterWidth) || filterWidth > 10*im.width) filterX = false;
-    if (im.height == 1 || isinf(filterHeight) || filterHeight > 10*im.height) filterY = false;
-    if (im.frames == 1 || isinf(filterFrames) || filterFrames > 10*im.frames) filterT = false;
-    if (filterX) posChannels++;
-    if (filterY) posChannels++;
-    if (filterT) posChannels++;
+    if (im.width == 1 || isinf(filterWidth) || filterWidth > 10*im.width) { filterX = false; }
+    if (im.height == 1 || isinf(filterHeight) || filterHeight > 10*im.height) { filterY = false; }
+    if (im.frames == 1 || isinf(filterFrames) || filterFrames > 10*im.frames) { filterT = false; }
+    if (filterX) { posChannels++; }
+    if (filterY) { posChannels++; }
+    if (filterT) { posChannels++; }
 
     // make the spatial filter
     int filterSizeX = filterX ? ((int)(filterWidth * 6 + 1) | 1) : 1;
@@ -479,32 +479,32 @@ void JointBilateral::apply(Window im, Window ref,
         if (filterSizeT * filterSizeX * filterSizeY < 16) {
             method = GaussTransform::EXACT;
         } else {
-            if (posChannels <= 4) method = GaussTransform::GRID;
-            else if (posChannels <= 10) method = GaussTransform::PERMUTOHEDRAL;
-            else method = GaussTransform::GKDTREE;
+            if (posChannels <= 4) { method = GaussTransform::GRID; }
+            else if (posChannels <= 10) { method = GaussTransform::PERMUTOHEDRAL; }
+            else { method = GaussTransform::GKDTREE; }
         }
     }
-    
+
     if (method == GaussTransform::EXACT) {
-        
-        Image out(im.width, im.height, im.frames, im.channels);        
+
+        Image out(im.width, im.height, im.frames, im.channels);
 
         // make the spatial filter
         int filterSizeT = (int)(filterFrames * 6 + 1) | 1;
         int filterSizeX = (int)(filterWidth * 6 + 1) | 1;
         int filterSizeY = (int)(filterHeight * 6 + 1) | 1;
-        
+
         Image filter(filterSizeX, filterSizeY, filterSizeT, 1);
-        
+
         for (int t = 0; t < filter.frames; t++) {
             for (int y = 0; y < filter.height; y++) {
-                for (int x = 0; x < filter.width; x++) {                
+                for (int x = 0; x < filter.width; x++) {
                     float dt = (t - filter.frames / 2) / filterFrames;
                     float dx = (x - filter.width / 2) / filterWidth;
                     float dy = (y - filter.height / 2) / filterHeight;
-                    if (!filterT) dt = 0;
-                    if (!filterX) dx = 0;
-                    if (!filterY) dy = 0;
+                    if (!filterT) { dt = 0; }
+                    if (!filterX) { dx = 0; }
+                    if (!filterY) { dy = 0; }
                     float distance = dt * dt + dx * dx + dy * dy;
                     float value = expf(-distance/2);
                     filter(x, y, t)[0] = value;
@@ -518,28 +518,28 @@ void JointBilateral::apply(Window im, Window ref,
         int toff = (filter.frames - 1)/2;
 
         float colorSigmaMult = 0.5f/(colorSigma*colorSigma);
-        
+
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
                     float totalWeight = 0;
-                    for (int dt = -toff; dt <= toff; dt++) {                    
+                    for (int dt = -toff; dt <= toff; dt++) {
                         int imt = t + dt;
-                        if (imt < 0) continue;
-                        if (imt >= im.frames) break;
+                        if (imt < 0) { continue; }
+                        if (imt >= im.frames) { break; }
                         int filtert = dt + toff;
                         for (int dy = -yoff; dy <= yoff; dy++) {
                             int imy = y + dy;
-                            if (imy < 0) continue;
-                            if (imy >= im.height) break;
+                            if (imy < 0) { continue; }
+                            if (imy >= im.height) { break; }
                             int filtery = dy + yoff;
                             for (int dx = -xoff; dx <= xoff; dx++) {
                                 int imx = x + dx;
-                                if (imx < 0) continue;
-                                if (imx >= im.width) break;
+                                if (imx < 0) { continue; }
+                                if (imx >= im.width) { break; }
                                 int filterx = dx + xoff;
                                 float weight = filter(filterx, filtery, filtert)[0];
-                                float colorDistance = 0;                           
+                                float colorDistance = 0;
                                 for (int c = 0; c < ref.channels; c++) {
                                     float diff = (ref(imx, imy, imt)[c] - ref(x, y, t)[c]);
                                     colorDistance += diff * diff * colorSigmaMult;
@@ -592,9 +592,9 @@ void JointBilateral::apply(Window im, Window ref,
                     *posPtr++ = (*refPtr++) * invColorSigma;
                 }
 
-                if (filterX) *posPtr++ = x * invSigmaX;
-                if (filterY) *posPtr++ = y * invSigmaY;
-                if (filterT) *posPtr++ = t * invSigmaT;
+                if (filterX) { *posPtr++ = x * invSigmaX; }
+                if (filterY) { *posPtr++ = y * invSigmaY; }
+                if (filterT) { *posPtr++ = t * invSigmaT; }
             }
         }
     }
@@ -643,8 +643,8 @@ void Bilateral::parse(vector<string> args) {
     colorSigma = readFloat(args[0]);
     filterWidth = filterHeight = readFloat(args[1]);
 
-    if (args.size() > 2) filterHeight = readFloat(args[2]);
-    if (args.size() > 3) filterFrames = readFloat(args[3]);
+    if (args.size() > 2) { filterHeight = readFloat(args[2]); }
+    if (args.size() > 3) { filterFrames = readFloat(args[3]); }
     if (args.size() > 4) {
         if (args[4] == "exact") {
             m = GaussTransform::EXACT;
@@ -702,11 +702,11 @@ Image BilateralSharpen::apply(Window im, float spatialSigma, float colorSigma, f
 }
 
 
-                 
+
 void ChromaBlur::help() {
-        printf("\n-chromablur blurs an image in the chrominance channels only. It is a good way\n"
+    printf("\n-chromablur blurs an image in the chrominance channels only. It is a good way\n"
            "of getting rid of chroma noise without apparently blurring the image. The two\n"
-           "arguments are the standard deviation in space and color of the bilateral filter.\n" 
+           "arguments are the standard deviation in space and color of the bilateral filter.\n"
            "Usage: ImageStack -load input.jpg -chromablur 2 -save output.png\n\n");
 }
 
@@ -788,7 +788,7 @@ void NLMeans::apply(Window image, float patchSize, int dimensions,
 
     Image filters = PatchPCA::apply(image, patchSize, dimensions);
     Image pca = Convolve::apply(image, filters, Convolve::Zero, Multiply::Inner);
-    JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);    
+    JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);
 };
 
 #include "footer.h"

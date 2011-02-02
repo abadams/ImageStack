@@ -14,7 +14,7 @@
  ******************************************************************/
 
 class DenseGrid {
-  public:
+public:
 
     static Image filter(Image im, Image ref, float accuracy, size_t *memory) {
         int taps;
@@ -36,7 +36,7 @@ class DenseGrid {
             // cubic
             // [1 6 15 20 15 6 1]/64
             // variance = 1.5
-        }       
+        }
 
         DenseGrid grid(ref.channels, im.channels+1, taps);
 
@@ -50,12 +50,12 @@ class DenseGrid {
                 }
             }
         }
-    
+
         //printf("Splatting...\n");
 
         float *col = new float[im.channels+1];
         col[im.channels] = 1;
-        
+
         float *imPtr = im(0, 0, 0);
         refPtr = ref(0, 0, 0);
         for (int t = 0; t < im.frames; t++) {
@@ -69,14 +69,14 @@ class DenseGrid {
                 }
             }
         }
-    
+
         //printf("Blurring...\n");
-    
+
         grid.blur();
-    
-        //printf("Slicing...\n");  
+
+        //printf("Slicing...\n");
         Image out = im.copy();
-        
+
         float *outPtr = out(0, 0, 0);
         refPtr = ref(0, 0, 0);
         for (int t = 0; t < im.frames; t++) {
@@ -93,10 +93,10 @@ class DenseGrid {
         }
 
         *memory = grid.memoryUsed();
-        
+
         return out;
     }
-    
+
     DenseGrid(int d_, int vd_, int taps_ = 3) : d(d_), vd(vd_), taps(taps_) {
         scaleFactor = new float[d];
         positionF = new float[d];
@@ -117,11 +117,11 @@ class DenseGrid {
             // total variance of splatting + slicing = d/3
 
             // total variance of the blur step is d(taps-1)/4
-            
+
             // so scale factor should be the std dev in each dimension
             // = sqrt(total variance / d) = sqrt(1/3 + (taps-1)/4)
-            
-            scaleFactor[i] = sqrtf(1.0/3 + (taps-1)*0.25); 
+
+            scaleFactor[i] = sqrtf(1.0/3 + (taps-1)*0.25);
         }
 
     }
@@ -147,14 +147,16 @@ class DenseGrid {
             }
         } else {
             for (int i = 0; i < d; i++) {
-                if (position[i]*scaleFactor[i] < minPosition[i])
+                if (position[i]*scaleFactor[i] < minPosition[i]) {
                     minPosition[i] = position[i]*scaleFactor[i];
-                if (position[i]*scaleFactor[i] > maxPosition[i])
+                }
+                if (position[i]*scaleFactor[i] > maxPosition[i]) {
                     maxPosition[i] = position[i]*scaleFactor[i];
+                }
             }
-        }        
+        }
     }
-    
+
     void splat(float *position, float *value) {
         if (!grid) {
             stride = new int[d+1];
@@ -163,7 +165,7 @@ class DenseGrid {
             for (int i = 0; i < d; i++) {
                 sizes[i] = (int)(ceil(maxPosition[i] - minPosition[i])+1);
                 stride[i+1] = stride[i]*sizes[i];
-            }            
+            }
             grid = new float[stride[d]];
             memset(grid, 0, sizeof(float)*stride[d]);
 
@@ -173,7 +175,7 @@ class DenseGrid {
     }
 
     void blur() {
-        switch(taps) {
+        switch (taps) {
         case 3:
             blur_<3>();
             return;
@@ -185,7 +187,7 @@ class DenseGrid {
             return;
         }
     }
-    
+
     void slice(float *position, float *value) {
         query<false>(position, value);
     }
@@ -194,22 +196,22 @@ class DenseGrid {
         return (sizeof(float)*stride[d]);
     }
 
-  private:
+private:
 
     template <int taps_>
     void blur_() {
         int *rowLocation = new int[d];
         float *tmp1 = new float[vd];
         float *tmp2 = new float[vd];
-        
-        for (int j = 0; j < d; j++) {            
 
-            for (int i = 0; i < d; i++) rowLocation[i] = 0;
+        for (int j = 0; j < d; j++) {
+
+            for (int i = 0; i < d; i++) { rowLocation[i] = 0; }
 
             //printf("Blurring in direction %d\n", j);
-            // iterate through every dimension except for j and the value dimension            
+            // iterate through every dimension except for j and the value dimension
             for (int row = 0; row < stride[d]/(vd*sizes[j]); row++) {
-                
+
                 float *startOfRow = grid;
                 for (int i = 0; i < d; i++) {
                     startOfRow += rowLocation[i]*stride[i];
@@ -220,32 +222,32 @@ class DenseGrid {
 
                     // now walk along the row blurring
                     int s = stride[j];
-                    
+
                     for (int k = 0; k < vd; k++) {
                         tmp1[k] = rowPtr[k]/2;
                     }
-                    
+
                     for (int i = 0; i < sizes[j]-1; i++) {
                         // the average of previous + current is stored in tmp1
-                        
+
                         // save the average of current + next into tmp2
                         for (int k = 0; k < vd; k++) {
                             tmp2[k] = 0.5*(rowPtr[k] + rowPtr[k+s]);
                         }
-                        
+
                         // then clobber current with the average of tmp1 and tmp2
                         for (int k = 0; k < vd; k++) {
                             rowPtr[k] = 0.5*(tmp1[k] + tmp2[k]);
                         }
-                        
+
                         // switch tmp1 and tmp2
                         float *tmp3 = tmp1;
                         tmp1 = tmp2;
                         tmp2 = tmp3;
-                        
+
                         rowPtr += s;
                     }
-                    
+
                     // write the last one
                     for (int k = 0; k < vd; k++) {
                         rowPtr[k] = 0.5*(tmp1[k] + 0.5*rowPtr[k]);
@@ -256,17 +258,17 @@ class DenseGrid {
                 // ignoring the digit in the place of the current
                 // dimension (digit j)
                 int k = 0;
-                if (k == j) k++;
-                if (k >= d) printf("PANIC!\n");
+                if (k == j) { k++; }
+                if (k >= d) { printf("PANIC!\n"); }
                 rowLocation[k]++;
 
                 while (rowLocation[k] == sizes[k]) {
                     rowLocation[k] = 0;
                     k++;
-                    if (k == j) k++;
-                    if (k >= d) break;
+                    if (k == j) { k++; }
+                    if (k >= d) { break; }
                     rowLocation[k]++;
-                }               
+                }
 
             }
         }
@@ -317,13 +319,13 @@ class DenseGrid {
                 }
             } else if (val) {
                 for (int j = 0; j < vd; j++) {
-                    value[j] += weight*val[j];                
+                    value[j] += weight*val[j];
                 }
             }
         }
     }
 
-  private:
+private:
 
     int d, vd, taps;
     float *scaleFactor;

@@ -28,7 +28,7 @@ void Gradient::parse(vector<string> args) {
     }
 }
 
-// gradient can be called as gradient('t') or gradient("xyt") 
+// gradient can be called as gradient('t') or gradient("xyt")
 void Gradient::apply(Window im, string dimensions) {
     for (size_t i = 0; i < dimensions.size(); i++) {
         apply(im, dimensions[i]);
@@ -79,14 +79,14 @@ void Integrate::parse(vector<string> args) {
     assert(args.size() > 0, "-integrate requires at least one argument\n");
     for (size_t i = 0; i < args.size(); i++) {
         apply(stack(0), args[i]);
-    }        
+    }
 }
 
-// integrate can be called as integrate('t') or integrate("xyt") 
+// integrate can be called as integrate('t') or integrate("xyt")
 void Integrate::apply(Window im, string dimensions) {
     for (size_t i = 0; i < dimensions.size(); i++) {
         apply(im, dimensions[i]);
-    }        
+    }
 }
 
 void Integrate::apply(Window im, char dimension) {
@@ -173,17 +173,17 @@ void Poisson::parse(vector<string> args) {
         rms = readFloat(args[0]);
     }
 
-    push(apply(stack(1), stack(0), rms));        
+    push(apply(stack(1), stack(0), rms));
 }
 
 Image Poisson::apply(Window dx, Window dy, float rms) {
     assert(dx.width  == dy.width &&
-           dx.height == dy.height && 
+           dx.height == dy.height &&
            dx.frames == dy.frames &&
            dx.channels == dy.channels,
-           "derivatives must be matching size and number of channels\n");      
+           "derivatives must be matching size and number of channels\n");
 
-    
+
     Image zerosc(dx.width, dx.height, dx.frames, dx.channels);
     Image zeros1(dx.width, dx.height, dx.frames, 1);
     Image ones1(dx.width, dx.height, dx.frames, 1);

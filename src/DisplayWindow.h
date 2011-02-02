@@ -16,7 +16,7 @@
 
 // a singleton SDL window
 class DisplayWindow {
-  public:
+public:
     static DisplayWindow *instance();
     void setMode(int width, int height, bool fullscreen = false, bool cursorVisible = true,
                  float bgRed = 0, float bgGreen = 0, float bgBlue = 0);
@@ -36,7 +36,7 @@ class DisplayWindow {
     void showAsync();
     void wait();
 
-  private:
+private:
     DisplayWindow();
     ~DisplayWindow();
 
@@ -53,7 +53,7 @@ class DisplayWindow {
     bool fullscreen_, cursorVisible_;
     unsigned char bgRed_, bgGreen_, bgBlue_;
     int tOffset_, xOffset_, yOffset_;
-    SDL_Surface *surface; 
+    SDL_Surface *surface;
     Uint8 *displayImage; // a 3D buffer of the 8bit image
     SDL_Thread *thread;
     SDL_mutex *mutex;

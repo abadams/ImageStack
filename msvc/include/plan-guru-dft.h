@@ -22,23 +22,22 @@
 #include "dft.h"
 
 X(plan) XGURU(dft)(int rank, const IODIM *dims,
-			 int howmany_rank, const IODIM *howmany_dims,
-			 C *in, C *out, int sign, unsigned flags)
-{
-     R *ri, *ii, *ro, *io;
+                   int howmany_rank, const IODIM *howmany_dims,
+                   C *in, C *out, int sign, unsigned flags) {
+    R *ri, *ii, *ro, *io;
 
-     if (!GURU_KOSHERP(rank, dims, howmany_rank, howmany_dims)) return 0;
+    if (!GURU_KOSHERP(rank, dims, howmany_rank, howmany_dims)) { return 0; }
 
-     EXTRACT_REIM(sign, in, &ri, &ii);
-     EXTRACT_REIM(sign, out, &ro, &io);
+    EXTRACT_REIM(sign, in, &ri, &ii);
+    EXTRACT_REIM(sign, out, &ro, &io);
 
-     return X(mkapiplan)(
-	  sign, flags,
-	  X(mkproblem_dft_d)(MKTENSOR_IODIMS(rank, dims, 2, 2),
-			     MKTENSOR_IODIMS(howmany_rank, howmany_dims,
-						2, 2),
-			     TAINT_UNALIGNED(ri, flags),
-			     TAINT_UNALIGNED(ii, flags), 
-			     TAINT_UNALIGNED(ro, flags),
-			     TAINT_UNALIGNED(io, flags)));
+    return X(mkapiplan)(
+               sign, flags,
+               X(mkproblem_dft_d)(MKTENSOR_IODIMS(rank, dims, 2, 2),
+                                  MKTENSOR_IODIMS(howmany_rank, howmany_dims,
+                                                  2, 2),
+                                  TAINT_UNALIGNED(ri, flags),
+                                  TAINT_UNALIGNED(ii, flags),
+                                  TAINT_UNALIGNED(ro, flags),
+                                  TAINT_UNALIGNED(io, flags)));
 }

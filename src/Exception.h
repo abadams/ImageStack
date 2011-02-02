@@ -8,7 +8,7 @@
 #define EXCEPTION_LENGTH 1024
 
 class Exception {
-  public:
+public:
     Exception(const char *fmt, va_list arglist);
     Exception(const char *fmt, ...);
 

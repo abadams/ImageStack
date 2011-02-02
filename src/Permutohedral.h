@@ -61,33 +61,36 @@ public:
 
         // Double hash table size if necessary
         if (filled >= (capacity/2)-1) { grow(); }
-        
+
         // Find the entry with the given key
         while (1) {
             Entry e = entries[h];
             // check if the cell is empty
             if (e.keyIdx == -1) {
-                if (!create) return -1; // Return not found.
+                if (!create) { return -1; } // Return not found.
                 // need to create an entry. Store the given key.
-                for (int i = 0; i < kd; i++)
-                    keys[filled*kd+i] = key[i];
+                for (int i = 0; i < kd; i++) {
+                    keys[filled *kd+i] = key[i];
+                }
                 e.keyIdx = filled*kd;
                 e.valueIdx = filled*vd;
                 entries[h] = e;
                 filled++;
                 return e.valueIdx;
             }
-            
+
             // check if the cell has a matching key
             bool match = true;
-            for (int i = 0; i < kd && match; i++)
+            for (int i = 0; i < kd && match; i++) {
                 match = keys[e.keyIdx+i] == key[i];
-            if (match)
+            }
+            if (match) {
                 return e.valueIdx;
-            
+            }
+
             // increment the bucket with wraparound
             h++;
-            if (h == capacity) h = 0;
+            if (h == capacity) { h = 0; }
         }
     }
 
@@ -98,16 +101,16 @@ public:
     float *lookup(short *k, bool create = true) {
         size_t h = hash(k) % capacity;
         int offset = lookupOffset(k, h, create);
-        if (offset < 0) return NULL;
-        else return values + offset;
+        if (offset < 0) { return NULL; }
+        else { return values + offset; }
     };
-  
-    /* Hash function used in this implementation. A simple base conversion. */  
+
+    /* Hash function used in this implementation. A simple base conversion. */
     size_t hash(const short *key) {
         size_t k = 0;
         for (int i = 0; i < kd; i++) {
             k += key[i];
-            k *= 2531011; 
+            k *= 2531011;
         }
         return k;
     }
@@ -116,7 +119,7 @@ private:
     /* Grows the size of the hash table */
     void grow() {
         //printf("Resizing hash table\n");
-        
+
         size_t oldCapacity = capacity;
         capacity *= 2;
 
@@ -125,30 +128,30 @@ private:
         memset(newValues, 0, sizeof(float)*vd*capacity/2);
         memcpy(newValues, values, sizeof(float)*vd*filled);
         delete[] values;
-        values = newValues;           
-    
+        values = newValues;
+
         // Migrate the key vectors.
         short *newKeys = new short[kd*capacity/2];
         memcpy(newKeys, keys, sizeof(short)*kd*filled);
         delete[] keys;
         keys = newKeys;
-        
+
         Entry *newEntries = new Entry[capacity];
-        
+
         // Migrate the table of indices.
-        for (size_t i = 0; i < oldCapacity; i++) {                
-            if (entries[i].keyIdx == -1) continue;
+        for (size_t i = 0; i < oldCapacity; i++) {
+            if (entries[i].keyIdx == -1) { continue; }
             size_t h = hash(keys + entries[i].keyIdx) % capacity;
             while (newEntries[h].keyIdx != -1) {
                 h++;
-                if (h == capacity) h = 0;
+                if (h == capacity) { h = 0; }
             }
             newEntries[h] = entries[i];
         }
         delete[] entries;
-        entries = newEntries;    
+        entries = newEntries;
     }
-  
+
     // Private struct for the hash table entries.
     struct Entry {
         Entry() : keyIdx(-1), valueIdx(-1) {}
@@ -160,7 +163,7 @@ private:
     float *values;
     Entry *entries;
     size_t capacity, filled;
-    int kd, vd;  
+    int kd, vd;
 };
 
 /******************************************************************
@@ -196,16 +199,16 @@ public:
                 }
             }
         }
-    
+
         // Blur the lattice
         //printf("Blurring...\n");
         lattice.blur();
-    
+
         // Slice from the lattice
-        //printf("Slicing...\n");  
+        //printf("Slicing...\n");
 
         Image out(im.width, im.height, im.frames, im.channels);
-        
+
         lattice.beginSlice();
         float *outPtr = out(0, 0, 0);
         for (int t = 0; t < im.frames; t++) {
@@ -216,10 +219,10 @@ public:
                 }
             }
         }
-    
+
         return out;
     }
-    
+
     /* Constructor
      *     d_ : dimensionality of key vectors
      *    vd_ : dimensionality of value vectors
@@ -231,26 +234,28 @@ public:
         // Allocate storage for various arrays
         elevated = new float[d+1];
         scaleFactor = new float[d];
-        
+
         greedy = new short[d+1];
-        rank = new char[d+1];        
+        rank = new char[d+1];
         barycentric = new float[d+2];
         replay = new ReplayEntry[nData*(d+1)];
         nReplay = 0;
         canonical = new short[(d+1)*(d+1)];
         key = new short[d+1];
-    
+
         // compute the coordinates of the canonical simplex, in which
         // the difference between a contained point and the zero
         // remainder vertex is always in ascending order. (See pg.4 of paper.)
         for (int i = 0; i <= d; i++) {
-            for (int j = 0; j <= d-i; j++)
-                canonical[i*(d+1)+j] = i; 
-            for (int j = d-i+1; j <= d; j++)
-                canonical[i*(d+1)+j] = i - (d+1); 
+            for (int j = 0; j <= d-i; j++) {
+                canonical[i*(d+1)+j] = i;
+            }
+            for (int j = d-i+1; j <= d; j++) {
+                canonical[i*(d+1)+j] = i - (d+1);
+            }
         }
-        
-        // Compute parts of the rotation matrix E. (See pg.4-5 of paper.)      
+
+        // Compute parts of the rotation matrix E. (See pg.4-5 of paper.)
         for (int i = 0; i < d; i++) {
             // the diagonal entries for normalization
             scaleFactor[i] = 1.0f/(sqrtf((float)(i+1)*(i+2)));
@@ -271,7 +276,7 @@ public:
         }
     }
 
-   
+
     ~PermutohedralLattice() {
         delete[] scaleFactor;
         delete[] elevated;
@@ -290,15 +295,15 @@ public:
         // first rotate position into the (d+1)-dimensional hyperplane
         elevated[d] = -d*position[d-1]*scaleFactor[d-1];
         for (int i = d-1; i > 0; i--)
-            elevated[i] = (elevated[i+1] - 
-                           i*position[i-1]*scaleFactor[i-1] + 
+            elevated[i] = (elevated[i+1] -
+                           i*position[i-1]*scaleFactor[i-1] +
                            (i+2)*position[i]*scaleFactor[i]);
         elevated[0] = elevated[1] + 2*position[0]*scaleFactor[0];
-    
+
         // prepare to find the closest lattice points
-        float scale = 1.0f/(d+1);        
-        char * myrank = rank;
-        short * mygreedy = greedy;
+        float scale = 1.0f/(d+1);
+        char *myrank = rank;
+        short *mygreedy = greedy;
 
         // greedily search for the closest zero-colored lattice point
         int sum = 0;
@@ -307,29 +312,30 @@ public:
             float up = ceilf(v)*(d+1);
             float down = floorf(v)*(d+1);
 
-            if (up - elevated[i] < elevated[i] - down) mygreedy[i] = (short)up;
-            else mygreedy[i] = (short)down;
+            if (up - elevated[i] < elevated[i] - down) { mygreedy[i] = (short)up; }
+            else { mygreedy[i] = (short)down; }
 
             sum += mygreedy[i];
         }
         sum /= d+1;
-    
+
         // rank differential to find the permutation between this simplex and the canonical one.
         // (See pg. 3-4 in paper.)
         memset(myrank, 0, sizeof(char)*(d+1));
         for (int i = 0; i < d; i++)
             for (int j = i+1; j <= d; j++)
-                if (elevated[i] - mygreedy[i] < elevated[j] - mygreedy[j]) myrank[i]++; else myrank[j]++;
+                if (elevated[i] - mygreedy[i] < elevated[j] - mygreedy[j]) { myrank[i]++; } else { myrank[j]++; }
 
-        if (sum > 0) { 
+        if (sum > 0) {
             // sum too large - the point is off the hyperplane.
             // need to bring down the ones with the smallest differential
             for (int i = 0; i <= d; i++) {
                 if (myrank[i] >= d + 1 - sum) {
                     mygreedy[i] -= d+1;
                     myrank[i] += sum - (d+1);
-                } else
+                } else {
                     myrank[i] += sum;
+                }
             }
         } else if (sum < 0) {
             // sum too small - the point is off the hyperplane
@@ -338,11 +344,12 @@ public:
                 if (myrank[i] < -sum) {
                     mygreedy[i] += d+1;
                     myrank[i] += (d+1) + sum;
-                } else
+                } else {
                     myrank[i] += sum;
+                }
             }
         }
-   
+
         // Compute barycentric coordinates (See pg.10 of paper.)
         memset(barycentric, 0, sizeof(float)*(d+2));
         for (int i = 0; i <= d; i++) {
@@ -350,25 +357,27 @@ public:
             barycentric[d+1-myrank[i]] -= (elevated[i] - mygreedy[i]) * scale;
         }
         barycentric[0] += 1.0f + barycentric[d+1];
-    
+
         // Splat the value into each vertex of the simplex, with barycentric weights.
         for (int remainder = 0; remainder <= d; remainder++) {
             // Compute the location of the lattice point explicitly (all but the last coordinate - it's redundant because they sum to zero)
-            for (int i = 0; i < d; i++)
+            for (int i = 0; i < d; i++) {
                 key[i] = mygreedy[i] + canonical[remainder*(d+1) + myrank[i]];
-  
+            }
+
             // Retrieve pointer to the value at this vertex.
-            float * val = hashTable.lookup(key, true);
+            float *val = hashTable.lookup(key, true);
 
             // Accumulate values with barycentric weight.
-            for (int i = 0; i < vd; i++)
+            for (int i = 0; i < vd; i++) {
                 val[i] += barycentric[remainder]*value[i];
+            }
 
             // Record this interaction to use later when slicing
             replay[nReplay].offset = val - hashTable.getValues();
             replay[nReplay].weight = barycentric[remainder];
             nReplay++;
-      
+
         }
     }
 
@@ -380,15 +389,15 @@ public:
         // first rotate position into the (d+1)-dimensional hyperplane
         elevated[d] = -d*position[d-1]*scaleFactor[d-1];
         for (int i = d-1; i > 0; i--)
-            elevated[i] = (elevated[i+1] - 
-                           i*position[i-1]*scaleFactor[i-1] + 
+            elevated[i] = (elevated[i+1] -
+                           i*position[i-1]*scaleFactor[i-1] +
                            (i+2)*position[i]*scaleFactor[i]);
         elevated[0] = elevated[1] + 2*position[0]*scaleFactor[0];
-    
+
         // prepare to find the closest lattice points
-        float scale = 1.0f/(d+1);        
-        char * myrank = rank;
-        short * mygreedy = greedy;
+        float scale = 1.0f/(d+1);
+        char *myrank = rank;
+        short *mygreedy = greedy;
 
         // greedily search for the closest zero-colored lattice point
         int sum = 0;
@@ -397,29 +406,30 @@ public:
             float up = ceilf(v)*(d+1);
             float down = floorf(v)*(d+1);
 
-            if (up - elevated[i] < elevated[i] - down) mygreedy[i] = (short)up;
-            else mygreedy[i] = (short)down;
+            if (up - elevated[i] < elevated[i] - down) { mygreedy[i] = (short)up; }
+            else { mygreedy[i] = (short)down; }
 
             sum += mygreedy[i];
         }
         sum /= d+1;
-    
+
         // rank differential to find the permutation between this simplex and the canonical one.
         // (See pg. 3-4 in paper.)
         memset(myrank, 0, sizeof(char)*(d+1));
         for (int i = 0; i < d; i++)
             for (int j = i+1; j <= d; j++)
-                if (elevated[i] - mygreedy[i] < elevated[j] - mygreedy[j]) myrank[i]++; else myrank[j]++;
+                if (elevated[i] - mygreedy[i] < elevated[j] - mygreedy[j]) { myrank[i]++; } else { myrank[j]++; }
 
-        if (sum > 0) { 
+        if (sum > 0) {
             // sum too large - the point is off the hyperplane.
             // need to bring down the ones with the smallest differential
             for (int i = 0; i <= d; i++) {
                 if (myrank[i] >= d + 1 - sum) {
                     mygreedy[i] -= d+1;
                     myrank[i] += sum - (d+1);
-                } else
+                } else {
                     myrank[i] += sum;
+                }
             }
         } else if (sum < 0) {
             // sum too small - the point is off the hyperplane
@@ -428,11 +438,12 @@ public:
                 if (myrank[i] < -sum) {
                     mygreedy[i] += d+1;
                     myrank[i] += (d+1) + sum;
-                } else
+                } else {
                     myrank[i] += sum;
+                }
             }
         }
-   
+
         // Compute barycentric coordinates (See pg.10 of paper.)
         memset(barycentric, 0, sizeof(float)*(d+2));
         for (int i = 0; i <= d; i++) {
@@ -440,19 +451,21 @@ public:
             barycentric[d+1-myrank[i]] -= (elevated[i] - mygreedy[i]) * scale;
         }
         barycentric[0] += 1.0f + barycentric[d+1];
-    
+
         // Splat the value into each vertex of the simplex, with barycentric weights.
         for (int remainder = 0; remainder <= d; remainder++) {
             // Compute the location of the lattice point explicitly (all but the last coordinate - it's redundant because they sum to zero)
-            for (int i = 0; i < d; i++)
+            for (int i = 0; i < d; i++) {
                 key[i] = mygreedy[i] + canonical[remainder*(d+1) + myrank[i]];
-  
+            }
+
             // Retrieve pointer to the value at this vertex.
-            float * val = hashTable.lookup(key, true);
+            float *val = hashTable.lookup(key, true);
 
             // Accumulate values with barycentric weight.
-            for (int i = 0; i < vd; i++)
+            for (int i = 0; i < vd; i++) {
                 value[i] += barycentric[remainder]*val[i];
+            }
         }
     }
 
@@ -467,7 +480,7 @@ public:
      */
     void slice(float *col) {
         float *base = hashTable.getValues();
-        for (int j = 0; j < vd; j++) col[j] = 0;
+        for (int j = 0; j < vd; j++) { col[j] = 0; }
         for (int i = 0; i <= d; i++) {
             ReplayEntry r = replay[nReplay++];
             for (int j = 0; j < vd; j++) {
@@ -486,7 +499,7 @@ public:
         float *hashTableBase = oldValue;
 
         float *zero = new float[vd];
-        for (int k = 0; k < vd; k++) zero[k] = 0;
+        for (int k = 0; k < vd; k++) { zero[k] = 0; }
 
         // For each of d+1 axes,
         for (int j = 0; j <= d; j++) {
@@ -499,30 +512,31 @@ public:
                 }
                 neighbor1[j] = key[j] - d;
                 neighbor2[j] = key[j] + d; // keys to the neighbors along the given axis.
-          
-                float *oldVal = oldValue + i*vd;                
+
+                float *oldVal = oldValue + i*vd;
                 float *newVal = newValue + i*vd;
 
                 float *vm1, *vp1;
 
                 vm1 = hashTable.lookup(neighbor1, false); // look up first neighbor
-                if (vm1) vm1 = vm1 - hashTableBase + oldValue;
-                else vm1 = zero;
-          
-                vp1 = hashTable.lookup(neighbor2, false); // look up second neighbor          
-                if (vp1) vp1 = vp1 - hashTableBase + oldValue;
-                else vp1 = zero;
-          
+                if (vm1) { vm1 = vm1 - hashTableBase + oldValue; }
+                else { vm1 = zero; }
+
+                vp1 = hashTable.lookup(neighbor2, false); // look up second neighbor
+                if (vp1) { vp1 = vp1 - hashTableBase + oldValue; }
+                else { vp1 = zero; }
+
                 // Mix values of the three vertices
-                for (int k = 0; k < vd; k++)
+                for (int k = 0; k < vd; k++) {
                     newVal[k] = (0.25f*vm1[k] + 0.5f*oldVal[k] + 0.25f*vp1[k]);
-            }  
+                }
+            }
             float *tmp = newValue;
             newValue = oldValue;
             oldValue = tmp;
             // the freshest data is now in oldValue, and newValue is ready to be written over
         }
-      
+
         // depending where we ended up, we may have to copy data
         if (oldValue != hashTableBase) {
             memcpy(hashTableBase, oldValue, hashTable.size()*vd*sizeof(float));
@@ -530,9 +544,9 @@ public:
         } else {
             delete newValue;
         }
-      
+
         delete zero;
-        delete neighbor1; 
+        delete neighbor1;
         delete neighbor2;
     }
 
@@ -540,7 +554,7 @@ private:
 
     int d, vd, nData;
     float *elevated, *scaleFactor, *barycentric;
-    short *canonical;    
+    short *canonical;
     short *key;
 
     // slicing is done by replaying splatting (ie storing the sparse matrix)

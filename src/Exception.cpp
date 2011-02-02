@@ -25,11 +25,11 @@ void panic(const char *fmt, ...) throw(Exception) {
 
 void assert(bool cond, const char *fmt, ...) throw(Exception) {
     if (!cond) {
-      va_list arglist;
-      va_start(arglist, fmt);
-      Exception e(fmt, arglist);
-      va_end(arglist);
-      throw e;
+        va_list arglist;
+        va_start(arglist, fmt);
+        Exception e(fmt, arglist);
+        va_end(arglist);
+        throw e;
     }
 }
 

@@ -3,19 +3,19 @@
 #include "header.h"
 
 class Loop : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
 };
 
 class Pause : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
 };
 
 class Time : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
 };

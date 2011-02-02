@@ -3,7 +3,7 @@
 #include "header.h"
 
 class Gradient : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, string dimensions);
@@ -11,7 +11,7 @@ class Gradient : public Operation {
 };
 
 class Integrate : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, string dimensions);
@@ -19,14 +19,14 @@ class Integrate : public Operation {
 };
 
 class GradMag : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im);
 };
 
 class Poisson : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window dx, Window dy, float termination = 0.01);

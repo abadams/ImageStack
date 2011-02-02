@@ -10,7 +10,7 @@
 // or the image header. It will often crash here as a result because
 // this is where things get freed.
 
-Image::~Image() {    
+Image::~Image() {
     //printf("In image destructor\n"); fflush(stdout);
 
     if (!refCount) {
@@ -24,7 +24,7 @@ Image::~Image() {
         //debug();
         delete refCount;
         //printf("refCount deleted\n"); fflush(stdout);
-        //debug();        
+        //debug();
         delete[] memory;
         //printf("data deleted\n"); fflush(stdout);
         //debug();
@@ -32,5 +32,5 @@ Image::~Image() {
 
     //printf("Leaving image desctructor\n"); fflush(stdout);
 }
-    
+
 #include "footer.h"

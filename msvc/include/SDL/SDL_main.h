@@ -35,7 +35,7 @@
     defined(__SYMBIAN32__) || defined(QWS)
 
 #ifdef __cplusplus
-#define C_LINKAGE	"C"
+#define C_LINKAGE   "C"
 #else
 #define C_LINKAGE
 #endif /* __cplusplus */
@@ -46,12 +46,12 @@
  *      #ifdef __cplusplus
  *      extern "C"
  *      #endif
- *	int main(int argc, char *argv[])
- *	{
- *	}
+ *  int main(int argc, char *argv[])
+ *  {
+ *  }
  *      @endcode
  */
-#define main	SDL_main
+#define main    SDL_main
 
 /** The prototype for the application's main() function */
 extern C_LINKAGE int SDL_main(int argc, char *argv[]);
@@ -66,12 +66,12 @@ extern C_LINKAGE int SDL_main(int argc, char *argv[]);
 extern "C" {
 #endif
 
-/** This should be called from your WinMain() function, if any */
-extern DECLSPEC void SDLCALL SDL_SetModuleHandle(void *hInst);
-/** This can also be called, but is no longer necessary */
-extern DECLSPEC int SDLCALL SDL_RegisterApp(char *name, Uint32 style, void *hInst);
-/** This can also be called, but is no longer necessary (SDL_Quit calls it) */
-extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
+    /** This should be called from your WinMain() function, if any */
+    extern DECLSPEC void SDLCALL SDL_SetModuleHandle(void *hInst);
+    /** This can also be called, but is no longer necessary */
+    extern DECLSPEC int SDLCALL SDL_RegisterApp(char *name, Uint32 style, void *hInst);
+    /** This can also be called, but is no longer necessary (SDL_Quit calls it) */
+    extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
 #ifdef __cplusplus
 }
 #endif
@@ -88,11 +88,11 @@ extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
 extern "C" {
 #endif
 
-/** Forward declaration so we don't need to include QuickDraw.h */
-struct QDGlobals;
+    /** Forward declaration so we don't need to include QuickDraw.h */
+    struct QDGlobals;
 
-/** This should be called from your main() function, if any */
-extern DECLSPEC void SDLCALL SDL_InitQuickDraw(struct QDGlobals *the_qd);
+    /** This should be called from your main() function, if any */
+    extern DECLSPEC void SDLCALL SDL_InitQuickDraw(struct QDGlobals *the_qd);
 
 #ifdef __cplusplus
 }
