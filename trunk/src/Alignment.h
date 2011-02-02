@@ -4,18 +4,18 @@
 #include "header.h"
 
 class Align : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
 
     typedef enum {TRANSLATE = 0, SIMILARITY, AFFINE, PERSPECTIVE, RIGID} Mode;
 
-    static Image apply(Window a, Window b, Mode m);    
-    
+    static Image apply(Window a, Window b, Mode m);
+
 };
 
 class AlignFrames : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, Align::Mode m);

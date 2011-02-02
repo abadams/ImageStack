@@ -54,9 +54,9 @@
 
 /* the API ``plan'' contains both the kernel plan and problem */
 struct X(plan_s) {
-     plan *pln;
-     problem *prb;
-     int sign;
+    plan *pln;
+    problem *prb;
+    int sign;
 };
 
 /* shorthand */
@@ -70,19 +70,19 @@ typedef R C[2];
 #define TAINT_UNALIGNED(p, flg) TAINT(p, ((flg) & FFTW_UNALIGNED) != 0)
 
 tensor *X(mktensor_rowmajor)(int rnk, const int *n,
-			     const int *niphys, const int *nophys,
-			     int is, int os);
+                             const int *niphys, const int *nophys,
+                             int is, int os);
 
 tensor *X(mktensor_iodims)(int rank, const X(iodim) *dims, int is, int os);
 tensor *X(mktensor_iodims64)(int rank, const X(iodim64) *dims, int is, int os);
 const int *X(rdft2_pad)(int rnk, const int *n, const int *nembed,
-			int inplace, int cmplx, int **nfree);
+                        int inplace, int cmplx, int **nfree);
 
 int X(many_kosherp)(int rnk, const int *n, int howmany);
 int X(guru_kosherp)(int rank, const X(iodim) *dims,
-		    int howmany_rank, const X(iodim) *howmany_dims);
+                    int howmany_rank, const X(iodim) *howmany_dims);
 int X(guru64_kosherp)(int rank, const X(iodim64) *dims,
-		    int howmany_rank, const X(iodim64) *howmany_dims);
+                      int howmany_rank, const X(iodim64) *howmany_dims);
 
 /* Note: FFTW_EXTERN is used for "internal" functions used in tests/hook.c */
 
@@ -95,4 +95,4 @@ void X(mapflags)(planner *, unsigned);
 
 apiplan *X(mkapiplan)(int sign, unsigned flags, problem *prb);
 
-#endif				/* __API_H__ */
+#endif              /* __API_H__ */

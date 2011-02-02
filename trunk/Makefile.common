@@ -104,3 +104,12 @@ include/ImageStack.h: src/ImageStack.h
 
 lib/build/%.o: src/%.cpp lib/build/main.h.gch
 	g++ -include lib/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
+
+##########################
+# Source Style Fixing    #
+##########################
+
+STYLE_OPTS = --indent=spaces=4 --brackets=attach --indent-labels --indent-preprocessor --indent-col1-comments --max-instatement-indent=60 --min-conditional-indent=0 --pad-header --unpad-paren --add-brackets --keep-one-line-blocks --keep-one-line-statements --convert-tabs --align-pointer=name --suffix=none --options=none
+
+style:
+	astyle $(STYLE_OPTS) `find . -name '[A-Za-z]*.h'` `find . -name '[A-Za-z]*.cpp'`

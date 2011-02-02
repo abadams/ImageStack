@@ -7,14 +7,14 @@
 class TCPServer;
 
 class Send : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, string host = "127.0.0.1", int port = 5678);
 };
 
 class Receive : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(int port = 5678);

@@ -15,7 +15,7 @@ void Loop::parse(vector<string> args) {
     assert(args.size() > 0, "-loop requires arguments\n");
 
     if (args[0].size() > 2 && args[0][0] == '-' && args[0][1] == '-') { // infinite loop mode
-        vector<string> newArgs(args.size());        
+        vector<string> newArgs(args.size());
 
         for (size_t i = 0; i < args.size(); i++) {
             if (args[i].size() > 1 && args[i][0] == '-' && args[i][1] == '-') {
@@ -24,13 +24,13 @@ void Loop::parse(vector<string> args) {
                 newArgs[i] = args[i];
             }
         }
-        
-        for (;;) parseCommands(newArgs);
+
+        for (;;) { parseCommands(newArgs); }
 
     } else { // finite loop mode
 
-        vector<string> newArgs(args.size() - 1);        
-        
+        vector<string> newArgs(args.size() - 1);
+
         for (size_t i = 0; i < newArgs.size(); i++) {
             if (args[i+1].size() > 1 && args[i+1][0] == '-' && args[i+1][1] == '-') {
                 newArgs[i] = args[i+1].substr(1, args[i+1].size() - 1);
@@ -38,7 +38,7 @@ void Loop::parse(vector<string> args) {
                 newArgs[i] = args[i+1];
             }
         }
-        
+
         for (int i = 0; i < readInt(args[0]); i++) {
             parseCommands(newArgs);
         }
@@ -56,7 +56,7 @@ void Pause::parse(vector<string> args) {
     assert(args.size() == 0, "-pause takes no arguments\n");
     fprintf(stdout, "Press enter to continue\n");
     char c = ' ';
-    while (c != '\n' && c != EOF) c = getchar();
+    while (c != '\n' && c != EOF) { c = getchar(); }
 }
 
 void Time::help() {
@@ -73,8 +73,8 @@ void Time::parse(vector<string> args) {
         return;
     }
 
-    vector<string> newArgs(args.size());        
-    
+    vector<string> newArgs(args.size());
+
     for (size_t i = 0; i < args.size(); i++) {
         if (args[i].size() > 1 && args[i][0] == '-' && args[i][1] == '-') {
             newArgs[i] = args[i].substr(1, args[i].size() - 1);
@@ -82,7 +82,7 @@ void Time::parse(vector<string> args) {
             newArgs[i] = args[i];
         }
     }
-        
+
     float t1 = currentTime();
     parseCommands(newArgs);
     float t2 = currentTime();

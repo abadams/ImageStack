@@ -38,9 +38,9 @@ void Haar::apply(Window im, int times) {
     assert(im.height % factor == 0, "the image height is not a multiple of 2^%i", times);
 
     // transform in x
-    Window win(im, 0, 0, 0, im.width, im.height, im.frames); 
+    Window win(im, 0, 0, 0, im.width, im.height, im.frames);
     for (int i = 0; i < times; i++) {
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int y = 0; y < win.height; y++) {
                 for (int x = 0; x < win.width; x+=2) {
                     float *a = win(x, y, t);
@@ -61,9 +61,9 @@ void Haar::apply(Window im, int times) {
     }
 
     // transform in y
-    win = Window(im, 0, 0, 0, im.width, im.height, im.frames); 
+    win = Window(im, 0, 0, 0, im.width, im.height, im.frames);
     for (int i = 0; i < times; i++) {
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int y = 0; y < win.height; y+=2) {
                 for (int x = 0; x < win.width; x++) {
                     float *a = win(x, y, t);
@@ -118,12 +118,12 @@ void InverseHaar::apply(Window im, int times) {
 
     // transform in y
     int h = 2*im.height/factor;
-    Window win(im, 0, 0, 0, im.width, h, im.frames); 
+    Window win(im, 0, 0, 0, im.width, h, im.frames);
     while (1) {
         // combine the averages and differences
         Interleave::apply(win, 1, 2, 1);
 
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int y = 0; y < win.height; y+=2) {
                 for (int x = 0; x < win.width; x++) {
                     float *a = win(x, y, t);
@@ -139,18 +139,18 @@ void InverseHaar::apply(Window im, int times) {
         }
         // repeat
         h *= 2;
-        if (h > im.height) break;
+        if (h > im.height) { break; }
         win = Window(im, 0, 0, 0, im.width, h, im.frames);
     }
 
     // transform in x
     int w = 2*im.width/factor;
-    win = Window(im, 0, 0, 0, w, im.height, im.frames); 
+    win = Window(im, 0, 0, 0, w, im.height, im.frames);
     while (1) {
         // combine the averages and differences
         Interleave::apply(win, 2, 1, 1);
 
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int y = 0; y < win.height; y++) {
                 for (int x = 0; x < win.width; x+=2) {
                     float *a = win(x, y, t);
@@ -166,7 +166,7 @@ void InverseHaar::apply(Window im, int times) {
         }
         // repeat
         w *= 2;
-        if (w > im.width) break;
+        if (w > im.width) { break; }
         win = Window(im, 0, 0, 0, w, im.height, im.frames);
     }
 
@@ -193,7 +193,7 @@ void Daubechies::parse(vector<string> args) {
 }
 
 void Daubechies::apply(Window im) {
-    
+
     int i;
     for (i = 1; i < im.width; i <<= 1);
     assert(i == im.width, "Image width must be a power of two\n");
@@ -201,9 +201,9 @@ void Daubechies::apply(Window im) {
     assert(i == im.height, "Image height must be a power of two\n");
 
     // transform in x
-    Window win(im, 0, 0, 0, im.width, im.height, im.frames); 
+    Window win(im, 0, 0, 0, im.width, im.height, im.frames);
     while (1) {
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int y = 0; y < win.height; y++) {
 
                 vector<float> saved1st(win.channels);
@@ -239,22 +239,22 @@ void Daubechies::apply(Window im) {
                     float dVal = d[k];
                     a[k] = DAUB0 * aVal + DAUB1 * bVal + DAUB2 * cVal + DAUB3 * dVal;
                     b[k] = DAUB3 * aVal - DAUB2 * bVal + DAUB1 * cVal - DAUB0 * dVal;
-                }                
+                }
             }
         }
         // separate into averages and differences
         Deinterleave::apply(win, 2, 1, 1);
-        
-        if (win.width == 2) break;
+
+        if (win.width == 2) { break; }
 
         // repeat on the averages
         win = Window(win, 0, 0, 0, win.width/2, win.height, win.frames);
     }
 
     // transform in y
-    win = Window(im, 0, 0, 0, im.width, im.height, im.frames); 
+    win = Window(im, 0, 0, 0, im.width, im.height, im.frames);
     while (1) {
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int x = 0; x < win.width; x++) {
 
                 vector<float> saved1st(win.channels);
@@ -290,13 +290,13 @@ void Daubechies::apply(Window im) {
                     float dVal = d[k];
                     a[k] = DAUB0 * aVal + DAUB1 * bVal + DAUB2 * cVal + DAUB3 * dVal;
                     b[k] = DAUB3 * aVal - DAUB2 * bVal + DAUB1 * cVal - DAUB0 * dVal;
-                }                
+                }
             }
         }
         // separate into averages and differences
         Deinterleave::apply(win, 1, 2, 1);
-        
-        if (win.height == 2) break;
+
+        if (win.height == 2) { break; }
 
         // repeat on the averages
         win = Window(win, 0, 0, 0, win.width, win.height/2, win.frames);
@@ -323,14 +323,14 @@ void InverseDaubechies::apply(Window im) {
     for (i = 1; i < im.height; i <<= 1);
     assert(i == im.height, "Image height must be a power of two\n");
 
-    
+
     // transform in x
-    Window win(im, 0, 0, 0, 2, im.height, im.frames); 
+    Window win(im, 0, 0, 0, 2, im.height, im.frames);
     while (1) {
         // Collect averages and differences
         Interleave::apply(win, 2, 1, 1);
 
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int y = 0; y < win.height; y++) {
                 vector<float> saved1st(win.channels);
                 vector<float> saved2nd(win.channels);
@@ -366,23 +366,23 @@ void InverseDaubechies::apply(Window im) {
                     float dVal = d[k];
                     c[k] = DAUB2 * aVal + DAUB1 * bVal + DAUB0 * cVal + DAUB3 * dVal;
                     d[k] = DAUB3 * aVal - DAUB0 * bVal + DAUB1 * cVal - DAUB2 * dVal;
-                }                
+                }
             }
         }
-        
-        if (win.width == im.width) break;
+
+        if (win.width == im.width) { break; }
 
         // repeat on the averages
         win = Window(im, 0, 0, 0, win.width*2, win.height, win.frames);
     }
 
     // transform in y
-    win = Window(im, 0, 0, 0, im.width, 2, im.frames); 
+    win = Window(im, 0, 0, 0, im.width, 2, im.frames);
     while (1) {
         // Collect averages and differences
         Interleave::apply(win, 1, 2, 1);
 
-        for (int t = 0; t < win.frames; t++) {            
+        for (int t = 0; t < win.frames; t++) {
             for (int x = 0; x < win.width; x++) {
                 vector<float> saved1st(win.channels);
                 vector<float> saved2nd(win.channels);
@@ -418,11 +418,11 @@ void InverseDaubechies::apply(Window im) {
                     float dVal = d[k];
                     c[k] = DAUB2 * aVal + DAUB1 * bVal + DAUB0 * cVal + DAUB3 * dVal;
                     d[k] = DAUB3 * aVal - DAUB0 * bVal + DAUB1 * cVal - DAUB2 * dVal;
-                }                
+                }
             }
         }
-        
-        if (win.height == im.height) break;
+
+        if (win.height == im.height) { break; }
 
         // repeat on the averages
         win = Window(im, 0, 0, 0, win.width, win.height*2, win.frames);

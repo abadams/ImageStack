@@ -108,8 +108,8 @@ void parseCommands(vector<string> args) {
         for (opArgs = 1; opArgs + arg < args.size(); opArgs++) {
             char first = args[arg + opArgs][0];
             assert(first != '\0', "Empty argument!");
-            if (first != '-') continue;
-            if (isalpha(args[arg + opArgs][1])) break;
+            if (first != '-') { continue; }
+            if (isalpha(args[arg + opArgs][1])) { break; }
         }
 
         printf("Performing operation %s ", op->first.c_str()); fflush(stdout);
@@ -121,7 +121,7 @@ void parseCommands(vector<string> args) {
         printf("...\n");
 
         vector<string> operationArgs;
-        for (size_t i = arg + 1; i < arg + opArgs; i++) operationArgs.push_back(args[i]);
+        for (size_t i = arg + 1; i < arg + opArgs; i++) { operationArgs.push_back(args[i]); }
 
         // call the operation
         (op->second)->parse(operationArgs);
@@ -145,8 +145,8 @@ float readFloat(string arg) {
         needToPop = true;
     }
     Expression::State s(stack(0));
-    float val = e.eval(&s);    
-    if (needToPop) pop();
+    float val = e.eval(&s);
+    if (needToPop) { pop(); }
     return val;
 }
 
@@ -159,7 +159,7 @@ char readChar(string arg) {
 
 
 // pretty-print some help text, by word wrapping at 80 chars
-void pprintf(const char *str) {    
+void pprintf(const char *str) {
     const char *startOfLine = str;
     const char *endOfLine = str;
     char line[81];
@@ -172,7 +172,7 @@ void pprintf(const char *str) {
         while (endOfLine - startOfLine < 80 && *endOfLine && *endOfLine != '\n') {
             *linePtr++ = *endOfLine++;
         }
-        
+
         if (!*endOfLine) {
             *linePtr = 0;
             printf("%s", line);
@@ -199,7 +199,7 @@ void pprintf(const char *str) {
             lastSpace[1] = 0;
             printf("%s", line);
             startOfLine += lastSpace - line + 1;
-        } 
+        }
     }
 }
 #include "footer.h"
@@ -210,7 +210,7 @@ void pprintf(const char *str) {
 // display won't work properly. On other platforms it's not necessary,
 // and might slow down non-display using ImageStack command lines, so
 // we don't do it.
-#ifdef __APPLE_CC__ 
+#ifdef __APPLE_CC__
 #ifndef NO_SDL
 #include <SDL.h>
 #endif
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
 
     try {
         parseCommands(args);
-    } catch(Exception &e) {
+    } catch (Exception &e) {
         printf("%s", e.message);
     }
 

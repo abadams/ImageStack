@@ -9,26 +9,26 @@ void LoadPanorama::help() {
            "homography text file output from autostitch. It loads and parses this file, \n"
            "and places each warped image in a separate frame. The remaining six arguments\n"
            "specify minimum and maximum theta, then phi, then the desired output resolution.\n\n"
-            "Usage: ImageStack -loadpanorama pano.txt -0.1 0.1 -0.1 0.1 640 480 -display\n\n");
-} 
+           "Usage: ImageStack -loadpanorama pano.txt -0.1 0.1 -0.1 0.1 640 480 -display\n\n");
+}
 
 void LoadPanorama::parse(vector<string> args) {
     assert(args.size() == 7, "-loadpanorama takes seven arguments\n");
-    push(apply(args[0], 
+    push(apply(args[0],
                readFloat(args[1]), readFloat(args[2]),
                readFloat(args[3]), readFloat(args[4]),
                readInt(args[5]), readInt(args[6])));
 }
 
-Image LoadPanorama::apply(string filename, 
+Image LoadPanorama::apply(string filename,
                           float minTheta, float maxTheta,
                           float minPhi, float maxPhi,
                           int width, int height) {
     FILE *pano = fopen(filename.c_str(), "rb");
     assert(pano, "Could not open file %s\n", filename.c_str());
 
-    char fname[4096]; 
-    char line[4096]; 
+    char fname[4096];
+    char line[4096];
     // scan through once counting the number of images
     int frames = 0;
     while (fgets(fname, 4095, pano) != NULL) {
@@ -51,9 +51,9 @@ Image LoadPanorama::apply(string filename,
         // get the focal distance
         assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");
         // get the last blank line
-        assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");            
+        assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");
         frames++;
-    } 
+    }
 
     // allocate the memory for the frames
     Image im(width, height, frames, 4);
@@ -77,22 +77,22 @@ Image LoadPanorama::apply(string filename,
         // load the frame
         Image next = Load::apply(fname);
         // get the T matrix
-         for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");
-            sscanf(line, "%f %f %f", 
-                    &Tmatrix[i][0], &Tmatrix[i][1], &Tmatrix[i][2]);
-             
+            sscanf(line, "%f %f %f",
+                   &Tmatrix[i][0], &Tmatrix[i][1], &Tmatrix[i][2]);
+
         }
 
         // get the next blank line
         assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");
 
-         // get the R matrix
+        // get the R matrix
         for (int i = 0; i < 3; i++) {
             assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");
 
-             sscanf(line, "%f %f %f", 
-                    &Rmatrix[i][0], &Rmatrix[i][1], &Rmatrix[i][2]);
+            sscanf(line, "%f %f %f",
+                   &Rmatrix[i][0], &Rmatrix[i][1], &Rmatrix[i][2]);
 
         }
 
@@ -104,7 +104,7 @@ Image LoadPanorama::apply(string filename,
         sscanf(line, "%f", &focalDistance);
 
         // get the last blank line
-        assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");            
+        assert(fgets(line, 4095, pano) != NULL, "unexpected EOF\n");
 
 
 
@@ -124,7 +124,7 @@ Image LoadPanorama::apply(string filename,
         }
 
         assert(next.channels == 3, "Input image does not have 3 channels");
- 
+
         // add an alpha channel that tapers at the edges
         Image nextWithAlpha(next.width, next.height, 1, 4);
         for (int y = 0; y < next.height; y++) {
@@ -145,20 +145,20 @@ Image LoadPanorama::apply(string filename,
             for (int x = 0; x < im.width; x++) {
                 float theta = (float)x * dTheta + minTheta;
                 float phi = (float)y * dPhi + maxPhi;
-                
-                float X = -sin(phi); 
+
+                float X = -sin(phi);
                 float Y = sin(theta) * cos(phi);
                 float Z = cos(theta) * cos(phi);
-                
+
                 float W = 1.0f / (matrix[2][0] * X + matrix[2][1] * Y + matrix[2][2] * Z);
-                
+
                 float srcY = (matrix[0][0] * X + matrix[0][1] * Y + matrix[0][2] * Z) * W;
                 float srcX = (matrix[1][0] * X + matrix[1][1] * Y + matrix[1][2] * Z) * W;
                 nextWithAlpha.sample2D(srcX, srcY, im(x, y, t));
             }
         }
 
-    
+
         t++;
     }
 
@@ -223,9 +223,9 @@ Image PanoramaBackground::apply(Window im) {
                     for (int c = 0; c < im.channels; c++) {
                         out(x, y)[c] /= totalWeight;
                     }
-                } else break;
+                } else { break; }
 
-                if (i > 5) break;
+                if (i > 5) { break; }
 
                 // recompute the weights as the distance from the mean times the alpha value
                 for (int t = 0; t < im.frames; t++) {

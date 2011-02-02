@@ -10,7 +10,7 @@
 #include <sstream>
 #include "header.h"
 
-DisplayWindow *DisplayWindow::instance() {    
+DisplayWindow *DisplayWindow::instance() {
     if (!instance_) {
         instance_ = new DisplayWindow();
     }
@@ -33,17 +33,17 @@ DisplayWindow::DisplayWindow() {
     modeChange = false;
     terminate = false;
     needRedraw = false;
-    
+
     thread = NULL;
 
     mutex = SDL_CreateMutex();
 }
 
 DisplayWindow::~DisplayWindow() {
-    if (displayImage) delete [] displayImage;
- 
-    SDL_mutexP(mutex);    
-    if (surface) SDL_FreeSurface(surface);
+    if (displayImage) { delete [] displayImage; }
+
+    SDL_mutexP(mutex);
+    if (surface) { SDL_FreeSurface(surface); }
     SDL_mutexV(mutex);
 
     if (thread) {
@@ -63,7 +63,7 @@ void DisplayWindow::setMode(int width, int height, bool fullscreen, bool cursorV
     bgGreen_ = (unsigned char)(bgGreen * 255 + 0.499);
     bgBlue_  = (unsigned char)(bgBlue  * 255 + 0.499);
 
-    if (width == width_ && height == height_ && fullscreen == fullscreen_) return;
+    if (width == width_ && height == height_ && fullscreen == fullscreen_) { return; }
 
     width_ = width;
     height_ = height;
@@ -72,18 +72,18 @@ void DisplayWindow::setMode(int width, int height, bool fullscreen, bool cursorV
     modeChange = true;
 
     // wait on the thread
-    if (thread) 
-        while (modeChange) SDL_Delay(1);
+    if (thread)
+        while (modeChange) { SDL_Delay(1); }
 }
 
 void DisplayWindow::handleModeChange() {
     // set cursor status
-    if (!cursorVisible_) SDL_ShowCursor(SDL_DISABLE);
+    if (!cursorVisible_) { SDL_ShowCursor(SDL_DISABLE); }
 
     SDL_mutexP(mutex);
     SDL_Surface *result;
-    if (fullscreen_) result = SDL_SetVideoMode(width_, height_, 32, SDL_DOUBLEBUF | SDL_FULLSCREEN);
-    else result = SDL_SetVideoMode(width_, height_, 32, SDL_DOUBLEBUF);
+    if (fullscreen_) { result = SDL_SetVideoMode(width_, height_, 32, SDL_DOUBLEBUF | SDL_FULLSCREEN); }
+    else { result = SDL_SetVideoMode(width_, height_, 32, SDL_DOUBLEBUF); }
     SDL_mutexV(mutex);
     assert(result != NULL, "Setting video mode failed: %s\n", SDL_GetError());
 
@@ -98,17 +98,17 @@ void DisplayWindow::setImage(Window im) {
 
     image_ = Image(im);
 
-    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
     rmask = 0xff000000;
     gmask = 0x00ff0000;
     bmask = 0x0000ff00;
     amask = 0x000000ff;
-    #else
+#else
     rmask = 0x000000ff;
     gmask = 0x0000ff00;
     bmask = 0x00ff0000;
     amask = 0xff000000;
-    #endif
+#endif
 
     SDL_mutexP(mutex);
     if (surface) {
@@ -131,25 +131,25 @@ void DisplayWindow::setImage(Window im) {
 void DisplayWindow::renderSurface() {
 
     int SDL_y = 0;
-    
+
     float scale = powf(2, stop_);
 
-    while (tOffset_ < 0) tOffset_ += image_.frames;
-    while (tOffset_ >= image_.frames) tOffset_ -= image_.frames;
+    while (tOffset_ < 0) { tOffset_ += image_.frames; }
+    while (tOffset_ >= image_.frames) { tOffset_ -= image_.frames; }
 
     SDL_LockSurface(surface);
 
-    switch(image_.channels) {
+    switch (image_.channels) {
 
     case 1:
         for (int y = 0; y < image_.height; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            float *imagePtr = image_(0, y, tOffset_);    
+            float *imagePtr = image_(0, y, tOffset_);
             for (int x = 0; x < image_.width; x++) {
-                float val = imagePtr[0]; 
+                float val = imagePtr[0];
                 *scanlinePtr++ = HDRtoLDR(scale * val);
                 *scanlinePtr++ = HDRtoLDR(scale * val);
-                *scanlinePtr++ = HDRtoLDR(scale * val);                        
+                *scanlinePtr++ = HDRtoLDR(scale * val);
                 *scanlinePtr++ = 255;
                 imagePtr ++;
             }
@@ -158,7 +158,7 @@ void DisplayWindow::renderSurface() {
     case 2:
         for (int y = 0; y < image_.height; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            float *imagePtr = image_(0, y, tOffset_);    
+            float *imagePtr = image_(0, y, tOffset_);
             for (int x = 0; x < image_.width; x++) {
                 *scanlinePtr++ = HDRtoLDR(scale*(*imagePtr++));
                 *scanlinePtr++ = 0;
@@ -171,7 +171,7 @@ void DisplayWindow::renderSurface() {
     case 3:
         for (int y = 0; y < image_.height; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            float *imagePtr = image_(0, y, tOffset_);    
+            float *imagePtr = image_(0, y, tOffset_);
             for (int x = 0; x < image_.width; x++) {
                 *scanlinePtr++ = HDRtoLDR(scale*(*imagePtr++));
                 *scanlinePtr++ = HDRtoLDR(scale*(*imagePtr++));
@@ -183,7 +183,7 @@ void DisplayWindow::renderSurface() {
     default:
         for (int y = 0; y < image_.height; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            float *imagePtr = image_(0, y, tOffset_);    
+            float *imagePtr = image_(0, y, tOffset_);
             for (int x = 0; x < image_.width; x++) {
                 *scanlinePtr++ = HDRtoLDR(imagePtr[0]*scale);
                 *scanlinePtr++ = HDRtoLDR(imagePtr[1]*scale);
@@ -207,10 +207,11 @@ void DisplayWindow::setOffset(int tOffset, int xOffset, int yOffset) {
 void DisplayWindow::redraw() {
 
     // fix the offsets
-    if (!image_.frames)
+    if (!image_.frames) {
         return;
+    }
 
-    if (!surface) return;
+    if (!surface) { return; }
 
     // copy the data over to staging surface
 
@@ -235,7 +236,7 @@ void DisplayWindow::redraw() {
     dstpos.h = height_;
 
     // blit from staging surface to screen buffer surface
-    assert((SDL_BlitSurface(surface, &srcpos, screenbuffer, &dstpos) >= 0), 
+    assert((SDL_BlitSurface(surface, &srcpos, screenbuffer, &dstpos) >= 0),
            "Blit failed: %s\n", SDL_GetError());
 
     // flip
@@ -253,7 +254,7 @@ void DisplayWindow::updateCaption() {
     cap << "ImageStack (x2^" << stop_ << ") (" << t << ", " << x << ", " << y << ")";
 
     if (x >= 0 && x < image_.width && y >= 0 && y < image_.height) {
-        cap << " = (" << image_(x, y, t)[0];        
+        cap << " = (" << image_(x, y, t)[0];
         for (int c = 1; c < image_.channels; c++) {
             cap << ", " << image_(x, y, t)[c];
         }
@@ -267,7 +268,7 @@ void DisplayWindow::show() {
     assert(SDL_Init(SDL_INIT_VIDEO) >= 0, "SDL failed to initialize: %s\n", SDL_GetError());
 
     while (1) {
-        if (!update()) return;
+        if (!update()) { return; }
         SDL_Delay(10);
     }
 }
@@ -278,33 +279,33 @@ int threadFunc(void *data) {
 }
 
 void DisplayWindow::showAsync() {
-    if (thread) return;
+    if (thread) { return; }
     terminate = false;
-    thread = SDL_CreateThread(threadFunc, NULL);    
+    thread = SDL_CreateThread(threadFunc, NULL);
 }
 
 bool DisplayWindow::update() {
     // check for termination
-    if (terminate) return false;
+    if (terminate) { return false; }
 
     // check for any pending display mode changes
     if (modeChange) {
         handleModeChange();
         modeChange = false;
     }
-    
+
     // handle SDL events
     bool closeDisplayWindow = false;
     SDL_Event event;
-    
+
     SDL_mutexP(mutex);
     while (SDL_PollEvent(&event)) {
-        switch(event.type) {
+        switch (event.type) {
         case SDL_QUIT:
             closeDisplayWindow = true;
             break;
         case SDL_KEYDOWN:
-            switch(event.key.keysym.sym) {
+            switch (event.key.keysym.sym) {
             case SDLK_r:
                 needRedraw = true;
                 break;
@@ -361,19 +362,19 @@ bool DisplayWindow::update() {
             break;
         }
     }
-    
+
     if (needRedraw) {
         redraw();
         needRedraw = false;
-    } 
+    }
 
     SDL_mutexV(mutex);
-    
+
     if (closeDisplayWindow) {
         thread = NULL;
         delete this;
         return false;
-    }        
+    }
 
     return true;
 }

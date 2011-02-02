@@ -3,7 +3,7 @@
 #include "header.h"
 
 class Inpaint : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, Window mask);

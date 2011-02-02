@@ -52,11 +52,11 @@ void Dup::help() {
     printf("\n-dup duplicates the current image and pushes it on the stack.\n\n"
            "Usage: ImageStack -load a.tga -dup -scale 0.5 -save a_small.tga\n"
            "                  -pop -scale 2 -save a_big.tga\n\n");
-        
+
 }
 
 void Dup::parse(vector<string> args) {
-    assert(args.size() == 0, "-dup takes no arguments\n");    
+    assert(args.size() == 0, "-dup takes no arguments\n");
     dup();
 }
 

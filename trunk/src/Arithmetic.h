@@ -3,14 +3,14 @@
 #include "header.h"
 
 class Add : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, Window b);
 };
 
 class Multiply : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     enum Mode {Elementwise = 0, Inner, Outer};
@@ -23,14 +23,14 @@ class Multiply : public Operation {
 };
 
 class Subtract : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, Window b);
 };
 
 class Divide : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     //enum Mode {Elementwise = 0, Matrix};
@@ -38,42 +38,42 @@ class Divide : public Operation {
 };
 
 class Maximum : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, Window b);
 };
 
 class Minimum : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, Window b);
 };
 
 class Log : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a);
 };
 
 class Exp : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, float base = E);
 };
 
 class Abs : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a);
 };
 
 class Offset : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, vector<float>);
@@ -81,7 +81,7 @@ class Offset : public Operation {
 };
 
 class Scale : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, vector<float>);
@@ -89,7 +89,7 @@ class Scale : public Operation {
 };
 
 class Gamma : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, vector<float>);
@@ -97,7 +97,7 @@ class Gamma : public Operation {
 };
 
 class Mod : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, vector<float>);
@@ -105,35 +105,35 @@ class Mod : public Operation {
 };
 
 class Clamp : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, float lower = 0, float upper = 1);
 };
 
 class DeNaN : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, float replacement = 0);
 };
 
 class Threshold : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, float val);
 };
 
 class Normalize : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a);
 };
 
 class Quantize : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, float increment);

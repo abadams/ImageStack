@@ -15,7 +15,7 @@ void DCT::help() {
             " given, every dimension is transformed.\n"
             "\n"
             "Usage: ImageStack -load a.png -dct xy -save freq.png\n");
-    
+
 }
 
 void DCT::parse(vector<string> args) {
@@ -25,7 +25,7 @@ void DCT::parse(vector<string> args) {
     if (args.size() == 1) {
         x = y = t = false;
         for (size_t i = 0; i < args[0].size(); i++) {
-            switch(args[0][i]) {
+            switch (args[0][i]) {
             case 'x':
                 x = true;
                 break;
@@ -42,121 +42,121 @@ void DCT::parse(vector<string> args) {
         }
 
     }
-    
+
     apply(stack(0), x, y, t);
 }
 
 void DCT::apply(Window im, bool transformX, bool transformY, bool transformT) {
-    if (im.width == 1) transformX = false;
-    if (im.height == 1) transformY = false;
-    if (im.frames == 1) transformT = false;
+    if (im.width == 1) { transformX = false; }
+    if (im.height == 1) { transformY = false; }
+    if (im.frames == 1) { transformT = false; }
 
     // rank 0
-    if (!transformX && !transformY && !transformT) return;
+    if (!transformX && !transformY && !transformT) { return; }
 
     if (transformX && transformY && transformT) { // rank 3
         int n[] = {im.frames, im.height, im.width};
         int nembed[] = {im.frames, im.tstride/im.ystride, im.ystride/im.xstride};
         fftw_r2r_kind kinds[] = {FFTW_REDFT00, FFTW_REDFT00, FFTW_REDFT00};
-        
+
         fftwf_plan plan = fftwf_plan_many_r2r(3, n, im.channels,
                                               im(0, 0, 0), nembed, im.channels, 1,
                                               im(0, 0, 0), nembed, im.channels, 1,
                                               kinds, FFTW_ESTIMATE);
-        
+
         fftwf_execute(plan);
         fftwf_destroy_plan(plan);
     } else if (transformX && transformY) { // rank 2
         int n[] = {im.height, im.width};
         int nembed[] = {im.tstride/im.ystride, im.ystride/im.xstride};
         fftw_r2r_kind kinds[] = {FFTW_REDFT00, FFTW_REDFT00};
-            
+
         for (int t = 0; t < im.frames; t++) {
             fftwf_plan plan = fftwf_plan_many_r2r(2, n, im.channels,
                                                   im(0, 0, t), nembed, im.channels, 1,
                                                   im(0, 0, t), nembed, im.channels, 1,
                                                   kinds, FFTW_ESTIMATE);
-            
-            fftwf_execute(plan);        
+
+            fftwf_execute(plan);
             fftwf_destroy_plan(plan);
         }
     } else if (transformT && transformY) { // rank 2
         int n[] = {im.frames, im.height};
         int nembed[] = {im.frames, im.tstride/im.ystride};
-        fftw_r2r_kind kinds[] = {FFTW_REDFT00, FFTW_REDFT00};        
+        fftw_r2r_kind kinds[] = {FFTW_REDFT00, FFTW_REDFT00};
 
         fftwf_plan plan = fftwf_plan_many_r2r(2, n, im.width*im.channels,
                                               im(0, 0, 0), nembed, im.width*im.channels, 1,
                                               im(0, 0, 0), nembed, im.width*im.channels, 1,
                                               kinds, FFTW_ESTIMATE);
-        
-        fftwf_execute(plan);        
+
+        fftwf_execute(plan);
         fftwf_destroy_plan(plan);
     } else if (transformT && transformX) { // rank 2
         int n[] = {im.frames, im.width};
         int nembed[] = {im.frames, im.tstride/im.xstride};
-        fftw_r2r_kind kinds[] = {FFTW_REDFT00, FFTW_REDFT00};        
+        fftw_r2r_kind kinds[] = {FFTW_REDFT00, FFTW_REDFT00};
 
-        for (int y = 0; y < im.height; y++) {        
+        for (int y = 0; y < im.height; y++) {
             fftwf_plan plan = fftwf_plan_many_r2r(2, n, im.channels,
                                                   im(0, y, 0), nembed, im.channels, 1,
                                                   im(0, y, 0), nembed, im.channels, 1,
                                                   kinds, FFTW_ESTIMATE);
-            
-            fftwf_execute(plan);        
-            fftwf_destroy_plan(plan);        
+
+            fftwf_execute(plan);
+            fftwf_destroy_plan(plan);
         }
     } else if (transformX) { // rank 1
         int n[] = {im.width};
         int nembed[] = {im.width};
-        fftw_r2r_kind kinds[] = {FFTW_REDFT00};        
+        fftw_r2r_kind kinds[] = {FFTW_REDFT00};
 
         for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {        
+            for (int y = 0; y < im.height; y++) {
                 fftwf_plan plan = fftwf_plan_many_r2r(1, n, im.channels,
                                                       im(0, y, t), nembed, im.channels, 1,
                                                       im(0, y, t), nembed, im.channels, 1,
                                                       kinds, FFTW_ESTIMATE);
-                
-                fftwf_execute(plan);        
-                fftwf_destroy_plan(plan);        
-            }        
+
+                fftwf_execute(plan);
+                fftwf_destroy_plan(plan);
+            }
         }
     } else if (transformY) { // rank 1
         int n[] = {im.height};
         int nembed[] = {im.height};
-        fftw_r2r_kind kinds[] = {FFTW_REDFT00};        
+        fftw_r2r_kind kinds[] = {FFTW_REDFT00};
 
         for (int t = 0; t < im.frames; t++) {
             fftwf_plan plan = fftwf_plan_many_r2r(1, n, im.width*im.channels,
                                                   im(0, 0, t), nembed, im.ystride, 1,
                                                   im(0, 0, t), nembed, im.ystride, 1,
                                                   kinds, FFTW_ESTIMATE);
-            
-            fftwf_execute(plan);        
-            fftwf_destroy_plan(plan);        
-        }        
+
+            fftwf_execute(plan);
+            fftwf_destroy_plan(plan);
+        }
     } else if (transformT) { // rank 1
         int n[] = {im.frames};
         int nembed[] = {im.frames};
-        fftw_r2r_kind kinds[] = {FFTW_REDFT00};        
+        fftw_r2r_kind kinds[] = {FFTW_REDFT00};
 
         for (int y = 0; y < im.height; y++) {
             fftwf_plan plan = fftwf_plan_many_r2r(1, n, im.width*im.channels,
                                                   im(0, y, 0), nembed, im.tstride, 1,
                                                   im(0, y, 0), nembed, im.tstride, 1,
                                                   kinds, FFTW_ESTIMATE);
-            fftwf_execute(plan);        
-            fftwf_destroy_plan(plan);        
+            fftwf_execute(plan);
+            fftwf_destroy_plan(plan);
         }
-    }       
+    }
 
     float m = 1.0;
-    if (transformX) m *= im.width;
-    if (transformY) m *= im.height;
-    if (transformT) m *= im.frames;
+    if (transformX) { m *= im.width; }
+    if (transformY) { m *= im.height; }
+    if (transformT) { m *= im.frames; }
     Scale::apply(im, 1.0f/sqrtf(m));
-    
+
 
 }
 
@@ -168,7 +168,7 @@ void FFT::help() {
             " laid out the same way.\n"
             "\n"
             "Usage: ImageStack -load a.tmp -fftcomplex -save freq.tmp\n\n");
-    
+
 }
 
 void FFT::parse(vector<string> args) {
@@ -178,7 +178,7 @@ void FFT::parse(vector<string> args) {
     if (args.size() == 1) {
         x = y = t = false;
         for (size_t i = 0; i < args[0].size(); i++) {
-            switch(args[0][i]) {
+            switch (args[0][i]) {
             case 'x':
                 x = true;
                 break;
@@ -195,82 +195,82 @@ void FFT::parse(vector<string> args) {
         }
 
     }
-    
+
     apply(stack(0), x, y, t);
 }
 
 void FFT::apply(Window im, bool transformX, bool transformY, bool transformT, bool inverse) {
     assert(im.channels % 2 == 0, "-fft requires an image with an even number of channels\n");
 
-    if (im.width == 1) transformX = false;
-    if (im.height == 1) transformY = false;
-    if (im.frames == 1) transformT = false;
+    if (im.width == 1) { transformX = false; }
+    if (im.height == 1) { transformY = false; }
+    if (im.frames == 1) { transformT = false; }
 
     // rank 0
-    if (!transformX && !transformY && !transformT) return;
+    if (!transformX && !transformY && !transformT) { return; }
 
     if (transformX && transformY && transformT) { // rank 3
         int n[] = {im.frames, im.height, im.width};
         int nembed[] = {im.frames, im.tstride/im.ystride, im.ystride/im.xstride};
-        
+
         fftwf_plan plan = fftwf_plan_many_dft(3, n, im.channels/2,
                                               (fftwf_complex *)im(0, 0, 0), nembed, im.channels/2, 1,
                                               (fftwf_complex *)im(0, 0, 0), nembed, im.channels/2, 1,
                                               inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-        
+
         fftwf_execute(plan);
         fftwf_destroy_plan(plan);
     } else if (transformX && transformY) { // rank 2
         int n[] = {im.height, im.width};
         int nembed[] = {im.tstride/im.ystride, im.ystride/im.xstride};
-            
+
         for (int t = 0; t < im.frames; t++) {
             fftwf_plan plan = fftwf_plan_many_dft(2, n, im.channels/2,
                                                   (fftwf_complex *)im(0, 0, t), nembed, im.channels/2, 1,
                                                   (fftwf_complex *)im(0, 0, t), nembed, im.channels/2, 1,
                                                   inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-            
-            fftwf_execute(plan);        
+
+            fftwf_execute(plan);
             fftwf_destroy_plan(plan);
         }
     } else if (transformT && transformY) { // rank 2
         int n[] = {im.frames, im.height};
         int nembed[] = {im.frames, im.tstride/im.ystride};
-        
+
         fftwf_plan plan = fftwf_plan_many_dft(2, n, im.width*im.channels/2,
                                               (fftwf_complex *)im(0, 0, 0), nembed, im.width*im.channels/2, 1,
                                               (fftwf_complex *)im(0, 0, 0), nembed, im.width*im.channels/2, 1,
                                               inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-        
-        fftwf_execute(plan);        
+
+        fftwf_execute(plan);
         fftwf_destroy_plan(plan);
     } else if (transformT && transformX) { // rank 2
         int n[] = {im.frames, im.width};
         int nembed[] = {im.frames, im.tstride/im.xstride};
 
-        for (int y = 0; y < im.height; y++) {        
+        for (int y = 0; y < im.height; y++) {
             fftwf_plan plan = fftwf_plan_many_dft(2, n, im.channels/2,
                                                   (fftwf_complex *)im(0, y, 0), nembed, im.channels/2, 1,
                                                   (fftwf_complex *)im(0, y, 0), nembed, im.channels/2, 1,
                                                   inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-            
-            fftwf_execute(plan);        
-            fftwf_destroy_plan(plan);        
+
+            fftwf_execute(plan);
+            fftwf_destroy_plan(plan);
         }
     } else if (transformX) { // rank 1
         int n[] = {im.width};
         int nembed[] = {im.width};
 
         for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {        
+            for (int y = 0; y < im.height; y++) {
                 fftwf_plan plan = fftwf_plan_many_dft(1, n, im.channels/2,
                                                       (fftwf_complex *)im(0, y, t), nembed, im.channels/2, 1,
                                                       (fftwf_complex *)im(0, y, t), nembed, im.channels/2, 1,
                                                       inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-                
-                fftwf_execute(plan);        
-                fftwf_destroy_plan(plan);        
-            }        
+
+                fftwf_execute(plan);
+                fftwf_destroy_plan(plan);
+            }
         }
     } else if (transformY) { // rank 1
         int n[] = {im.height};
@@ -281,10 +281,10 @@ void FFT::apply(Window im, bool transformX, bool transformY, bool transformT, bo
                                                   (fftwf_complex *)im(0, 0, t), nembed, im.ystride/2, 1,
                                                   (fftwf_complex *)im(0, 0, t), nembed, im.ystride/2, 1,
                                                   inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-            
-            fftwf_execute(plan);        
-            fftwf_destroy_plan(plan);        
-        }        
+
+            fftwf_execute(plan);
+            fftwf_destroy_plan(plan);
+        }
     } else if (transformT) { // rank 1
         int n[] = {im.frames};
         int nembed[] = {im.frames};
@@ -293,19 +293,19 @@ void FFT::apply(Window im, bool transformX, bool transformY, bool transformT, bo
                                                   (fftwf_complex *)im(0, y, 0), nembed, im.tstride/2, 1,
                                                   (fftwf_complex *)im(0, y, 0), nembed, im.tstride/2, 1,
                                                   inverse ? FFTW_BACKWARD : FFTW_FORWARD, FFTW_ESTIMATE);
-            fftwf_execute(plan);        
-            fftwf_destroy_plan(plan);        
+            fftwf_execute(plan);
+            fftwf_destroy_plan(plan);
         }
-    }       
+    }
 
     if (inverse) {
         float m = 1.0;
-        if (transformX) m *= im.width;
-        if (transformY) m *= im.height;
-        if (transformT) m *= im.frames;
+        if (transformX) { m *= im.width; }
+        if (transformY) { m *= im.height; }
+        if (transformT) { m *= im.frames; }
         Scale::apply(im, 1.0f/m);
     }
-    
+
 
 }
 
@@ -326,7 +326,7 @@ void IFFT::parse(vector<string> args) {
     if (args.size() == 1) {
         x = y = t = false;
         for (size_t i = 0; i < args[0].size(); i++) {
-            switch(args[0][i]) {
+            switch (args[0][i]) {
             case 'x':
                 x = true;
                 break;
@@ -342,7 +342,7 @@ void IFFT::parse(vector<string> args) {
             }
         }
     }
-    
+
     apply(stack(0), x, y, t);
 }
 
@@ -370,10 +370,10 @@ void FFTConvolve::parse(vector<string> args) {
     Convolve::BoundaryCondition b;
 
     if (args.size() > 0) {
-        if (args[0] == "zero") b = Convolve::Zero;
-        else if (args[0] == "homogeneous") b = Convolve::Homogeneous;
-        else if (args[0] == "clamp") b = Convolve::Clamp;
-        else if (args[0] == "wrap") b = Convolve::Wrap;
+        if (args[0] == "zero") { b = Convolve::Zero; }
+        else if (args[0] == "homogeneous") { b = Convolve::Homogeneous; }
+        else if (args[0] == "clamp") { b = Convolve::Clamp; }
+        else if (args[0] == "wrap") { b = Convolve::Wrap; }
         else {
             panic("Unknown boundary condition: %s\n", args[0].c_str());
         }
@@ -382,9 +382,9 @@ void FFTConvolve::parse(vector<string> args) {
     }
 
     if (args.size() > 1) {
-        if (args[1] == "inner") m = Multiply::Inner;
-        else if (args[1] == "outer") m = Multiply::Outer;
-        else if (args[1] == "elementwise") m = Multiply::Elementwise;
+        if (args[1] == "inner") { m = Multiply::Inner; }
+        else if (args[1] == "outer") { m = Multiply::Outer; }
+        else if (args[1] == "elementwise") { m = Multiply::Elementwise; }
         else {
             panic("Unknown vector-vector multiplication: %s\n", args[1].c_str());
         }
@@ -412,7 +412,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
         // anything goes
         resultChannels = im.channels * filter.channels;
     } else if (m == Multiply::Elementwise) {
-        assert(im.channels == filter.channels, 
+        assert(im.channels == filter.channels,
                "For elementwise convolution the filter must have the same number of channels as the image\n");
         resultChannels = im.channels;
     } else {
@@ -430,7 +430,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
         Divide::apply(result, resultW);
         return result;
     }
-    
+
     assert(filter.width % 2 == 1 &&
            filter.height % 2 == 1 &&
            filter.frames % 2 == 1,
@@ -448,7 +448,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
     Image weightT;
 
     imT = Image(im.width+xPad*2, im.height+yPad*2, im.frames+tPad*2, im.channels*2);
-    
+
     //printf("1\n"); fflush(stdout);
     // 1) Make the padded complex image
     if (b == Convolve::Clamp) {
@@ -472,7 +472,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
             for (int y = 0; y < im.height; y++) {
                 float *imPtr = im(0, y, t);
                 float *imTPtr = imT(xPad, y+yPad, t+tPad);
-                for (int x = 0; x < im.width; x++) {                    
+                for (int x = 0; x < im.width; x++) {
                     for (int c = 0; c < im.channels; c++) {
                         *imTPtr++ = *imPtr++;
                         imTPtr++;
@@ -481,7 +481,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
             }
         }
     }
-    
+
     //printf("2\n"); fflush(stdout);
     // 2) Transform the padded image
     FFT::apply(imT);
@@ -491,20 +491,20 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
     Image filterT(imT.width, imT.height, imT.frames, filter.channels*2);
     for (int t = 0; t < filter.frames; t++) {
         int ft = t - filter.frames/2;
-        if (ft < 0) ft += filterT.frames;
+        if (ft < 0) { ft += filterT.frames; }
         for (int y = 0; y < filter.height; y++) {
             int fy = y - filter.height/2;
-            if (fy < 0) fy += filterT.height;
+            if (fy < 0) { fy += filterT.height; }
             for (int x = 0; x < filter.width; x++) {
                 for (int c = 0; c < filter.channels; c++) {
                     int fx = x - filter.width/2;
-                    if (fx < 0) fx += filterT.width;
+                    if (fx < 0) { fx += filterT.width; }
                     filterT(fx, fy, ft)[2*c] = filter(x, y, t)[c];
                 }
             }
         }
     }
-    
+
     //printf("4\n"); fflush(stdout);
     // 4) Transform the padded filter
     FFT::apply(filterT);
@@ -520,7 +520,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
             float *imTPtr     = imT(0, y, t);
             if (m == Multiply::Outer) {
                 for (int x = 0; x < resultT.width; x++) {
-                    for (int cf = 0; cf < filterT.channels; cf+=2) {                            
+                    for (int cf = 0; cf < filterT.channels; cf+=2) {
                         for (int ci = 0; ci < imT.channels; ci+=2) {
                             *resultTPtr++ = filterTPtr[cf]*imTPtr[ci] - filterTPtr[cf+1]*imTPtr[ci+1];
                             *resultTPtr++ = filterTPtr[cf+1]*imTPtr[ci] + filterTPtr[cf]*imTPtr[ci+1];
@@ -558,7 +558,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
                     for (int c = 0; c < resultChannels; c++) {
                         resultTPtr[0] += filterTPtr[0]*imTPtr[0] - filterTPtr[1]*imTPtr[1];
                         resultTPtr[1] += filterTPtr[1]*imTPtr[0] + filterTPtr[0]*imTPtr[1];
-                        imTPtr += 2;                        
+                        imTPtr += 2;
                         resultTPtr += 2;
                         filterTPtr += 2;
                     }
@@ -570,7 +570,7 @@ Image FFTConvolve::apply(Window im, Window filter, Convolve::BoundaryCondition b
     //printf("6\n"); fflush(stdout);
     // 6) Inverse transorm the result
     IFFT::apply(resultT);
- 
+
     //printf("7\n"); fflush(stdout);
     // 7) Remove the padding, and convert back to real numbers
     Image result(im.width, im.height, im.frames, resultChannels);
@@ -613,10 +613,10 @@ void FFTDeconvolve::parse(vector<string> args) {
         height = readInt(args[3]);
         frames = readInt(args[1]);
         size = frames * width * height;
-        assert((int)args.size() == size + 4, "a size of %ix%ix%i requires %i more arguments. %i were given.", 
+        assert((int)args.size() == size + 4, "a size of %ix%ix%i requires %i more arguments. %i were given.",
                frames, width, height, size, (int)args.size() - 4);
         assert(size % 2 == 1, "matrix must have odd size\n");
-        
+
         Image filter(frames, width, height, 1);
 
         size_t i = 4;
@@ -626,8 +626,8 @@ void FFTDeconvolve::parse(vector<string> args) {
                     filter(t, x, y)[0] = readFloat(args[i++]);
                 }
             }
-        }        
-        
+        }
+
         Image im = apply(stack(0), filter, weight);
         pop();
         push(im);
@@ -642,7 +642,7 @@ void FFTDeconvolve::parse(vector<string> args) {
     }
 }
 
-// Frequency-space gaussian deconvolution is pretty simple (outside of the fourier transforms) 
+// Frequency-space gaussian deconvolution is pretty simple (outside of the fourier transforms)
 // Output = fft(filter) * fft(image) / (fft(filter)^2 + weight*fft(gradient filters)^2)
 Image FFTDeconvolve::apply(Window im, Window filter, float weight) {
 
@@ -665,22 +665,22 @@ Image FFTDeconvolve::apply(Window im, Window filter, float weight) {
     Image fft_filter(im.width, im.height, 1, 2);
     for (int y = 0; y < filter.height; y++) {
         int fy = y - filter.height/2;
-        if (fy < 0) fy += fft_filter.height;
+        if (fy < 0) { fy += fft_filter.height; }
         for (int x = 0; x < filter.width; x++) {
             for (int c = 0; c < filter.channels; c++) {
                 int fx = x - filter.width/2;
-                if (fx < 0) fx += fft_filter.width;
+                if (fx < 0) { fx += fft_filter.width; }
                 fft_filter(fx, fy)[2*c] = filter(x, y)[c];
             }
         }
     }
     FFT::apply(fft_filter);
 
-    ComplexMultiply::apply(fft_im, fft_filter, true); 
-    ComplexMultiply::apply(fft_filter, fft_filter, true); 
+    ComplexMultiply::apply(fft_im, fft_filter, true);
+    ComplexMultiply::apply(fft_filter, fft_filter, true);
 
-    Add::apply(fft_filter, fft_g); 
-    ComplexDivide::apply(fft_im, fft_filter, false); 
+    Add::apply(fft_filter, fft_g);
+    ComplexDivide::apply(fft_im, fft_filter, false);
 
     IFFT::apply(fft_im);
     return ComplexReal::apply(fft_im);
@@ -725,7 +725,7 @@ void FFTPoisson::parse(vector<string> args) {
 // boundary conditions on gradient images).
 
 Image FFTPoisson::apply(Window dx, Window dy, Window target, float targetStrength) {
-    
+
     assert(dx.width == dy.width &&
            dx.height == dy.height &&
            dx.frames == dy.frames &&
@@ -736,60 +736,65 @@ Image FFTPoisson::apply(Window dx, Window dy, Window target, float targetStrengt
                target.height == dx.height &&
                target.frames == dx.frames &&
                target.channels == dx.channels,
-               "target image must have the same size as the gradient images\n");               
+               "target image must have the same size as the gradient images\n");
     }
 
     Image fftBuff(dx.width, dx.height, dx.frames, 1);
 
-    //compute two 1D lookup tables for computing the DCT of a 2D Laplacian on the fly    
+    //compute two 1D lookup tables for computing the DCT of a 2D Laplacian on the fly
     Image ftLapY(1, dx.height, 1, 1);
     Image ftLapX(dx.width, 1, 1, 1);
 
-    for(int x = 0; x < dx.width; x++)
+    for (int x = 0; x < dx.width; x++) {
         ftLapX(x, 0)[0] = 2.0f * cos((M_PI * x) / (dx.width - 1));
-    
-    for(int y = 0; y < dx.height; y++)
+    }
+
+    for (int y = 0; y < dx.height; y++) {
         ftLapY(0, y)[0] = -4.0f + (2.0f * cos((M_PI * y) / (dx.height - 1)));
-    
+    }
+
     // Create a DCT-I plan, which is its own inverse.
-    fftwf_plan fftPlan;        
-    fftPlan = fftwf_plan_r2r_2d(dx.height, dx.width, 
-                                fftBuff(0, 0), fftBuff(0, 0), 
+    fftwf_plan fftPlan;
+    fftPlan = fftwf_plan_r2r_2d(dx.height, dx.width,
+                                fftBuff(0, 0), fftBuff(0, 0),
                                 FFTW_REDFT00, FFTW_REDFT00, FFTW_ESTIMATE); //use FFTW_PATIENT when plan can be reused
-    
+
     Image out(dx.width, dx.height, dx.frames, dx.channels);
 
     for (int t = 0; t < dx.frames; t++) {
-        for (int c = 0; c < dx.channels; c++) {            
+        for (int c = 0; c < dx.channels; c++) {
 
             float dcSum = 0.0f;
-            
+
             // compute h_hat from u, gx, gy (see equation 48 in the paper), as well as the DC term of u's DCT.
             float *fftPtr = fftBuff(0, 0);
-            for(int y = 0; y < dx.height; y++) {
-                for(int x = 0; x < dx.width; x++) {
+            for (int y = 0; y < dx.height; y++) {
+                for (int x = 0; x < dx.width; x++) {
                     // Compute DC term of u's DCT without computing the whole DCT.
                     float dcMult = 1.0f;
-                    if ((x > 0) && (x < dx.width  - 1))
+                    if ((x > 0) && (x < dx.width  - 1)) {
                         dcMult *= 2.0f;
-                    if ((y > 0) && (y < dx.height - 1))
+                    }
+                    if ((y > 0) && (y < dx.height - 1)) {
                         dcMult *= 2.0f;
-                    
+                    }
+
                     if (target) {
                         dcSum += dcMult * target(x, y, t)[c];
-                    } else { 
+                    } else {
                         // try to read the dc term out of the double
                         // integral of the gradient fields
                         // instead. Works if the gradients were
                         // computed with a zero boundary condition.
                         dcSum += 2.0f*((dx.width-x)*dx(x, y, t)[c] + (dy.height-y)*dy(x, y, t)[c]);
                     }
-                    
-                    
-                    if (target) 
-                        *fftPtr = targetStrength * target(x, y, t)[c];                    
-                    else 
+
+
+                    if (target) {
+                        *fftPtr = targetStrength * target(x, y, t)[c];
+                    } else {
                         *fftPtr = 0;
+                    }
 
                     // Subtract g^x_x and g^y_y, with boundary factor of -2.0 to account for boundary reflections implicit in the DCT
                     if (x == 0) {
@@ -808,7 +813,7 @@ Image FFTPoisson::apply(Window dx, Window dy, Window target, float targetStrengt
                         *fftPtr -= (dy(x, y+1, t)[c] - dy(x, y, t)[c]);
                     }
 
-                    
+
                     fftPtr++;
                 }
             }
@@ -818,35 +823,35 @@ Image FFTPoisson::apply(Window dx, Window dy, Window target, float targetStrengt
 
             //compute F_hat using H_hat (see equation 29 in the paper)
             fftPtr = fftBuff(0, 0);
-            for(int y = 0; y < dx.height; y++) {
-                for(int x = 0; x < dx.width; x++) {
+            for (int y = 0; y < dx.height; y++) {
+                for (int x = 0; x < dx.width; x++) {
                     float ftLapResponse = ftLapY(0, y)[0] + ftLapX(x, 0)[0];
                     *fftPtr++ /= (targetStrength - ftLapResponse);
                 }
             }
-            
+
             fftBuff(0, 0)[0] = dcSum;
-            
+
             //transform F_hat to f_hat by taking the inverse DCT of F_hat
             fftwf_execute(fftPlan);
 
             float fftMult = 1.0f / (4.0f * (dx.width-1) * (dx.height-1));
 
             fftPtr = fftBuff(0, 0);
-            
-            for(int y = 0; y < dx.height; y++) {
-                for(int x = 0; x < dx.width; x++) {
+
+            for (int y = 0; y < dx.height; y++) {
+                for (int x = 0; x < dx.width; x++) {
                     out(x, y, t)[c] = (*fftPtr++) * fftMult;
                 }
             }
-            
+
         }
     }
 
     fftwf_destroy_plan(fftPlan);
 
     return out;
-    
+
 }
 
 

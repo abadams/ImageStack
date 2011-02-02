@@ -42,5 +42,5 @@
 // Included for the first time
 namespace ImageStack {
 
-#endif 
+#endif
 

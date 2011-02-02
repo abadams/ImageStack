@@ -29,7 +29,7 @@ void ColorMatrix::parse(vector<string> args) {
 }
 
 Image ColorMatrix::apply(Window im, vector<float> matrix) {
-    assert(matrix.size() % im.channels == 0, 
+    assert(matrix.size() % im.channels == 0,
            "-colormatrix requires a number of arguments that is a multiple of the number of\n"
            "channels of the current image\n");
 
@@ -83,7 +83,7 @@ Image ColorConvert::apply(Window im, string from, string to) {
     }
 
     // direct conversions that don't have to go via rgb
-    if (from == "yuyv" && to == "yuv") {        
+    if (from == "yuyv" && to == "yuv") {
         return yuyv2yuv(im);
     } else if (from == "uyvy" && to == "yuv") {
         return uyvy2yuv(im);
@@ -102,22 +102,22 @@ Image ColorConvert::apply(Window im, string from, string to) {
             return rgb2yuv(im);
         } else if (to == "xyz") {
             return rgb2xyz(im);
-        } else if (to == "y" || to == "gray" || 
+        } else if (to == "y" || to == "gray" ||
                    to == "grayscale" || to == "luminance") {
             return rgb2y(im);
-        } else if (to == "lab"){
+        } else if (to == "lab") {
             return rgb2lab(im);
         } else {
             panic("Unknown color space %s\n", to.c_str());
         }
-    } else { //(to == "rgb") 
+    } else { //(to == "rgb")
         if (from == "hsv" || from == "hsl" || from == "hsb") {
             return hsv2rgb(im);
         } else if (from == "yuv") {
             return yuv2rgb(im);
         } else if (from == "xyz") {
             return xyz2rgb(im);
-        } else if (from == "y" || from == "gray" || 
+        } else if (from == "y" || from == "gray" ||
                    from == "grayscale" || from == "luminance") {
             return y2rgb(im);
         } else if (from == "lab") {
@@ -136,19 +136,19 @@ Image ColorConvert::apply(Window im, string from, string to) {
 
 }
 
-//conversions to and from lab inspired by CImg (http://cimg.sourceforge.net/) 
-Image ColorConvert::xyz2lab(Window im){
-    #define labf(x)  ((x)>=0.008856?(powf(x,1/3.0)):(7.787*(x)+16.0/116.0))
-        
+//conversions to and from lab inspired by CImg (http://cimg.sourceforge.net/)
+Image ColorConvert::xyz2lab(Window im) {
+#define labf(x)  ((x)>=0.008856?(powf(x,1/3.0)):(7.787*(x)+16.0/116.0))
+
     assert(im.channels == 3, "Image does not have 3 channels\n");
-    
+
     Image out(im.width, im.height, im.frames, im.channels);
-    
+
     //left in this form to allow for changes/fine-tuning
     float Xn = 1.0f/(0.412453 + 0.357580 + 0.180423);
     float Yn = 1.0f/(0.212671 + 0.715160 + 0.072169);
     float Zn = 1.0f/(0.019334 + 0.119193 + 0.950227);
-    
+
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
@@ -166,19 +166,19 @@ Image ColorConvert::xyz2lab(Window im){
         }
     }
     return out;
-    
+
 }
 
-Image ColorConvert::lab2xyz(Window im){
+Image ColorConvert::lab2xyz(Window im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
     Image out(im.width, im.height, im.frames, im.channels);
-    
+
     float s = 6.0/29;
-    
+
     float Xn = 0.412453 + 0.357580 + 0.180423;
     float Yn = 0.212671 + 0.715160 + 0.072169;
     float Zn = 0.019334 + 0.119193 + 0.950227;
-    
+
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
@@ -189,7 +189,7 @@ Image ColorConvert::lab2xyz(Window im){
                 fy = (L + 0.16f)/1.16f;
                 fx = fy + a/5.0f;
                 fz = fy - b/2.0f;
-                
+
                 if (fy > s) {
                     Y = Yn*(fy * fy * fy);
                 } else {
@@ -205,24 +205,24 @@ Image ColorConvert::lab2xyz(Window im){
                 } else {
                     Z = (fz - 16.0/116)*3*s*s*Zn;
                 }
-                
+
                 out(x, y, t)[0] = X;
                 out(x, y, t)[1] = Y;
                 out(x, y, t)[2] = Z;
             }
         }
     }
-    
+
     return out;
 }
 
-Image ColorConvert::rgb2lab(Window im){
+Image ColorConvert::rgb2lab(Window im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
-    
+
     return xyz2lab(rgb2xyz(im));
 }
 
-Image ColorConvert::lab2rgb(Window im){
+Image ColorConvert::lab2rgb(Window im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
     return xyz2rgb(lab2xyz(im));
 }
@@ -246,23 +246,23 @@ Image ColorConvert::rgb2hsv(Window im) {
 
                 minV = min(r, g, b);
                 maxV = max(r, g, b);
-                v = maxV;   
-                
+                v = maxV;
+
                 delta = maxV - minV;
-                
+
                 if (delta != 0) {
-                    s = delta / maxV; 
-                    if (r == maxV)      h = 0 + (g - b) / delta; // between yellow & magenta
-                    else if (g == maxV) h = 2 + (b - r) / delta; // between cyan & yellow
-                    else                h = 4 + (r - g) / delta; // between magenta & cyan
+                    s = delta / maxV;
+                    if (r == maxV) { h = 0 + (g - b) / delta; } // between yellow & magenta
+                    else if (g == maxV) { h = 2 + (b - r) / delta; } // between cyan & yellow
+                    else { h = 4 + (r - g) / delta; } // between magenta & cyan
                     h *= mult;
-                    if (h < 0) h++;
+                    if (h < 0) { h++; }
                 } else {
                     // r = g = b = 0 so s = 0, h is undefined
                     s = 0;
                     h = 0;
                 }
-                
+
                 out(x, y, t)[0] = h;
                 out(x, y, t)[1] = s;
                 out(x, y, t)[2] = v;
@@ -284,20 +284,20 @@ Image ColorConvert::hsv2rgb(Window im) {
                 float h = im(x, y, t)[0];
                 float s = im(x, y, t)[1];
                 float v = im(x, y, t)[2];
-                
+
                 if (s == 0) {
                     // achromatic (grey)
                     im(x, y, t)[0] = im(x, y, t)[1] = im(x, y, t)[2] = v;
                 } else {
-                    
+
                     h *= 6;        // sector 0 to 5
                     int i = (int)h;
-                    if (i == 6) i = 5;
+                    if (i == 6) { i = 5; }
                     float f = h - i;
                     float p = v * (1 - s);
                     float q = v * (1 - s * f);
                     float u = v * (1 - s * (1 - f));
-                    
+
                     switch (i) {
                     case 0:
                         out(x, y, t)[0] = v;
@@ -346,8 +346,8 @@ Image ColorConvert::rgb2y(Window im) {
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
-                out(x, y, t)[0] = (im(x, y, t)[0] * 0.299f + 
-                                   im(x, y, t)[1] * 0.587f + 
+                out(x, y, t)[0] = (im(x, y, t)[0] * 0.299f +
+                                   im(x, y, t)[1] * 0.587f +
                                    im(x, y, t)[2] * 0.114f);
             }
         }
@@ -357,7 +357,7 @@ Image ColorConvert::rgb2y(Window im) {
 
 }
 
-Image ColorConvert::y2rgb(Window im) {        
+Image ColorConvert::y2rgb(Window im) {
     assert(im.channels == 1, "Image does not have one channel\n");
 
     Image out(im.width, im.height, im.frames, 3);
@@ -420,9 +420,10 @@ Image ColorConvert::rgb2xyz(Window im) {
 
     float mat[9] = {0.412453, 0.212671, 0.019334,
                     0.357580, 0.715160, 0.119193,
-                    0.180423, 0.072169, 0.950227};
+                    0.180423, 0.072169, 0.950227
+                   };
     vector<float> matrix(mat, mat+9);
-    
+
     return ColorMatrix::apply(im, matrix);
 
 }
@@ -432,7 +433,8 @@ Image ColorConvert::xyz2rgb(Window im) {
 
     float mat[9] = {3.240479, -0.969256, 0.055648,
                     -1.537150, 1.875992, -0.204043,
-                    -0.498535, 0.041556, 1.057311};
+                    -0.498535, 0.041556, 1.057311
+                   };
     vector<float> matrix(mat, mat+9);
 
     return ColorMatrix::apply(im, matrix);
@@ -440,7 +442,7 @@ Image ColorConvert::xyz2rgb(Window im) {
 }
 
 Image ColorConvert::uyvy2yuv(Window im) {
-    assert(im.channels == 2, 
+    assert(im.channels == 2,
            "uyvy images should be stored as a two channel image where the second"
            " channel represents luminance (y), and the first channel alternates"
            " between u and v.\n");
@@ -448,50 +450,50 @@ Image ColorConvert::uyvy2yuv(Window im) {
            "uyvy images must have an even width\n");
 
     Image out(im.width, im.height, im.frames, 3);
-    float *outPtr = out(0, 0, 0);  
+    float *outPtr = out(0, 0, 0);
     for (int t = 0; t < out.frames; t++) {
         for (int y = 0; y < out.height; y++) {
             float *imPtr = im(0, y, t);
             for (int x = 0; x < out.width; x+=2) {
-                *outPtr++ = imPtr[1]; // Y 
-                *outPtr++ = imPtr[0]; // U 
+                *outPtr++ = imPtr[1]; // Y
+                *outPtr++ = imPtr[0]; // U
                 *outPtr++ = imPtr[2]; // V
-                *outPtr++ = imPtr[3]; // Y 
-                *outPtr++ = imPtr[0]; // U 
+                *outPtr++ = imPtr[3]; // Y
+                *outPtr++ = imPtr[0]; // U
                 *outPtr++ = imPtr[2]; // V
                 imPtr += 4;
             }
         }
     }
-    
+
     return out;
 }
 
 Image ColorConvert::yuyv2yuv(Window im) {
-    assert(im.channels == 2, 
+    assert(im.channels == 2,
            "yuyv images should be stored as a two channel image where the first"
            " channel represents luminance (y), and the second channel alternates"
            " between u and v.\n");
     assert((im.width & 1) == 0,
            "uyvy images must have an even width\n");
-    
+
     Image out(im.width, im.height, im.frames, 3);
-    float *outPtr = out(0, 0, 0);  
+    float *outPtr = out(0, 0, 0);
     for (int t = 0; t < out.frames; t++) {
         for (int y = 0; y < out.height; y++) {
             float *imPtr = im(0, y, t);
             for (int x = 0; x < out.width; x+=2) {
-                *outPtr++ = imPtr[0]; // Y 
-                *outPtr++ = imPtr[1]; // U 
+                *outPtr++ = imPtr[0]; // Y
+                *outPtr++ = imPtr[1]; // U
                 *outPtr++ = imPtr[3]; // V
-                *outPtr++ = imPtr[2]; // Y 
-                *outPtr++ = imPtr[1]; // U 
+                *outPtr++ = imPtr[2]; // Y
+                *outPtr++ = imPtr[1]; // U
                 *outPtr++ = imPtr[3]; // V
                 imPtr += 4;
             }
         }
     }
-    
+
     return out;
 }
 
@@ -500,7 +502,7 @@ Image ColorConvert::uyvy2rgb(Window im) {
 }
 
 Image ColorConvert::yuyv2rgb(Window im) {
-    return yuv2rgb(yuyv2yuv(im));    
+    return yuv2rgb(yuyv2yuv(im));
 }
 
 //TODO: rgb2lab
@@ -534,7 +536,7 @@ void Demosaic::parse(vector<string> args) {
         yoff = readInt(args[1]);
         awb = true;
     } else {
-        panic("-demosaic takes zero, two, or three arguments");        
+        panic("-demosaic takes zero, two, or three arguments");
     }
     Image im = apply(stack(0), xoff, yoff, awb);
     pop();
@@ -548,7 +550,7 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
     Image out(im.width, im.height, im.frames, 3);
 
     // This algorithm is adaptive color plane interpolation (ACPI)
-    // by Runs Hamilton and Adams 
+    // by Runs Hamilton and Adams
     // (The Adams is not me)
 
     // make sure the image is of even width and height
@@ -568,13 +570,14 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     double val = im(x, y, t)[0];
                     maximum[x & 1][y & 1] = max(maximum[x & 1][y & 1], val);
                     sum[x & 1][y & 1] += val;
-                }                
+                }
             }
         }
-        
+
         double scale = sum[0][0]/maximum[0][0];
-        double multiplier[2][2] = {{1.0/maximum[0][0], scale/sum[0][1]}, 
-                                   {scale/sum[1][0],   scale/sum[1][1]}};
+        double multiplier[2][2] = {{1.0/maximum[0][0], scale/sum[0][1]},
+            {scale/sum[1][0],   scale/sum[1][1]}
+        };
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
@@ -585,7 +588,7 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
     }
 
     // Step 2
-    // Interpolate green, blending in horizontal or vertical directions depending on 
+    // Interpolate green, blending in horizontal or vertical directions depending on
     // gradient magnitudes. Add a correction factor based on the second derivative of
     // the color channel at that point.
     // Ie, calculate |dI/dx| + |d2I/dx2| and |dI/dy| + |d2I/dy2|, and interpolate
@@ -607,8 +610,8 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     float here = im(x, y, t)[0];
                     float left2 = im(x-2, y, t)[0], right2 = im(x+1, y, t)[0];
                     float up2 = im(x, y-2, t)[0], down2 = im(x, y+2, t)[0];
-                    
-                    // decide which way to interpolate 
+
+                    // decide which way to interpolate
                     // (divide laplacian by two because it's across twice the baseline)
                     // the correction terms have been removed because they look retarded
                     float interpHoriz = fabs(right1 - left1) + fabs(2*here - right2 - left2)/2;
@@ -617,7 +620,7 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                         //float colAverage = (left2 + right2)/2;
                         //float correction = here - colAverage;
                         // only apply half the correction, because it's across twice the baseline
-                        out(x, y, t)[1] = (left1 + right1)/2;// + correction/2; 
+                        out(x, y, t)[1] = (left1 + right1)/2;// + correction/2;
                     } else if (interpVert < interpHoriz) { // vertically
                         //float colAverage = (up2 + down2)/2;
                         //float correction = here - colAverage;
@@ -631,9 +634,9 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
             }
         }
     }
-    
+
     // Step 3
-    // to predict blue (or red) on top of green, 
+    // to predict blue (or red) on top of green,
     // A) average the two neighbouring blue (or red) pixels
     // B) Calculate the error you would have made if you did the same thing to predict green
     // C) Correct blue (or red) by that error
@@ -642,11 +645,11 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
     // to predict blue on red or red on blue,
     // we have 4 neighbours, diagonally around us
     // use the same approach as step 2, but take diagonal derivatives and interpolate diagonally
-   
+
     for (int t = 0; t < im.frames; t++) {
         for (int y = 2; y < im.height-2; y++) {
             for (int x = 2; x < im.width-2; x++) {
-                if (((x + xoff) & 1) == ((y + yoff) & 1)) { 
+                if (((x + xoff) & 1) == ((y + yoff) & 1)) {
                     // GREEN IS KNOWN (step 3)
 
                     // figure out which of red/blue is horizontally interpolated
@@ -669,10 +672,10 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     float greenLeft = out(x-1, y, t)[1], greenRight = out(x+1, y, t)[1], greenHere = out(x, y, t)[1];
                     float greenAverage = (greenLeft + greenRight)/2;
                     // see how wrong the green average was
-                    float correction = greenHere - greenAverage; 
+                    float correction = greenHere - greenAverage;
                     // set the output to the average color plus the correction factor needed for green
                     out(x, y, t)[horizChannel] = colAverage + correction;
-                    
+
                     // do the vertical interpolation
                     float colUp = im(x, y-1, t)[0], colDown = im(x, y+1, t)[0];
                     float greenUp = out(x, y-1, t)[1], greenDown = out(x, y+1, t)[1];
@@ -680,10 +683,10 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     greenAverage = (greenUp + greenDown)/2;
                     correction = greenHere - greenAverage;
                     out(x, y, t)[vertChannel] = colAverage + correction;
-                    
+
                 } else {
                     // RED OR BLUE IS KNOWN (step 4)
-                    
+
                     // figure out which channel is known exactly
                     int knownChannel, unknownChannel;
                     if ((y+yoff) & 1) {
@@ -693,10 +696,10 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                         knownChannel = 0;
                         unknownChannel = 2;
                     }
-                    
+
                     // set the known channel to the correct value
                     out(x, y, t)[knownChannel] = im(x, y, t)[0];
-                    
+
                     // for the unknown channel, do diagonal interpolation
                     // u is up left, v is down right, s is up right, t is down left
                     // p is the channel to be predicted, g is green (already interpolated)
@@ -705,10 +708,10 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     float sp = im(x+1, y-1, t)[0], sg = out(x+1, y-1, t)[1];
                     float tp = im(x-1, y+1, t)[0], tg = out(x-1, t+1, t)[1];
                     float greenHere = out(x, y, t)[1];
-                    
+
                     float interpUV = fabs(vp - up) + fabs(2*greenHere - vg - ug);
                     float interpST = fabs(sp - tp) + fabs(2*greenHere - sg - tg);
-                    
+
                     if (interpUV < interpST) {
                         float greenAverage = (ug + vg)/2;
                         float correction = greenHere - greenAverage;
@@ -722,7 +725,7 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                         float correction = greenHere - greenAverage;
                         out(x, y, t)[unknownChannel] = (up + vp + sp + tp)/4 + correction;
                     }
-                    
+
                 }
             }
         }

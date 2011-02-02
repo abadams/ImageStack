@@ -14,11 +14,11 @@ class Expression {
     /* Grammar:
 
     IfThenElse -> Condition | Condition ? Condition : Condition
-    Condition  -> Sum > Sum | Sum < Sum | 
-    Sum >= Sum | Sum <= Sum | 
+    Condition  -> Sum > Sum | Sum < Sum |
+    Sum >= Sum | Sum <= Sum |
     Sum == Sum | Sum != Sum | Sum
     Sum     -> Sum + Product | Sum - Product | Product
-    Product -> Product * Factor | Product / Factor | 
+    Product -> Product * Factor | Product / Factor |
     Product % Factor | Factor
     Factor  -> Term ^ Term | Term
     Term    -> Funct0 ( ) | Funct1 ( IfThenElse ) | Funct2 ( IfThenElse , IfThenElse ) | - Term | Var | ( IfThenElse ) | Float | Sample | Const | Uniform
@@ -30,13 +30,13 @@ class Expression {
     Const   -> e | pi
     Sample  -> [IfThenElse, IfThenElse, IfThenElse] | [IfThenElse, IfThenElse] | [IfThenElse]
 
-    */    
-  public:
+    */
+public:
 
     struct State {
         State(Window im_) : im(im_), stats(im_) {}
         int t, x, y, c;
-        float *val;        
+        float *val;
         Window im;
         Stats stats;
     };
@@ -65,12 +65,12 @@ class Expression {
         Node *left, *middle, *right;
     };
 
-    struct Negation : public Unary {      
+    struct Negation : public Unary {
         Negation(Node *arg) : Unary(arg) {}
         float eval(State *state) {return -arg->eval(state);}
     };
 
-    struct IfThenElse : public Ternary {    
+    struct IfThenElse : public Ternary {
         IfThenElse(Node *left, Node *middle, Node *right) : Ternary(left, middle, right) {}
         float eval(State *state) {return left->eval(state) ? middle->eval(state) : right->eval(state);}
     };
@@ -97,22 +97,22 @@ class Expression {
 
     struct EQ : public Binary {
         EQ(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return left->eval(state) == right->eval(state) ? 1 : 0;}    
+        float eval(State *state) {return left->eval(state) == right->eval(state) ? 1 : 0;}
     };
 
     struct NEQ : public Binary {
         NEQ(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return left->eval(state) != right->eval(state) ? 1 : 0;}    
+        float eval(State *state) {return left->eval(state) != right->eval(state) ? 1 : 0;}
     };
 
     struct Plus : public Binary {
         Plus(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return left->eval(state) + right->eval(state);}    
+        float eval(State *state) {return left->eval(state) + right->eval(state);}
     };
 
     struct Minus : public Binary {
         Minus(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return left->eval(state) - right->eval(state);}    
+        float eval(State *state) {return left->eval(state) - right->eval(state);}
     };
 
     struct Mod : public Binary {
@@ -122,17 +122,17 @@ class Expression {
 
     struct Times : public Binary {
         Times(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return left->eval(state) * right->eval(state);}        
+        float eval(State *state) {return left->eval(state) * right->eval(state);}
     };
 
     struct Divide : public Binary {
         Divide(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return left->eval(state) / right->eval(state);}    
+        float eval(State *state) {return left->eval(state) / right->eval(state);}
     };
 
     struct Power : public Binary {
         Power(Node *left, Node *right) : Binary(left, right) {}
-        float eval(State *state) {return powf(left->eval(state), right->eval(state));}    
+        float eval(State *state) {return powf(left->eval(state), right->eval(state));}
     };
 
     struct Funct_sin : public Unary {
@@ -284,15 +284,15 @@ class Expression {
         float eval(State *state) {return state->val[(int)(arg->eval(state) + 0.5)];}
     };
 
-    struct Sample2D : public Binary {    
+    struct Sample2D : public Binary {
         Sample2D(Node *left_, Node *right_) : Binary(left_, right_) {
             sample = NULL;
         }
 
-        ~Sample2D() {if (sample) delete[] sample;}
+        ~Sample2D() {if (sample) { delete[] sample; }}
 
         float eval(State *state) {
-            if (!sample) sample = new float[state->im.channels];
+            if (!sample) { sample = new float[state->im.channels]; }
             state->im.sample2D(left->eval(state), right->eval(state), sample);
             return sample[state->c];
         }
@@ -302,38 +302,38 @@ class Expression {
 
     struct Sample3D : public Ternary {
         Sample3D(Node *left_, Node *middle_, Node *right_) : Ternary(left_, middle_, right_) {
-            sample = NULL; 
+            sample = NULL;
         }
 
-        ~Sample3D() {if (sample) delete[] sample;}
+        ~Sample3D() {if (sample) { delete[] sample; }}
         float eval(State *state) {
-            if (!sample) sample = new float[state->im.channels];
-            state->im.sample3D(left->eval(state), 
-                                middle->eval(state), 
-                                right->eval(state), sample);
+            if (!sample) { sample = new float[state->im.channels]; }
+            state->im.sample3D(left->eval(state),
+                               middle->eval(state),
+                               right->eval(state), sample);
             return sample[state->c];
-        }    
+        }
 
         float *sample;
     };
 
-    struct Var_x : public Node {    
+    struct Var_x : public Node {
         float eval(State *state) {return state->x;}
     };
 
-    struct Var_y : public Node {    
+    struct Var_y : public Node {
         float eval(State *state) {return state->y;}
     };
 
-    struct Var_t : public Node {    
+    struct Var_t : public Node {
         float eval(State *state) {return state->t;}
     };
 
-    struct Var_c : public Node {    
+    struct Var_c : public Node {
         float eval(State *state) {return state->c;}
     };
 
-    struct Var_val : public Node {    
+    struct Var_val : public Node {
         float eval(State *state) {return state->val[state->c];}
     };
 
@@ -353,14 +353,14 @@ class Expression {
         float eval(State *state) {return state->im.channels;}
     };
 
-    struct Float : public Node {    
+    struct Float : public Node {
         Float(float value_) : value(value_) {}
         float eval(State *state) {return value;}
         float value;
     };
 
     // all the parsing stuff is below here
-  private:
+private:
     void skipWhitespace();
     bool match(string prefix);
     bool consume(string prefix);
@@ -377,7 +377,7 @@ class Expression {
     // Product -> Factor ((*|/|%) Factor)*
     Node *parseProduct();
 
-    // Factor  -> Term ^ Term | Term  
+    // Factor  -> Term ^ Term | Term
     Node *parseFactor();
 
     // Term    -> Funct ( ) | Funct ( IfThenElse , IfThenElse ) | Funct ( IfThenElse ) | - Term | Var | ( IfThenElse ) | Float | Sample
@@ -388,7 +388,7 @@ class Expression {
     size_t sourceIndex;
     bool varyingAllowed;
 
-  public:
+public:
     Expression(string source_, bool varyingAllowed = true);
 
     ~Expression();

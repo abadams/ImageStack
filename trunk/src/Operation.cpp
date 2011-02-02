@@ -152,9 +152,9 @@ void loadOperations() {
     operationMap["-complexconjugate"] = new ComplexConjugate();
     operationMap["-complexmagnitude"] = new ComplexMagnitude();
     operationMap["-complexphase"] = new ComplexPhase();
-    
 
-    #ifndef NO_FFTW
+
+#ifndef NO_FFTW
     // discrete fourier transforms
     operationMap["-dct"] = new DCT();
     operationMap["-fft"] = new FFT();
@@ -162,7 +162,7 @@ void loadOperations() {
     operationMap["-fftconvolve"] = new FFTConvolve();
     operationMap["-fftdeconvolve"] = new FFTDeconvolve();
     operationMap["-fftpoisson"] = new FFTPoisson();
-    #endif
+#endif
 
     // painting stuff
     operationMap["-eval"] = new Eval();
@@ -212,16 +212,16 @@ void loadOperations() {
     operationMap["-bilateralsharpen"] = new BilateralSharpen();
     operationMap["-chromablur"] = new ChromaBlur();
     operationMap["-nlmeans"] = new NLMeans();
-   
+
     // Locally Adaptive Hierachical Basis Preconditioned Conjugate Gradients
     operationMap["-lahbpcg"] = new LAHBPCG();
-    
+
     // Weighted-Least-Squares filtering
     operationMap["-wls"] = new WLS();
 
     // projection stuff
     operationMap["-sinugram"] = new Sinugram();
-    
+
     // HDR stuff
     operationMap["-assemblehdr"] = new AssembleHDR();
 
@@ -272,9 +272,9 @@ void Help::parse(vector<string> args) {
     } else {
         string opname = '-' + args[0];
         OperationMapIterator op = operationMap.find(opname);
-        if (op == operationMap.end())
+        if (op == operationMap.end()) {
             printf("No such operation \"%s\"\n", args[0].c_str());
-        else {
+        } else {
             printf("\n");
             op->second->help();
         }

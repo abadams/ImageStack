@@ -49,13 +49,13 @@ Image Inpaint::apply(Window im, Window mask) {
                         for (int dy = minDy; dy <= maxDy; dy++) {
                             for (int dx = minDx; dx <= maxDx; dx++) {
                                 int R = dx * dx + dy * dy + dt * dt;
-                                if (R == r) { 
+                                if (R == r) {
                                     alpha += mask(x+dx, y+dy, t+dt)[0];
                                     for (int c = 0; c < im.channels; c++) {
-                                        out(x, y, t)[c] += (im(x+dx, y+dy, t+dt)[c] * 
-                                                                   mask(x+dx, y+dy, t+dt)[0]);
+                                        out(x, y, t)[c] += (im(x+dx, y+dy, t+dt)[c] *
+                                                            mask(x+dx, y+dy, t+dt)[0]);
                                     }
-                                } else if (R < r && dx < 0) dx *= -1; // optimization, skip over low values of |dx|
+                                } else if (R < r && dx < 0) { dx *= -1; } // optimization, skip over low values of |dx|
                             }
                         }
                     }
@@ -63,7 +63,7 @@ Image Inpaint::apply(Window im, Window mask) {
 
                 }
 
-                for (int c = 0; c < im.channels; c++) out(x, y, t)[c] /= alpha;
+                for (int c = 0; c < im.channels; c++) { out(x, y, t)[c] /= alpha; }
             }
         }
     }

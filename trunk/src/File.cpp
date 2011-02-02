@@ -7,10 +7,10 @@
 
 // used for picking file formats
 bool suffixMatch(string filename, string suffix) {
-    if (suffix.size() > filename.size()) return false;
+    if (suffix.size() > filename.size()) { return false; }
     int offset = (int)filename.size() - (int)suffix.size();
     for (size_t i = 0; i < suffix.size(); i++) {
-        if (tolower(filename[i + offset]) != tolower(suffix[i])) return false;
+        if (tolower(filename[i + offset]) != tolower(suffix[i])) { return false; }
     }
     return true;
 }
@@ -18,7 +18,7 @@ bool suffixMatch(string filename, string suffix) {
 void Load::help() {
     pprintf("-load loads a file and places it on the top of the stack. ImageStack"
             " can load the following file formats:\n");
-    
+
     printf("\n");
     FileTMP::help();
     printf("\n");
@@ -53,7 +53,7 @@ void Load::parse(vector<string> args) {
 }
 
 
-Image Load::apply(string filename) {    
+Image Load::apply(string filename) {
     if (suffixMatch(filename, ".tmp")) {
         return FileTMP::load(filename);
     } else if (suffixMatch(filename, ".hdr")) {
@@ -70,8 +70,8 @@ Image Load::apply(string filename) {
         return FileWAV::load(filename);
     } else if (suffixMatch(filename, ".ppm")) {
         return FilePPM::load(filename);
-    } else if (suffixMatch(filename, ".tiff") || 
-               suffixMatch(filename, ".tif") || 
+    } else if (suffixMatch(filename, ".tiff") ||
+               suffixMatch(filename, ".tif") ||
                suffixMatch(filename, ".meg")) {
         return FileTIFF::load(filename);
     } else if (suffixMatch(filename, ".flo")) {
@@ -79,9 +79,9 @@ Image Load::apply(string filename) {
     } else if (suffixMatch(filename, ".csv")) {
         return FileCSV::load(filename);
     } else if (suffixMatch(filename, ".pba")) {
-	return FilePBA::load(filename);
+        return FilePBA::load(filename);
     }
-    
+
     panic("Unknown file format %s\n", filename.c_str());
 
     // keep compiler happy
@@ -117,15 +117,15 @@ Image LoadFrames::apply(vector<string> args) {
         im = Load::apply(args[i]);
         // check dimensions and channels match
         assert(im.frames == 1, "-loadframes can only load many single frame images\n");
-        assert((im.width == result.width) && 
+        assert((im.width == result.width) &&
                (im.height == result.height) &&
-               (im.channels == result.channels), 
+               (im.channels == result.channels),
                "-loadframes can only load file sequences of matching width, height, and channel count\n");
         fflush(stdout);
         memcpy(ptr, im(0, 0, 0), frameSize*sizeof(float));
         ptr += frameSize;
     }
-        
+
     return result;
 }
 
@@ -133,7 +133,7 @@ Image LoadFrames::apply(vector<string> args) {
 void Save::help() {
     printf("\n-save stores the image at the top of the stack to a file. The stack is not\n"
            "altered. The following file formats are supported:\n\n");
-    
+
     printf("\n");
     FileTMP::help();
     printf("\n");
@@ -168,26 +168,26 @@ void Save::help() {
 
 void Save::parse(vector<string> args) {
     assert(args.size() == 1 || args.size() == 2, "-save requires exactly one or two arguments\n");
-    if (args.size() == 1) apply(stack(0), args[0], "");
-    else if (args.size() == 2) apply(stack(0), args[0], args[1]);
+    if (args.size() == 1) { apply(stack(0), args[0], ""); }
+    else if (args.size() == 2) { apply(stack(0), args[0], args[1]); }
 }
 
 
 void Save::apply(Window im, string filename, string arg) {
     if (suffixMatch(filename, ".tmp")) {
-        if (arg == "") arg = "float32";
+        if (arg == "") { arg = "float32"; }
         FileTMP::save(im, filename, arg);
     } else if (suffixMatch(filename, ".hdr")) {
         FileHDR::save(im, filename);
     } else if (suffixMatch(filename, ".jpg") || suffixMatch(filename, ".jpeg")) {
         int quality;
-        if (arg == "") quality = 90;
-        else quality = readInt(arg);
+        if (arg == "") { quality = 90; }
+        else { quality = readInt(arg); }
         FileJPG::save(im, filename, quality);
     } else if (suffixMatch(filename, ".exr")) {
         string compression;
-        if (arg == "") compression = "piz";
-        else compression = arg;
+        if (arg == "") { compression = "piz"; }
+        else { compression = arg; }
         FileEXR::save(im, filename, compression);
     } else if (suffixMatch(filename, ".png")) {
         FilePNG::save(im, filename);
@@ -197,8 +197,8 @@ void Save::apply(Window im, string filename, string arg) {
         FileWAV::save(im, filename);
     } else if (suffixMatch(filename, ".ppm")) {
         int bitdepth;
-        if (arg == "") bitdepth = 8;
-        else bitdepth = readInt(arg);
+        if (arg == "") { bitdepth = 8; }
+        else { bitdepth = readInt(arg); }
         FilePPM::save(im, filename, bitdepth);
     } else if (suffixMatch(filename, ".tiff") || suffixMatch(filename, ".tif")) {
         FileTIFF::save(im, filename, arg);
@@ -207,7 +207,7 @@ void Save::apply(Window im, string filename, string arg) {
     } else if (suffixMatch(filename, ".csv")) {
         FileCSV::save(im, filename);
     } else if (suffixMatch(filename, ".pba")) {
-	FilePBA::save(im, filename);
+        FilePBA::save(im, filename);
     } else {
         panic("Unknown file format %s\n", filename.c_str());
     }
@@ -223,8 +223,8 @@ void SaveFrames::help() {
 
 void SaveFrames::parse(vector<string> args) {
     assert(args.size() == 1 || args.size() == 2, "-saveframes takes one or two arguments.\n");
-    if (args.size() == 1) apply(stack(0), args[0], "");
-    else apply(stack(0), args[0], args[1]);
+    if (args.size() == 1) { apply(stack(0), args[0], ""); }
+    else { apply(stack(0), args[0], args[1]); }
 }
 
 // Microsoft has an underscore in front of snprintf for some reason
@@ -236,7 +236,7 @@ void SaveFrames::parse(vector<string> args) {
 
 void SaveFrames::apply(Window im, string pattern, string arg) {
     char filename[4096];
-  
+
     for (int t = 0; t < im.frames; t++) {
         Window frame(im, 0, 0, t, im.width, im.height, 1);
         snprintf(filename, 4096, pattern.c_str(), t);
@@ -260,8 +260,8 @@ void LoadBlock::help() {
             "           -scale 2 -saveblock foo.tmp 0 0 0 0\n"
             "ImageStack -loadblock foo.tmp 0 0 0 64 512 512 64 3 \\\n"
             "           -scale 2 -saveblock foo.tmp 0 0 64 0\n\n"
-        );    
-} 
+           );
+}
 
 void LoadBlock::parse(vector<string> args) {
     int t = 0, x = 0, y = 0, c = 0;
@@ -279,7 +279,7 @@ void LoadBlock::parse(vector<string> args) {
         y = readInt(args[2]);
         t = readInt(args[3]);
         width = readInt(args[4]);
-        height = readInt(args[5]);        
+        height = readInt(args[5]);
         frames = readInt(args[6]);
     } else if (args.size() == 9) {
         x = readInt(args[1]);
@@ -287,13 +287,13 @@ void LoadBlock::parse(vector<string> args) {
         t = readInt(args[3]);
         c = readInt(args[4]);
         width = readInt(args[5]);
-        height = readInt(args[6]);        
+        height = readInt(args[6]);
         frames = readInt(args[7]);
         channels = readInt(args[8]);
     } else {
         panic("-loadblock takes 3, 5, 7, or 9 arguments\n");
     }
-    push(LoadBlock::apply(args[0], x, y, t, c, width, height, frames, channels));    
+    push(LoadBlock::apply(args[0], x, y, t, c, width, height, frames, channels));
 }
 
 // 64 bit systems may not have fseeko. In this case fseek is just fine.
@@ -307,21 +307,21 @@ void fread_(void *ptr, size_t size, size_t n, FILE *f) {
            "Unexpected end of file\n");
 }
 
-Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff, 
+Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
                        int width, int height, int frames, int channels) {
     // peek in the header
 
     struct {
         int frames, width, height, channels, type;
     } header;
-    FILE *f = fopen(filename.c_str(), "rb"); 
+    FILE *f = fopen(filename.c_str(), "rb");
     assert(f, "Could not open file: %s", filename.c_str());
     fread_(&header, sizeof(int), 5, f);
-    
-    if (frames   <= 0) frames   = header.frames;
-    if (width    <= 0) width    = header.width;
-    if (height   <= 0) height   = header.height;
-    if (channels <= 0) channels = header.channels;
+
+    if (frames   <= 0) { frames   = header.frames; }
+    if (width    <= 0) { width    = header.width; }
+    if (height   <= 0) { height   = header.height; }
+    if (channels <= 0) { channels = header.channels; }
 
     if (header.type != 0) {
         fclose(f);
@@ -352,11 +352,11 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
     int ymin = max(yoff, 0);
     int ymax = min(yoff+height, header.height);
     int tmin = max(toff, 0);
-    int tmax = min(toff+frames, header.frames);    
+    int tmax = min(toff+frames, header.frames);
 
     // the contiguous channel case
     if (coff == 0 && channels == header.channels) {
-        for (int t = tmin; t < tmax; t++) {            
+        for (int t = tmin; t < tmax; t++) {
             for (int y = ymin; y < ymax; y++) {
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
@@ -366,8 +366,8 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
     } else {
         // the non-contiguous channel case
         vector<float> scanline(width*header.channels);
-        for (int t = tmin; t < tmax; t++) {            
-            for (int y = ymin; y < ymax; y++) {                
+        for (int t = tmin; t < tmax; t++) {
+            for (int y = ymin; y < ymax; y++) {
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
                 fread_(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
@@ -380,7 +380,7 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
             }
         }
     }
-    
+
     fclose(f);
 
     return out;
@@ -400,7 +400,7 @@ void SaveBlock::help() {
             "ImageStack -loadblock foo.tmp 0 0 0 0 64 512 512 3 \\\n"
             "           -scale 2 -saveblock foo.tmp 0 0 0 0\n"
             "ImageStack -loadblock foo.tmp 64 0 0 0 64 512 512 3 \\\n"
-            "           -scale 2 -saveblock foo.tmp 0 0 0 0\n\n");                      
+            "           -scale 2 -saveblock foo.tmp 0 0 0 0\n\n");
 }
 
 
@@ -432,9 +432,9 @@ void SaveBlock::apply(Window im, string filename, int xoff, int yoff, int toff, 
     struct {
         int frames, width, height, channels, type;
     } header;
-    FILE *f = fopen(filename.c_str(), "rb+"); 
+    FILE *f = fopen(filename.c_str(), "rb+");
     assert(f, "Could not open file: %s", filename.c_str());
-    fread_(&header, sizeof(int), 5, f);    
+    fread_(&header, sizeof(int), 5, f);
 
     if (header.type != 0) {
         fclose(f);
@@ -449,7 +449,7 @@ void SaveBlock::apply(Window im, string filename, int xoff, int yoff, int toff, 
               "Perhaps this is not a tmp file?\n", header.frames, header.width, header.height, header.channels);
         return;
     }
-    
+
     float *imPtr;
     off_t frameBytes = header.width*header.height*header.channels*sizeof(float);
     off_t sampleBytes = header.channels*sizeof(float);
@@ -463,29 +463,29 @@ void SaveBlock::apply(Window im, string filename, int xoff, int yoff, int toff, 
     int ymin = max(yoff, 0);
     int ymax = min(yoff+im.height, header.height);
     int tmin = max(toff, 0);
-    int tmax = min(toff+im.frames, header.frames);    
+    int tmax = min(toff+im.frames, header.frames);
 
     // the contiguous channel case
     if (coff == 0 && im.channels == header.channels) {
-        for (int t = tmin; t < tmax; t++) {            
-            for (int y = ymin; y < ymax; y++) {                
+        for (int t = tmin; t < tmax; t++) {
+            for (int y = ymin; y < ymax; y++) {
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
-                fwrite(im(xmin-xoff, y-yoff, t-toff), sizeof(float), (xmax-xmin)*im.channels, f);                      
+                fwrite(im(xmin-xoff, y-yoff, t-toff), sizeof(float), (xmax-xmin)*im.channels, f);
             }
         }
     } else {
         // the non-contiguous channel case
         vector<float> scanline(im.width*header.channels);
-        for (int t = tmin; t < tmax; t++) {            
-            for (int y = ymin; y < ymax; y++) {                
+        for (int t = tmin; t < tmax; t++) {
+            for (int y = ymin; y < ymax; y++) {
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
                 fread_(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
                 imPtr = im(xmin-xoff, y-yoff, t-toff);
-                for (int x = 0; x < xmax-xmin; x++) {                    
+                for (int x = 0; x < xmax-xmin; x++) {
                     for (int c = cmin; c < cmax; c++) {
-                        scanline[x*header.channels+c] = *imPtr++;
+                        scanline[x *header.channels+c] = *imPtr++;
                     }
                 }
                 fseeko(f, offset, SEEK_SET);
@@ -599,7 +599,7 @@ Image LoadArray::apply(string filename, int width, int height, int frames, int c
     int size = width * height * channels * frames;
 
     assert(f, "Could not open file %s", filename.c_str());
-    
+
     Image im(width, height, frames, channels);
 
     T *rawData = new T[size];
@@ -620,8 +620,8 @@ Image LoadArray::apply(string filename, int width, int height, int frames, int c
 void SaveArray::help() {
     printf("-savearray saves raw arrays of various data types. It takes 2 arguments. The first\n"
            "is the filename to be loaded, the second is the data type, which must be one of:\n"
-           "int8, uint8, int16, uint16, int32, uint32, float32, float64, or equivalently:\n" 
-           "char, unsigned char, short, unsigned short, int, unsigned int, float, double.\n\n" 
+           "int8, uint8, int16, uint16, int32, uint32, float32, float64, or equivalently:\n"
+           "char, unsigned char, short, unsigned short, int, unsigned int, float, double.\n\n"
            "Bear in mind that ImageStack stores values internally as 32 bit floats, so\n"
            "saving in double format does not give you higher fidelity.\n\n"
            "Integer type formats are not scaled from the range zero to one. This must be\n"

@@ -3,19 +3,19 @@
 #include "header.h"
 
 class LoadPanorama : public Operation {
- public:
+public:
     void help();
 
     void parse(vector<string> args);
 
-    static Image apply(string filename, 
+    static Image apply(string filename,
                        float minTheta, float maxTheta,
                        float minPhi, float maxPhi,
                        int width, int height);
-}; 
+};
 
 class PanoramaBackground : public Operation {
- public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im);

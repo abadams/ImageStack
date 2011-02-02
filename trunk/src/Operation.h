@@ -3,7 +3,7 @@
 #include "header.h"
 
 class Operation {
-  public:
+public:
     virtual ~Operation() {};
     virtual void parse(vector<string>) = 0;
     virtual void help() = 0;

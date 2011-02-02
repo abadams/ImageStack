@@ -25,7 +25,7 @@
  */
 
 /** @file SDL_loadso.h
- *  Some things to keep in mind:                                        
+ *  Some things to keep in mind:
  *  - These functions only work on C function names.  Other languages may
  *    have name mangling and intrinsic language support that varies from
  *    compiler to compiler.
@@ -52,24 +52,24 @@
 extern "C" {
 #endif
 
-/**
- * This function dynamically loads a shared object and returns a pointer
- * to the object handle (or NULL if there was an error).
- * The 'sofile' parameter is a system dependent name of the object file.
- */
-extern DECLSPEC void * SDLCALL SDL_LoadObject(const char *sofile);
+    /**
+     * This function dynamically loads a shared object and returns a pointer
+     * to the object handle (or NULL if there was an error).
+     * The 'sofile' parameter is a system dependent name of the object file.
+     */
+    extern DECLSPEC void *SDLCALL SDL_LoadObject(const char *sofile);
 
-/**
- * Given an object handle, this function looks up the address of the
- * named function in the shared object and returns it.  This address
- * is no longer valid after calling SDL_UnloadObject().
- */
-extern DECLSPEC void * SDLCALL SDL_LoadFunction(void *handle, const char *name);
+    /**
+     * Given an object handle, this function looks up the address of the
+     * named function in the shared object and returns it.  This address
+     * is no longer valid after calling SDL_UnloadObject().
+     */
+    extern DECLSPEC void *SDLCALL SDL_LoadFunction(void *handle, const char *name);
 
-/** Unload a shared object from memory */
-extern DECLSPEC void SDLCALL SDL_UnloadObject(void *handle);
+    /** Unload a shared object from memory */
+    extern DECLSPEC void SDLCALL SDL_UnloadObject(void *handle);
 
-/* Ends C function definitions when using C++ */
+    /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
 }
 #endif

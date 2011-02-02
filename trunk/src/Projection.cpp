@@ -26,7 +26,7 @@ Image Sinugram::apply(Window im, int directions) {
             float dy = sin(theta);
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
-                    // calculate the distance from this pixel to 
+                    // calculate the distance from this pixel to
                     // the ray passing through the center at angle theta
                     float distance = (x - im.width * 0.5f) * dy + (y - im.height * 0.5f) * -dx;
                     float outX = distance + outWidth * 0.5f;

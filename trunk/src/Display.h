@@ -3,7 +3,7 @@
 #include "header.h"
 
 class Display : public Operation {
-  public:
+public:
     ~Display();
     void help();
     void parse(vector<string> args);

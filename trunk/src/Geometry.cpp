@@ -17,7 +17,7 @@ void Upsample::help() {
 
 void Upsample::parse(vector<string> args) {
     int boxWidth = 2, boxHeight = 2, boxFrames = 1;
-    assert(args.size() <= 3, "-upsample takes three or fewer arguments\n");    
+    assert(args.size() <= 3, "-upsample takes three or fewer arguments\n");
     if (args.size() == 3) {
         boxWidth = readInt(args[0]);
         boxHeight = readInt(args[1]);
@@ -46,18 +46,18 @@ Image Upsample::apply(Window im, int boxWidth, int boxHeight, int boxFrames) {
     // the loop is ordered to maintain spatial coherence in the output
     float *outPtr = out(0, 0, 0);
     for (int t = 0; t < im.frames; t++) for (int dt = 0; dt < boxFrames; dt++) {
-        for (int y = 0; y < im.height; y++) for (int dy = 0; dy < boxHeight; dy++) {
-            float *imPtr = im(0, y, t);
-            for (int x = 0; x < im.width; x++) {
-                for (int dx = 0; dx < boxWidth; dx++) {
-                    for (int c = 0; c < im.channels; c++) {
-                        *outPtr++ = imPtr[c];
+            for (int y = 0; y < im.height; y++) for (int dy = 0; dy < boxHeight; dy++) {
+                    float *imPtr = im(0, y, t);
+                    for (int x = 0; x < im.width; x++) {
+                        for (int dx = 0; dx < boxWidth; dx++) {
+                            for (int c = 0; c < im.channels; c++) {
+                                *outPtr++ = imPtr[c];
+                            }
+                        }
+                        imPtr += im.channels;
                     }
                 }
-                imPtr += im.channels;
-            }
         }
-    }
 
     return out;
 
@@ -94,30 +94,31 @@ void Downsample::parse(vector<string> args) {
 
 Image Downsample::apply(Window im, int boxWidth, int boxHeight, int boxFrames) {
 
-    if (!((im.width % boxWidth == 0) && (im.height % boxHeight == 0) && (im.frames % boxFrames == 0)))
-        printf("Warning: Image dimensions are not a multiple of the downsample size. Ignoring some pixels.\n"); 
+    if (!((im.width % boxWidth == 0) && (im.height % boxHeight == 0) && (im.frames % boxFrames == 0))) {
+        printf("Warning: Image dimensions are not a multiple of the downsample size. Ignoring some pixels.\n");
+    }
 
     int newWidth = im.width / boxWidth;
     int newHeight = im.height / boxHeight;
     int newFrames = im.frames / boxFrames;
 
     Image out(newWidth, newHeight, newFrames, im.channels);
-    
+
     // this is all arranged for maximum spatial cache coherence for input
     for (int t = 0; t < newFrames; t++) for (int dt = 0; dt < boxFrames; dt++) {
-        for (int y = 0; y < newHeight; y++) for (int dy = 0; dy < boxHeight; dy++) {
-            float *imPtr = im(0, y*boxHeight+dy, t*boxFrames+dt);
-            float *outPtr = out(0, y, t);
-            for (int x = 0; x < newWidth; x++) {
-                for (int dx = 0; dx < boxWidth; dx++) {
-                    for (int c = 0; c < im.channels; c++) {                    
-                        outPtr[c] += *imPtr++;
+            for (int y = 0; y < newHeight; y++) for (int dy = 0; dy < boxHeight; dy++) {
+                    float *imPtr = im(0, y*boxHeight+dy, t*boxFrames+dt);
+                    float *outPtr = out(0, y, t);
+                    for (int x = 0; x < newWidth; x++) {
+                        for (int dx = 0; dx < boxWidth; dx++) {
+                            for (int c = 0; c < im.channels; c++) {
+                                outPtr[c] += *imPtr++;
+                            }
+                        }
+                        outPtr += out.channels;
                     }
                 }
-                outPtr += out.channels;
-            }
         }
-    }
 
     Scale::apply(out, 1.0f/(boxWidth*boxHeight*boxFrames));
 
@@ -127,7 +128,7 @@ Image Downsample::apply(Window im, int boxWidth, int boxHeight, int boxFrames) {
 void Resample::help() {
     printf("-resample resamples the input using a 3-lobed Lanczos filter. When"
            " given three arguments, it produces a new volume of the given width,"
-           " height, and frames. When given two arguments, it produces a new volume"           
+           " height, and frames. When given two arguments, it produces a new volume"
            " of the given width and height, with the same number of frames.\n\n"
            "Usage: ImageStack -loadframes f*.tga -resample 20 50 50 -saveframes f%%03d.tga\n\n");
 }
@@ -145,13 +146,13 @@ void Resample::parse(vector<string> args) {
     } else {
         panic("-resample takes two or three arguments\n");
     }
-        
+
 }
 
 Image Resample::apply(Window im, int width, int height) {
     if (height != im.height && width != im.width) {
         Image tmp = resampleY(im, height);
-        return resampleX(tmp, width); 
+        return resampleX(tmp, width);
     } else if (width != im.width) {
         return resampleX(im, width);
     } else if (height != im.height) {
@@ -194,13 +195,13 @@ Image Resample::resampleX(Window im, int width) {
                 }
 
                 if (totalWeight > 0) {
-                    for (int c = 0; c < im.channels; c++) out(x, y, t)[c] /= totalWeight;
+                    for (int c = 0; c < im.channels; c++) { out(x, y, t)[c] /= totalWeight; }
                 }
             }
         }
     }
 
-    return out;  
+    return out;
 }
 
 Image Resample::resampleY(Window im, int height) {
@@ -228,13 +229,13 @@ Image Resample::resampleY(Window im, int height) {
                 }
 
                 if (totalWeight > 0) {
-                    for (int c = 0; c < im.channels; c++) out(x, y, t)[c] /= totalWeight;
+                    for (int c = 0; c < im.channels; c++) { out(x, y, t)[c] /= totalWeight; }
                 }
             }
         }
     }
 
-    return out;  
+    return out;
 }
 
 Image Resample::resampleT(Window im, int frames) {
@@ -262,13 +263,13 @@ Image Resample::resampleT(Window im, int frames) {
                 }
 
                 if (totalWeight > 0) {
-                    for (int c = 0; c < im.channels; c++) out(x, y, t)[c] /= totalWeight;
+                    for (int c = 0; c < im.channels; c++) { out(x, y, t)[c] /= totalWeight; }
                 }
             }
         }
     }
 
-    return out;  
+    return out;
 }
 
 
@@ -292,7 +293,7 @@ void Interleave::parse(vector<string> args) {
 
 void Interleave::apply(Window im, int rx, int ry, int rt) {
     assert(rt >= 1 && rx >= 1 && ry >= 1, "arguments to interleave must be strictly positive integers\n");
-    
+
     // interleave in t
     if (rt != 1) {
         Image tmp(1, 1, im.frames, im.channels);
@@ -311,7 +312,7 @@ void Interleave::apply(Window im, int rx, int ry, int rt) {
                         im(x, y, oldT)[c] = tmp(0, 0, t)[c];
                     }
                     oldT += rt;
-                    if (oldT >= im.frames) oldT = (oldT % rt) + 1;
+                    if (oldT >= im.frames) { oldT = (oldT % rt) + 1; }
                 }
             }
         }
@@ -336,7 +337,7 @@ void Interleave::apply(Window im, int rx, int ry, int rt) {
                         im(oldX, y, t)[c] = tmp(x, 0, 0)[c];
                     }
                     oldX += rx;
-                    if (oldX >= im.width) oldX = (oldX % rx) + 1;
+                    if (oldX >= im.width) { oldX = (oldX % rx) + 1; }
                 }
             }
         }
@@ -361,7 +362,7 @@ void Interleave::apply(Window im, int rx, int ry, int rt) {
                         im(x, oldY, t)[c] = tmp(0, y, 0)[c];
                     }
                     oldY += ry;
-                    if (oldY >= im.height) oldY = (oldY % ry) + 1;
+                    if (oldY >= im.height) { oldY = (oldY % ry) + 1; }
                 }
             }
         }
@@ -388,7 +389,7 @@ void Deinterleave::parse(vector<string> args) {
 
 void Deinterleave::apply(Window im, int rx, int ry, int rt) {
     assert(rt >= 1 && rx >= 1 && ry >= 1, "arguments to deinterleave must be strictly positive integers\n");
-    
+
     // interleave in t
     if (rt != 1) {
         Image tmp(1, 1, im.frames, im.channels);
@@ -407,7 +408,7 @@ void Deinterleave::apply(Window im, int rx, int ry, int rt) {
                         im(x, y, t)[c] = tmp(0, 0, oldT)[c];
                     }
                     oldT += rt;
-                    if (oldT >= im.frames) oldT = (oldT % rt) + 1;
+                    if (oldT >= im.frames) { oldT = (oldT % rt) + 1; }
                 }
             }
         }
@@ -432,7 +433,7 @@ void Deinterleave::apply(Window im, int rx, int ry, int rt) {
                         im(x, y, t)[c] = tmp(oldX, 0, 0)[c];
                     }
                     oldX += rx;
-                    if (oldX >= im.width) oldX = (oldX % rx) + 1;
+                    if (oldX >= im.width) { oldX = (oldX % rx) + 1; }
                 }
             }
         }
@@ -457,7 +458,7 @@ void Deinterleave::apply(Window im, int rx, int ry, int rt) {
                         im(x, y, t)[c] = tmp(0, oldY, 0)[c];
                     }
                     oldY += ry;
-                    if (oldY >= im.height) oldY = (oldY % ry) + 1;
+                    if (oldY >= im.height) { oldY = (oldY % ry) + 1; }
                 }
             }
         }
@@ -479,9 +480,9 @@ void Rotate::parse(vector<string> args) {
     pop();
     push(im);
 }
-    
 
-Image Rotate::apply(Window im, float degrees) {    
+
+Image Rotate::apply(Window im, float degrees) {
 
     // figure out the rotation matrix
     float radians = degrees * M_PI / 180;
@@ -506,7 +507,7 @@ Image Rotate::apply(Window im, float degrees) {
                 float fy = m10 * (x - xorigin) + m11 * (y - yorigin) + yorigin;
                 // don't sample outside the image
                 if (fx < 0 || fx > im.width || fy < 0 || fy > im.height) {
-                    for (int i = 0; i < im.channels; i++) out(x, y, t)[i] = 0;
+                    for (int i = 0; i < im.channels; i++) { out(x, y, t)[i] = 0; }
                 } else {
                     im.sample2D(fx, fy, t, out(x, y, t));
                 }
@@ -528,7 +529,7 @@ void AffineWarp::help() {
 void AffineWarp::parse(vector<string> args) {
     assert(args.size() == 6, "-affinewarp takes six arguments\n");
     vector<double> matrix(6);
-    for (int i = 0; i < 6; i++) matrix[i] = readFloat(args[i]);
+    for (int i = 0; i < 6; i++) { matrix[i] = readFloat(args[i]); }
     Image im = apply(stack(0), matrix);
     pop();
     push(im);
@@ -546,7 +547,7 @@ Image AffineWarp::apply(Window im, vector<double> matrix) {
                 float fy = matrix[3] * x + matrix[4] * y + matrix[5] * im.height;
                 // don't sample outside the image
                 if (fx < 0 || fx > im.width || fy < 0 || fy > im.height) {
-                    for (int i = 0; i < im.channels; i++) out(x, y, t)[i] = 0;
+                    for (int i = 0; i < im.channels; i++) { out(x, y, t)[i] = 0; }
                 } else {
                     im.sample2D(fx, fy, t, out(x, y, t));
                 }
@@ -574,21 +575,21 @@ void Crop::help() {
 }
 
 void Crop::parse(vector<string> args) {
-     
+
     Image im;
 
     if (args.size() == 0) {
         im = apply(stack(0));
     } else if (args.size() == 2) {
-        im = apply(stack(0), 
-                   0, 0, readInt(args[0]), 
+        im = apply(stack(0),
+                   0, 0, readInt(args[0]),
                    stack(0).width, stack(0).height, readInt(args[1]));
     } else if (args.size() == 4) {
-        im = apply(stack(0), 
+        im = apply(stack(0),
                    readInt(args[0]), readInt(args[1]),
                    readInt(args[2]), readInt(args[3]));
     } else if (args.size() == 6) {
-        im = apply(stack(0), 
+        im = apply(stack(0),
                    readInt(args[0]), readInt(args[1]), readInt(args[2]),
                    readInt(args[3]), readInt(args[4]), readInt(args[5]));
     } else {
@@ -607,92 +608,92 @@ Image Crop::apply(Window im) {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int c = 0; c < im.channels; c++) {
-                    if (im(minX, y, t)[c] != im(0, 0, 0)[c]) goto minXdone;
+                    if (im(minX, y, t)[c] != im(0, 0, 0)[c]) { goto minXdone; }
                 }
             }
         }
     }
-  minXdone:
+minXdone:
 
     // calculate maxX
     for (maxX = im.width-1; maxX >= 0; maxX--) {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int c = 0; c < im.channels; c++) {
-                    if (im(maxX, y, t)[c] != im(0, 0, 0)[c]) goto maxXdone;
+                    if (im(maxX, y, t)[c] != im(0, 0, 0)[c]) { goto maxXdone; }
                 }
             }
         }
     }
-  maxXdone:
+maxXdone:
 
     // calculate minY
     for (minY = 0; minY < im.height; minY++) {
         for (int t = 0; t < im.frames; t++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    if (im(x, minY, t)[c] != im(0, 0, 0)[c]) goto minYdone;
+                    if (im(x, minY, t)[c] != im(0, 0, 0)[c]) { goto minYdone; }
                 }
             }
         }
     }
-  minYdone:
+minYdone:
 
     // calculate maxY
     for (maxY = im.height-1; maxY >= 0; maxY--) {
         for (int t = 0; t < im.frames; t++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    if (im(x, maxY, t)[c] != im(0, 0, 0)[c]) goto maxYdone;
+                    if (im(x, maxY, t)[c] != im(0, 0, 0)[c]) { goto maxYdone; }
                 }
             }
         }
     }
-  maxYdone:
+maxYdone:
 
     // calculate minT
     for (minT = 0; minT < im.frames; minT++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    if (im(x, y, minT)[c] != im(0, 0, 0)[c]) goto minTdone;
+                    if (im(x, y, minT)[c] != im(0, 0, 0)[c]) { goto minTdone; }
                 }
             }
         }
     }
-  minTdone:
+minTdone:
 
     // calculate maxT
     for (maxT = im.frames-1; maxT >= 0; maxT--) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    if (im(x, y, maxT)[c] != im(0, 0, 0)[c]) goto maxTdone;
+                    if (im(x, y, maxT)[c] != im(0, 0, 0)[c]) { goto maxTdone; }
                 }
             }
         }
     }
-  maxTdone:
+maxTdone:
 
     int width = maxX - minX + 1;
     int height = maxY - minY + 1;
     int frames = maxT - minT + 1;
-    
+
     assert(width >= 0 && height >= 0 && frames >= 0, "Can't auto crop a blank image\n");
 
     return apply(im, minX, minY, minT, width, height, frames);
 
 }
 
-Image Crop::apply(Window im, int minX, int minY, int width, int height) {    
+Image Crop::apply(Window im, int minX, int minY, int width, int height) {
     return apply(im,
-                 minX, minY, 0, 
+                 minX, minY, 0,
                  width, height, im.frames);
 }
 
 
 Image Crop::apply(Window im, int minX, int minY, int minT,
-                  int width, int height, int frames) {         
+                  int width, int height, int frames) {
     Image out(width, height, frames, im.channels);
 
     for (int t = max(0, -minT); t < min(frames, im.frames - minT); t++) {
@@ -720,45 +721,45 @@ void Flip::parse(vector<string> args) {
     apply(stack(0), dimension);
 }
 
-void Flip::apply(Window im, char dimension) {    
+void Flip::apply(Window im, char dimension) {
     if (dimension == 't') {
         for (int t = 0; t < im.frames/2; t++) {
             for (int y = 0; y < im.height; y++) {
-                for (int x = 0; x < im.width; x++) {                    
+                for (int x = 0; x < im.width; x++) {
                     float *ptr1 = im(x, y, t);
                     float *ptr2 = im(x, y, im.frames - t - 1);
                     for (int c = 0; c < im.channels; c++) {
                         float tmp = ptr1[c];
                         ptr1[c] = ptr2[c];
-                        ptr2[c] = tmp;                        
+                        ptr2[c] = tmp;
                     }
                 }
             }
         }
-    } else if (dimension == 'y') { 
+    } else if (dimension == 'y') {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height/2; y++) {
-                for (int x = 0; x < im.width; x++) {                    
+                for (int x = 0; x < im.width; x++) {
                     float *ptr1 = im(x, y, t);
                     float *ptr2 = im(x, im.height - 1 - y, t);
                     for (int c = 0; c < im.channels; c++) {
                         float tmp = ptr1[c];
                         ptr1[c] = ptr2[c];
-                        ptr2[c] = tmp;                        
+                        ptr2[c] = tmp;
                     }
                 }
             }
         }
-    } else if (dimension == 'x') { 
+    } else if (dimension == 'x') {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
-                for (int x = 0; x < im.width/2; x++) {                    
+                for (int x = 0; x < im.width/2; x++) {
                     float *ptr1 = im(x, y, t);
                     float *ptr2 = im(im.width - 1 - x, y, t);
                     for (int c = 0; c < im.channels; c++) {
                         float tmp = ptr1[c];
                         ptr1[c] = ptr2[c];
-                        ptr2[c] = tmp;                        
+                        ptr2[c] = tmp;
                     }
                 }
             }
@@ -870,10 +871,10 @@ void Transpose::parse(vector<string> args) {
 
 
 Image Transpose::apply(Window im, char arg1, char arg2) {
-    
+
     char dim1 = min(arg1, arg2);
     char dim2 = max(arg1, arg2);
-    
+
     if (dim1 == 'c' && dim2 == 'y') {
         Image out(im.width, im.channels, im.frames, im.height);
         for (int t = 0; t < im.frames; t++) {
@@ -985,7 +986,7 @@ void Translate::parse(vector<string> args) {
 Image Translate::apply(Window im, float xoff, float yoff, float toff) {
     Window current = im;
     Image out;
-    
+
     // First do any non-integer translations
     if (xoff != floorf(xoff)) {
         out = applyX(im, xoff);
@@ -1006,7 +1007,7 @@ Image Translate::apply(Window im, float xoff, float yoff, float toff) {
     }
 
     // Now take care of the integer ones with a crop
-    return Crop::apply(current, -xoff, -yoff, -toff, im.width, im.height, im.frames);        
+    return Crop::apply(current, -xoff, -yoff, -toff, im.width, im.height, im.frames);
 }
 
 Image Translate::applyX(Window im, float xoff) {
@@ -1027,8 +1028,8 @@ Image Translate::applyX(Window im, float xoff) {
             for (int x = 0; x < im.width; x++) {
                 for (int kx = -3; kx < 3; kx++) {
                     int imx = x - ix + kx;
-                    if (imx < 0) continue;
-                    if (imx >= im.width) continue;
+                    if (imx < 0) { continue; }
+                    if (imx >= im.width) { continue; }
                     float w = kernel[kx+3];
                     for (int c = 0; c < im.channels; c++) {
                         out(x, y, t)[c] += w*im(imx, y, t)[c];
@@ -1057,8 +1058,8 @@ Image Translate::applyY(Window im, float yoff) {
         for (int y = 0; y < im.height; y++) {
             for (int ky = -3; ky < 3; ky++) {
                 int imy = y - iy + ky;
-                if (imy < 0) continue;
-                if (imy >= im.height) continue;
+                if (imy < 0) { continue; }
+                if (imy >= im.height) { continue; }
                 float w = kernel[ky+3];
                 for (int x = 0; x < im.width; x++) {
                     for (int c = 0; c < im.channels; c++) {
@@ -1087,8 +1088,8 @@ Image Translate::applyT(Window im, float toff) {
     for (int t = 0; t < im.frames; t++) {
         for (int kt = -3; kt < 3; kt++) {
             int imt = t - it + kt;
-            if (imt < 0) continue;
-            if (imt >= im.frames) continue;
+            if (imt < 0) { continue; }
+            if (imt >= im.frames) { continue; }
             float w = kernel[kt+3];
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
@@ -1114,7 +1115,7 @@ void Paste::help() {
            "The format is thus: -paste [desination origin] [source origin] [size]\n\n"
            "Usage: ImageStack -load a.jpg -push 820 820 1 3 -paste 10 10 -save border.jpg\n\n");
 }
-    
+
 void Paste::parse(vector<string> args) {
     int xdst = 0, ydst = 0, tdst = 0;
     int xsrc = 0, ysrc = 0, tsrc = 0;
@@ -1144,15 +1145,15 @@ void Paste::parse(vector<string> args) {
         ysrc = readInt(args[4]);
         tsrc = readInt(args[5]);
         width  = readInt(args[6]);
-        height = readInt(args[7]);            
+        height = readInt(args[7]);
         frames = readInt(args[8]);
     } else {
         panic("-paste requires two, three, six, or nine arguments\n");
     }
 
-    apply(stack(0), stack(1), 
-          xdst, ydst, tdst, 
-          xsrc, ysrc, tsrc, 
+    apply(stack(0), stack(1),
+          xdst, ydst, tdst,
+          xsrc, ysrc, tsrc,
           width, height, frames);
     pull(1);
     pop();
@@ -1160,9 +1161,9 @@ void Paste::parse(vector<string> args) {
 }
 
 
-void Paste::apply(Window into, Window from, 
-                  int xdst, int ydst, 
-                  int xsrc, int ysrc, 
+void Paste::apply(Window into, Window from,
+                  int xdst, int ydst,
+                  int xsrc, int ysrc,
                   int width, int height) {
     apply(into, from,
           xdst, ydst, 0,
@@ -1170,7 +1171,7 @@ void Paste::apply(Window into, Window from,
           width, height, from.frames);
 }
 
-void Paste::apply(Window into, Window from, 
+void Paste::apply(Window into, Window from,
                   int xdst, int ydst, int tdst) {
     apply(into, from,
           xdst, ydst, tdst,
@@ -1178,9 +1179,9 @@ void Paste::apply(Window into, Window from,
           from.width, from.height, from.frames);
 }
 
-void Paste::apply(Window into, Window from, 
-                  int xdst, int ydst, int tdst, 
-                  int xsrc, int ysrc, int tsrc, 
+void Paste::apply(Window into, Window from,
+                  int xdst, int ydst, int tdst,
+                  int xsrc, int ysrc, int tsrc,
                   int width, int height, int frames) {
     assert(into.channels == from.channels,
            "Images must have the same number of channels\n");
@@ -1189,7 +1190,7 @@ void Paste::apply(Window into, Window from,
            xdst >= 0 &&
            tdst + frames <= into.frames &&
            ydst + height <= into.height &&
-           xdst + width  <= into.width, 
+           xdst + width  <= into.width,
            "Cannot paste outside the target image\n");
     assert(tsrc >= 0 &&
            ysrc >= 0 &&
@@ -1237,7 +1238,7 @@ void Tile::parse(vector<string> args) {
 Image Tile::apply(Window im, int xRepeat, int yRepeat, int tRepeat) {
 
     Image out(im.width * xRepeat, im.height * yRepeat, im.frames * tRepeat, im.channels);
-    
+
     for (int t = 0; t < im.frames * tRepeat; t++) {
         int imT = t % im.frames;
         for (int y = 0; y < im.height * yRepeat; y++) {
@@ -1269,9 +1270,9 @@ void Subsample::parse(vector<string> args) {
         Image im = apply(stack(0), readInt(args[0]), readInt(args[1]));
         pop(); push(im);
     } else if (args.size() == 4) {
-        Image im = apply(stack(0), readInt(args[0]), readInt(args[1]), 
+        Image im = apply(stack(0), readInt(args[0]), readInt(args[1]),
                          readInt(args[2]), readInt(args[3]));
-        pop(); push(im);        
+        pop(); push(im);
     } else if (args.size() == 6) {
         Image im = apply(stack(0), readInt(args[0]), readInt(args[1]), readInt(args[2]),
                          readInt(args[3]), readInt(args[4]), readInt(args[5]));
@@ -1285,19 +1286,19 @@ Image Subsample::apply(Window im, int boxFrames, int offsetT) {
     return apply(im, 1, 1, boxFrames, 0, 0, offsetT);
 }
 
-Image Subsample::apply(Window im, int boxWidth, int boxHeight, 
+Image Subsample::apply(Window im, int boxWidth, int boxHeight,
                        int offsetX, int offsetY) {
     return apply(im, boxWidth, boxHeight, 1, offsetX, offsetY, 0);
 }
 
 Image Subsample::apply(Window im, int boxWidth, int boxHeight, int boxFrames,
-                      int offsetX, int offsetY, int offsetT) {
+                       int offsetX, int offsetY, int offsetT) {
 
     int newFrames = 0, newWidth = 0, newHeight = 0;
-    for (int t = offsetT; t < im.frames; t += boxFrames) newFrames++;
-    for (int x = offsetX; x < im.width;  x += boxWidth)  newWidth++;
-    for (int y = offsetY; y < im.height; y += boxHeight) newHeight++;
-    
+    for (int t = offsetT; t < im.frames; t += boxFrames) { newFrames++; }
+    for (int x = offsetX; x < im.width;  x += boxWidth) { newWidth++; }
+    for (int y = offsetY; y < im.height; y += boxHeight) { newHeight++; }
+
     Image out(newWidth, newHeight, newFrames, im.channels);
 
     int outT = 0;
@@ -1346,16 +1347,16 @@ Image TileFrames::apply(Window im, int xTiles, int yTiles) {
 
     for (int t = 0; t < newFrames; t++) {
         int outY = 0;
-        for (int yt = 0; yt < yTiles; yt++) {            
+        for (int yt = 0; yt < yTiles; yt++) {
             for (int y = 0; y < im.height; y++) {
                 int outX = 0;
                 for (int xt = 0; xt < xTiles; xt++) {
                     int imT = (t * yTiles + yt) * xTiles + xt;
-                    if (imT >= im.frames) break;
+                    if (imT >= im.frames) { break; }
                     for (int x = 0; x < im.width; x++) {
                         for (int c = 0; c < im.channels; c++) {
                             out(outX, outY, t)[c] = im(x, y, imT)[c];
-                                
+
                         }
                         outX++;
                     }
@@ -1363,7 +1364,7 @@ Image TileFrames::apply(Window im, int xTiles, int yTiles) {
                 outY++;
             }
         }
-    }        
+    }
 
     return out;
 }
@@ -1397,7 +1398,7 @@ Image FrameTiles::apply(Window im, int xTiles, int yTiles) {
 
     for (int t = 0; t < im.frames; t++) {
         int imY = 0;
-        for (int yt = 0; yt < yTiles; yt++) {            
+        for (int yt = 0; yt < yTiles; yt++) {
             for (int y = 0; y < newHeight; y++) {
                 int imX = 0;
                 for (int xt = 0; xt < xTiles; xt++) {
@@ -1412,7 +1413,7 @@ Image FrameTiles::apply(Window im, int xTiles, int yTiles) {
                 imY++;
             }
         }
-    }        
+    }
 
     return out;
 }
@@ -1434,7 +1435,7 @@ void Warp::parse(vector<string> args) {
     push(im);
 }
 
-Image Warp::apply(Window coords, Window source) {    
+Image Warp::apply(Window coords, Window source) {
 
     Image out(coords.width, coords.height, coords.frames, source.channels);
 
@@ -1443,10 +1444,10 @@ Image Warp::apply(Window coords, Window source) {
             for (int y = 0; y < coords.height; y++) {
                 for (int x = 0; x < coords.width; x++) {
                     float *srcCoords = coords(x, y, t);
-                    source.sample3D(srcCoords[0]*source.width, 
-                                     srcCoords[1]*source.height,
-                                     srcCoords[2]*source.frames, 
-                                     out(x, y, t));
+                    source.sample3D(srcCoords[0]*source.width,
+                                    srcCoords[1]*source.height,
+                                    srcCoords[2]*source.frames,
+                                    out(x, y, t));
                 }
             }
         }
@@ -1455,9 +1456,9 @@ Image Warp::apply(Window coords, Window source) {
             for (int y = 0; y < coords.height; y++) {
                 for (int x = 0; x < coords.width; x++) {
                     float *srcCoords = coords(x, y, t);
-                    source.sample2D(srcCoords[0]*source.width, 
-                                     srcCoords[1]*source.height, 
-                                     t, out(x, y, t));
+                    source.sample2D(srcCoords[0]*source.width,
+                                    srcCoords[1]*source.height,
+                                    t, out(x, y, t));
                 }
             }
         }
@@ -1465,7 +1466,7 @@ Image Warp::apply(Window coords, Window source) {
         panic("index image must have two or three channels\n");
     }
     return out;
-}    
+}
 
 
 
@@ -1478,12 +1479,12 @@ void Reshape::help() {
 
 void Reshape::parse(vector<string> args) {
     assert(args.size() == 4, "-reshape takes four arguments\n");
-    Image im = apply(stack(0), 
+    Image im = apply(stack(0),
                      readInt(args[0]), readInt(args[1]),
                      readInt(args[2]), readInt(args[3]));
     pop();
     push(im);
-    
+
 }
 
 Image Reshape::apply(Window im, int x, int y, int t, int c) {
@@ -1492,7 +1493,7 @@ Image Reshape::apply(Window im, int x, int y, int t, int c) {
 }
 
 Image Reshape::apply(Image im, int x, int y, int t, int c) {
-    assert(t * x * y * c == im.frames * im.width * im.height * im.channels,
+    assert(t *x *y *c == im.frames * im.width * im.height * im.channels,
            "New shape uses a different amount of memory that the old shape.\n");
     Image out(im);
     out.frames = t;

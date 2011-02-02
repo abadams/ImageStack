@@ -3,7 +3,7 @@
 #include "header.h"
 
 void Expression::skipWhitespace() {
-    while (source[sourceIndex] == ' ' || source[sourceIndex] == '\t' || source[sourceIndex] == '\n') sourceIndex++;
+    while (source[sourceIndex] == ' ' || source[sourceIndex] == '\t' || source[sourceIndex] == '\n') { sourceIndex++; }
 }
 
 // Check ahead to see if the next few characters match 'prefix'
@@ -16,10 +16,10 @@ bool Expression::match(string prefix) {
     for (;;) {
         if (prefixPtr == prefix.size()) {
             return true;
-        } 
+        }
         if (prefix[prefixPtr] != source[sourceIndex + sourcePtr]) {
             return false;
-        } 
+        }
         if (sourcePtr == source.size()) {
             return false;
         }
@@ -34,7 +34,7 @@ bool Expression::consume(string prefix) {
     if (match(prefix)) {
         sourceIndex += prefix.size();
         return true;
-    } 
+    }
     return false;
 }
 
@@ -69,8 +69,8 @@ Expression::Node *Expression::parseCondition() {
         result = new EQ(result, parseSum());
     } else if (consume("!=")) {
         result = new NEQ(result, parseSum());
-    } 
-        
+    }
+
     return result;
 }
 
@@ -110,7 +110,7 @@ Expression::Node *Expression::parseProduct() {
     }
 }
 
-// Factor  -> Term ^ Term | Term  
+// Factor  -> Term ^ Term | Term
 Expression::Node *Expression::parseFactor() {
     //printf("parsing factor\n");
     Node *result = parseTerm();
@@ -155,27 +155,27 @@ Expression::Node *Expression::parseTerm() {
     } else if (consume("log")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_log(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");        
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("exp")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_exp(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");        
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("tan")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_tan(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("atan")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_atan(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("asin")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_asin(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("acos")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_acos(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("atan2")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         Node *arg1 = parseIfThenElse();
@@ -186,15 +186,15 @@ Expression::Node *Expression::parseTerm() {
     } else if (consume("abs")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_abs(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("floor")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_floor(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("ceil")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_ceil(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");            
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("round")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_round(parseIfThenElse());
@@ -267,18 +267,18 @@ Expression::Node *Expression::parseTerm() {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         Node *arg1 = parseIfThenElse();
         assert(consume(","), "',' expected between function call arguments.\n");
-        Node *arg2 = parseIfThenElse();        
+        Node *arg2 = parseIfThenElse();
         assert(consume(")"), "Function call missing closing parenthesis.\n");
         result = new Funct_covariance(arg1, arg2);
     } else if (consume("-")) { // unary negation
         result = new Negation(parseTerm());
     } else if (varyingAllowed && consume("x")) { // variables
         result = new Var_x();
-    } else if (varyingAllowed && consume("y")) { 
+    } else if (varyingAllowed && consume("y")) {
         result = new Var_y();
-    } else if (varyingAllowed && consume("t")) { 
+    } else if (varyingAllowed && consume("t")) {
         result = new Var_t();
-    } else if (varyingAllowed && consume("c")) { 
+    } else if (varyingAllowed && consume("c")) {
         result = new Var_c();
     } else if (varyingAllowed && consume("val")) {
         result = new Var_val();
@@ -300,11 +300,11 @@ Expression::Node *Expression::parseTerm() {
     } else { // must be a float constant
         float val;
         int consumed = sscanf(source.c_str() + sourceIndex, "%f", &val);
-        if (consumed == 0) panic("Could not parse from here: %s\n", source.c_str() + sourceIndex);
+        if (consumed == 0) { panic("Could not parse from here: %s\n", source.c_str() + sourceIndex); }
         result = new Float(val);
         // now we must skip the constant
         // fortunately, a float can't sensibly be followed by . or e or a digit
-        while (isdigit(source[sourceIndex]) || source[sourceIndex] == '.' || source[sourceIndex] == 'e') sourceIndex++;
+        while (isdigit(source[sourceIndex]) || source[sourceIndex] == '.' || source[sourceIndex] == 'e') { sourceIndex++; }
     }
     //printf("done parsing term\n");
     return result;

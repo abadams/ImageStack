@@ -4,21 +4,21 @@
 #include "header.h"
 
 class DCT : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window win, bool x = true, bool y = true, bool t = true);
 };
 
 class FFT : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, bool x = true, bool y = true, bool t = true, bool inverse = false);
 };
 
 class IFFT : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static void apply(Window im, bool x = true, bool y = true, bool t = true);
@@ -27,21 +27,21 @@ class IFFT : public Operation {
 #include "Convolve.h"
 
 class FFTConvolve : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, Window filter, Convolve::BoundaryCondition b, Multiply::Mode m);
 };
 
 class FFTDeconvolve: public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
     static Image apply(Window im, Window filter, float weight);
 };
 
 class FFTPoisson : public Operation {
-  public:
+public:
     void help();
     void parse(vector<string> args);
 
