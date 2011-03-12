@@ -62,7 +62,7 @@ extern "C" {
         CD_PLAYING,
         CD_PAUSED,
         CD_ERROR = -1
-               } CDstatus;
+    } CDstatus;
 
     /** Given a status, returns true if there's a disk in the drive */
 #define CD_INDRIVE(status)  ((int)(status) > 0)

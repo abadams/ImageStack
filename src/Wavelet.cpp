@@ -195,9 +195,9 @@ void Daubechies::parse(vector<string> args) {
 void Daubechies::apply(Window im) {
 
     int i;
-    for (i = 1; i < im.width; i <<= 1);
+    for (i = 1; i < im.width; i <<= 1) { ; }
     assert(i == im.width, "Image width must be a power of two\n");
-    for (i = 1; i < im.height; i <<= 1);
+    for (i = 1; i < im.height; i <<= 1) { ; }
     assert(i == im.height, "Image height must be a power of two\n");
 
     // transform in x
@@ -318,9 +318,9 @@ void InverseDaubechies::parse(vector<string> args) {
 void InverseDaubechies::apply(Window im) {
 
     int i;
-    for (i = 1; i < im.width; i <<= 1);
+    for (i = 1; i < im.width; i <<= 1) { ; }
     assert(i == im.width, "Image width must be a power of two\n");
-    for (i = 1; i < im.height; i <<= 1);
+    for (i = 1; i < im.height; i <<= 1) { ; }
     assert(i == im.height, "Image height must be a power of two\n");
 
 

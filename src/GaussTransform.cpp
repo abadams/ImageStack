@@ -791,4 +791,58 @@ void NLMeans::apply(Window image, float patchSize, int dimensions,
     JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);
 };
 
+
+void NLMeans3D::help() {
+    pprintf("-nlmeans3d denoises a volume using non-local means, by performing a PCA"
+            " reduction on Gaussian weighted patches and then doing a"
+            " joint-bilateral filter of the image with respect to those PCA-reduced"
+            " patches. The four arguments required are the standard deviation of"
+            " the Gaussian patches used, the number of dimensions to reduce the"
+            " patches to, the spatial standard deviation of the filter, and the"
+            " patch-space standard deviation of the filter. Tolga Tasdizen"
+            " demonstrates in \"Principal Components for Non-Local Means Image"
+            " Denoising\" that 6 dimensions work best most of the time. You can"
+            " optionally add a fifth argument that specifies which method to use"
+            " for the joint bilateral filter (see -gausstransform).\n"
+            "\n"
+            "Usage: ImageStack -load volume.tmp -nlmeans3d 1.0 6 50 0.02\n");
+}
+
+void NLMeans3D::parse(vector<string> args) {
+    assert(args.size() == 4 || args.size() == 5, "-nlmeans takes four or five arguments\n");
+
+    float patchSize = readFloat(args[0]);
+    int dimensions = readInt(args[1]);
+    float spatialSigma = readFloat(args[2]);
+    float patchSigma = readFloat(args[3]);
+
+    GaussTransform::Method m = GaussTransform::AUTO;
+    if (args.size() > 4) {
+        if (args[4] == "exact") {
+            m = GaussTransform::EXACT;
+        } else if (args[4] == "grid") {
+            m = GaussTransform::GRID;
+        } else if (args[4] == "permutohedral") {
+            m = GaussTransform::PERMUTOHEDRAL;
+        } else if (args[4] == "gkdtree") {
+            m = GaussTransform::GKDTREE;
+        } else {
+            panic("Unknown method %s\n", args[4].c_str());
+        }
+    }
+
+    apply(stack(0), patchSize, dimensions, spatialSigma, patchSigma, m);
+
+}
+
+void NLMeans3D::apply(Window image, float patchSize, int dimensions,
+                      float spatialSigma, float patchSigma,
+                      GaussTransform::Method method) {
+
+    Image filters = PatchPCA3D::apply(image, patchSize, dimensions);
+    Image pca = Convolve::apply(image, filters, Convolve::Zero, Multiply::Inner);
+    JointBilateral::apply(image, pca, spatialSigma, spatialSigma, INF, patchSigma);
+};
+
+
 #include "footer.h"

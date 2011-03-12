@@ -80,7 +80,7 @@ extern "C" {
             *  It is the number of bits in the event mask datatype -- Uint32
          */
         SDL_NUMEVENTS = 32
-                    } SDL_EventType;
+    } SDL_EventType;
 
     /** @name Predefined event masks */
     /*@{*/

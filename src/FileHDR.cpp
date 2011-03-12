@@ -135,8 +135,9 @@ int fwritecolrs(COLR *scanline, int len, FILE *fp) { /* write out a colr scanlin
         for (j = 0; j < len; j += cnt) {        /* find next run */
             for (beg = j; beg < len; beg += cnt) {
                 for (cnt = 1; cnt < 127 && beg+cnt < len &&
-                     scanline[beg+cnt][i] == scanline[beg][i]; cnt++)
+                     scanline[beg+cnt][i] == scanline[beg][i]; cnt++) {
                     ;
+                }
                 if (cnt >= MINRUN) {
                     break;    /* long enough */
                 }

@@ -58,5 +58,14 @@ public:
                       GaussTransform::Method m = GaussTransform::AUTO);
 };
 
+class NLMeans3D : public Operation {
+public:
+    void help();
+    void parse(vector<string> args);
+    static void apply(Window image, float patchSize, int dimensions,
+                      float spatialSigma, float patchSigma,
+                      GaussTransform::Method m = GaussTransform::AUTO);
+};
+
 #include "footer.h"
 #endif

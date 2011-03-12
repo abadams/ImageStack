@@ -321,7 +321,7 @@ public:
 
         // rank differential to find the permutation between this simplex and the canonical one.
         // (See pg. 3-4 in paper.)
-        memset(myrank, 0, sizeof(char)*(d+1));
+        for (int i = 0; i < d+1; i++) { myrank[i] = 0; }
         for (int i = 0; i < d; i++)
             for (int j = i+1; j <= d; j++)
                 if (elevated[i] - mygreedy[i] < elevated[j] - mygreedy[j]) { myrank[i]++; } else { myrank[j]++; }
@@ -351,7 +351,7 @@ public:
         }
 
         // Compute barycentric coordinates (See pg.10 of paper.)
-        memset(barycentric, 0, sizeof(float)*(d+2));
+        for (int i = 0; i < d+2; i++) { barycentric[i] = 0.0f; }
         for (int i = 0; i <= d; i++) {
             barycentric[d-myrank[i]] += (elevated[i] - mygreedy[i]) * scale;
             barycentric[d+1-myrank[i]] -= (elevated[i] - mygreedy[i]) * scale;

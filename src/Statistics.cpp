@@ -1261,7 +1261,7 @@ Image PatchPCA::apply(Window im, float sigma, int newChannels) {
     vector<float> vec(patchSize*patchSize*im.channels);
 
     Eigenvectors e(patchSize*patchSize*im.channels, newChannels);
-    for (int iter = 0; iter < min(20000, im.width*im.height*im.frames); iter++) {
+    for (int iter = 0; iter < min(1000, im.width*im.height*im.frames); iter++) {
         int t = randomInt(0, im.frames-1);
         int x = randomInt(patchSize/2, im.width-1-patchSize/2);
         int y = randomInt(patchSize/2, im.height-1-patchSize/2);
@@ -1292,6 +1292,90 @@ Image PatchPCA::apply(Window im, float sigma, int newChannels) {
                 for (int c = 0; c < im.channels; c++) {
                     filters(x, y)[i *im.channels+c] = vec[j];
                     j++;
+                }
+            }
+        }
+    }
+
+    return filters;
+}
+
+
+void PatchPCA3D::help() {
+    pprintf("-patchpca3d treats local 3D Gaussian neighbourhoods of pixel values as vectors"
+            " and computes a stack of filters that can be used to reduce"
+            " dimensionality and decorrelate the color channels. The two arguments"
+            " are the standard deviation of the Gaussian, and the desired number of"
+            " output dimensions. Patches near the edge of the image are not"
+            " included in the covariance computation.\n"
+            "Usage: ImageStack -load volume.tmp -patchpca3d 2 8 -save filters.tmp\n"
+            " -pull 1 -convolve zero inner -save reduced.tmp\n");
+}
+
+
+void PatchPCA3D::parse(vector<string> args) {
+    assert(args.size() == 2, "-patchpca3d takes two arguments\n");
+    Image im = apply(stack(0), readFloat(args[0]), readInt(args[1]));
+    push(im);
+}
+
+
+Image PatchPCA3D::apply(Window im, float sigma, int newChannels) {
+
+    int patchSize = ((int)(sigma*6+1)) | 1;
+
+    printf("Using %dx%d patches\n", patchSize, patchSize);
+
+    vector<float> mask(patchSize);
+    float sum = 0;
+    printf("Gaussian mask: ");
+    for (int i = 0; i < patchSize; i++) {
+        mask[i] = expf(-(i-patchSize/2)*(i - patchSize/2)/(2*sigma*sigma));
+        sum += mask[i];
+        printf("%f ", mask[i]);
+    }
+    for (int i = 0; i < patchSize; i++) { mask[i] /= sum; }
+    printf("\n");
+
+    vector<float> vec(patchSize*patchSize*patchSize*im.channels);
+
+    Eigenvectors e(patchSize*patchSize*patchSize*im.channels, newChannels);
+    for (int iter = 0; iter < min(1000, im.width*im.height*im.frames); iter++) {
+        int t = randomInt(patchSize/2, im.frames-1-patchSize/2);
+        int x = randomInt(patchSize/2, im.width-1-patchSize/2);
+        int y = randomInt(patchSize/2, im.height-1-patchSize/2);
+        float *imPtr = im(x, y, t);
+        int j = 0;
+        for (int dt = -patchSize/2; dt <= patchSize/2; dt++) {
+            for (int dy = -patchSize/2; dy <= patchSize/2; dy++) {
+                for (int dx = -patchSize/2; dx <= patchSize/2; dx++) {
+                    for (int c = 0; c < im.channels; c++) {
+                        vec[j] = (mask[dx+patchSize/2]*
+                                  mask[dy+patchSize/2]*
+                                  mask[dt+patchSize/2]*
+                                  imPtr[dt*im.tstride + dy*im.ystride + dx*im.xstride + c]);
+                        j++;
+                    }
+                }
+            }
+        }
+        e.add(&vec[0]);
+    }
+
+    e.compute();
+
+    Image filters(patchSize, patchSize, patchSize, im.channels * newChannels);
+
+    for (int i = 0; i < newChannels; i++) {
+        e.getEigenvector(i, &vec[0]);
+        int j = 0;
+        for (int t = 0; t < patchSize; t++) {
+            for (int y = 0; y < patchSize; y++) {
+                for (int x = 0; x < patchSize; x++) {
+                    for (int c = 0; c < im.channels; c++) {
+                        filters(x, y, t)[i*im.channels+c] = vec[j];
+                        j++;
+                    }
                 }
             }
         }
