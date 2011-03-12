@@ -65,6 +65,7 @@ void loadOperations() {
     operationMap["-fprintf"] = new FPrintf();
     operationMap["-pca"] = new PCA();
     operationMap["-patchpca"] = new PatchPCA();
+    operationMap["-patchpca3d"] = new PatchPCA3D();
 
     // file IO
     operationMap["-load"] = new Load();
@@ -212,6 +213,7 @@ void loadOperations() {
     operationMap["-bilateralsharpen"] = new BilateralSharpen();
     operationMap["-chromablur"] = new ChromaBlur();
     operationMap["-nlmeans"] = new NLMeans();
+    operationMap["-nlmeans3d"] = new NLMeans();
 
     // Locally Adaptive Hierachical Basis Preconditioned Conjugate Gradients
     operationMap["-lahbpcg"] = new LAHBPCG();

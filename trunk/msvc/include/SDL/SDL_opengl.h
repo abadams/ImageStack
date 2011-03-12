@@ -3447,7 +3447,7 @@ extern "C" {
     typedef void (APIENTRYP PFNGLBUFFERDATAPROC)(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
     typedef void (APIENTRYP PFNGLBUFFERSUBDATAPROC)(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data);
     typedef void (APIENTRYP PFNGLGETBUFFERSUBDATAPROC)(GLenum target, GLintptr offset, GLsizeiptr size, GLvoid *data);
-    typedef GLvoid*(APIENTRYP PFNGLMAPBUFFERPROC)(GLenum target, GLenum access);
+    typedef GLvoid *(APIENTRYP PFNGLMAPBUFFERPROC)(GLenum target, GLenum access);
     typedef GLboolean(APIENTRYP PFNGLUNMAPBUFFERPROC)(GLenum target);
     typedef void (APIENTRYP PFNGLGETBUFFERPARAMETERIVPROC)(GLenum target, GLenum pname, GLint *params);
     typedef void (APIENTRYP PFNGLGETBUFFERPOINTERVPROC)(GLenum target, GLenum pname, GLvoid* *params);
@@ -4048,7 +4048,7 @@ extern "C" {
     typedef void (APIENTRYP PFNGLBUFFERDATAARBPROC)(GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
     typedef void (APIENTRYP PFNGLBUFFERSUBDATAARBPROC)(GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
     typedef void (APIENTRYP PFNGLGETBUFFERSUBDATAARBPROC)(GLenum target, GLintptrARB offset, GLsizeiptrARB size, GLvoid *data);
-    typedef GLvoid*(APIENTRYP PFNGLMAPBUFFERARBPROC)(GLenum target, GLenum access);
+    typedef GLvoid *(APIENTRYP PFNGLMAPBUFFERARBPROC)(GLenum target, GLenum access);
     typedef GLboolean(APIENTRYP PFNGLUNMAPBUFFERARBPROC)(GLenum target);
     typedef void (APIENTRYP PFNGLGETBUFFERPARAMETERIVARBPROC)(GLenum target, GLenum pname, GLint *params);
     typedef void (APIENTRYP PFNGLGETBUFFERPOINTERVARBPROC)(GLenum target, GLenum pname, GLvoid* *params);
@@ -6420,7 +6420,7 @@ extern "C" {
     GLAPI GLvoid *APIENTRY glMapObjectBufferATI(GLuint);
     GLAPI void APIENTRY glUnmapObjectBufferATI(GLuint);
 #endif /* GL_GLEXT_PROTOTYPES */
-    typedef GLvoid*(APIENTRYP PFNGLMAPOBJECTBUFFERATIPROC)(GLuint buffer);
+    typedef GLvoid *(APIENTRYP PFNGLMAPOBJECTBUFFERATIPROC)(GLuint buffer);
     typedef void (APIENTRYP PFNGLUNMAPOBJECTBUFFERATIPROC)(GLuint buffer);
 #endif
 

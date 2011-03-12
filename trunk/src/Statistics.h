@@ -179,5 +179,12 @@ public:
     static Image apply(Window im, float sigma, int newChannels);
 };
 
+class PatchPCA3D : public Operation {
+public:
+    void help();
+    void parse(vector<string> args);
+    static Image apply(Window im, float sigma, int newChannels);
+};
+
 #include "footer.h"
 #endif
