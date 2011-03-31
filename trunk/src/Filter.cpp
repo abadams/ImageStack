@@ -1169,4 +1169,45 @@ Image Envelope::apply(Window im, Mode m, float smoothness, float edgePreserving)
 }
 
 
+void HotPixelSuppression::help() {
+    pprintf("-hotpixelsuppression removes salt-and-pepper noise from an image by"
+            " constraining each pixel to be within the bounds of its four"
+            " neighbors\n\n"
+            "Usage: ImageStack -load noisy.jpg -hotpixelsuppression -save denoised.jpg\n");
+}
+
+
+void HotPixelSuppression::parse(vector<string> args) {
+    assert(args.size() == 0, 
+           "-hotpixelsuppression takes no arguments\n");
+    Image im = apply(stack(0));
+    pop();
+    push(im);
+}
+
+Image HotPixelSuppression::apply(Window im) {
+    Image out(im.width, im.height, im.frames, im.channels);
+
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 1; y < im.height-1; y++) {
+            for (int x = 1; x < im.width-1; x++) {
+                for (int c = 0; c < im.channels; c++) {
+                    float n1 = im(x-1, y, t)[c];
+                    float n2 = im(x+1, y, t)[c];
+                    float n3 = im(x, y-1, t)[c];
+                    float n4 = im(x, y+1, t)[c];
+                    float here = im(x, y, t)[c];
+                    float maxn = max(max(n1, n2), max(n3, n4));
+                    float minn = min(min(n1, n2), min(n3, n4));
+                    if (here > maxn) here = maxn;
+                    if (here < minn) here = minn;
+                    out(x, y, t)[c] = here;
+                }
+            }
+        }
+    }
+
+    return out;
+}
+
 #include "footer.h"

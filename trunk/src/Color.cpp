@@ -287,7 +287,7 @@ Image ColorConvert::hsv2rgb(Window im) {
 
                 if (s == 0) {
                     // achromatic (grey)
-                    im(x, y, t)[0] = im(x, y, t)[1] = im(x, y, t)[2] = v;
+                    out(x, y, t)[0] = out(x, y, t)[1] = out(x, y, t)[2] = v;
                 } else {
 
                     h *= 6;        // sector 0 to 5

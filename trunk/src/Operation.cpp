@@ -205,6 +205,7 @@ void loadOperations() {
     operationMap["-medianfilter"] = new MedianFilter();
     operationMap["-percentilefilter"] = new PercentileFilter();
     operationMap["-envelope"] = new Envelope();
+    operationMap["-hotpixelsuppression"] = new HotPixelSuppression();
 
     // Filters that use a Gauss transform
     operationMap["-gausstransform"] = new GaussTransform();
