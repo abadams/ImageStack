@@ -75,5 +75,12 @@ public:
     static Image apply(Window im, Mode m, float smoothness, float edgePreserving);
 };
 
+class HotPixelSuppression : public Operation {
+public:
+    void help();
+    void parse(vector<string> args);
+    static Image apply(Window im);
+};
+
 #include "footer.h"
 #endif
