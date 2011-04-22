@@ -38,7 +38,7 @@ void GaussTransform::parse(vector<string> args) {
     Method m;
 
     assert(args.size() > 0, "-gausstransform takes at least one argument");
-
+ 
     if (args[0] == "exact") {
         m = EXACT;
     } else if (args[0] == "grid") {
@@ -64,7 +64,7 @@ void GaussTransform::parse(vector<string> args) {
         panic("-gausstransform takes one argument, two arguments, or one plus the"
               " number of channels in the second image on the stack arguments\n");
     }
-
+ 
     Image im = apply(stack(0), stack(1), stack(2), sigmas, m);
     pop();
     push(im);
@@ -102,7 +102,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                             float *pptr2 = splatPositions(0, y2, t2);
                             float *vptr2 = values(0, y2, t2);
                             for (int x2 = 0; x2 < splatPositions.width; x2++) {
-                                float dist = 0;
+                                float dist = 0; 
                                 for (int c = 0; c < splatPositions.channels; c++) {
                                     float d = pptr1[c] - pptr2[c];
                                     dist += d*d * invVar[c];
@@ -281,29 +281,27 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                     points[i++] = ref(x, y, t);
                 }
             }
-        }
+        }  
 
-        GKDTree tree(ref.channels, &points[0], points.size(), 0.15);
+        GKDTree tree(ref.channels, &points[0], points.size(), 2*0.707107);
 
         tree.finalize();
 
         //printf("Splatting...\n");
 
-        int SPLAT_ACCURACY = 16;
-        int BLUR_ACCURACY  = 64;
+        int SPLAT_ACCURACY = 4; 
         int SLICE_ACCURACY = 64;
-
-        const float SPLAT_STD_DEV = 0.30156;
-        const float BLUR_STD_DEV = 0.9045;
-        const float SLICE_STD_DEV = 0.30156;
-
-        //const float SPLAT_STD_DEV = 0.707107;
-        //const float SLICE_STD_DEV = 0.707107;
+ 
+        //const float SPLAT_STD_DEV = 0.30156;
+        //const float BLUR_STD_DEV = 0.9045;
+        //const float SLICE_STD_DEV = 0.30156;
+        
+        const float SPLAT_STD_DEV = 0.707107;
+        const float SLICE_STD_DEV = 0.707107;
 
         vector<int> indices(max(SPLAT_ACCURACY, SLICE_ACCURACY));
         vector<float> weights(max(SPLAT_ACCURACY, SLICE_ACCURACY));
         Image leafValues(tree.getLeaves(), 1, 1, values.channels);
-        Image tmpLeafValues(tree.getLeaves(), 1, 1, values.channels);
 
         float *valuesPtr = values(0, 0, 0);
         float *refPtr = ref(0, 0, 0);
@@ -325,14 +323,6 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
             }
         }
 
-        //printf("Blurring...\n");
-
-        tree.blur(BLUR_STD_DEV, leafValues(0, 0), tmpLeafValues(0, 0), leafValues.channels, BLUR_ACCURACY);
-        Image tmp = tmpLeafValues;
-        tmpLeafValues = leafValues;
-        leafValues = tmp;
-
-        //printf("Slicing...\n");
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
 
         float *outPtr = out(0, 0, 0);

@@ -7,6 +7,7 @@
  * Andrew Adams, Natasha Gelfand, Jennifer Dolson, Marc Levoy     *
  ******************************************************************/
 
+#include <limits>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +20,9 @@ const float INF = std::numeric_limits<float>::infinity();
 class Gaussian {
 public:
     Gaussian(float sigma_) : sigma(sigma_) {
+        //alpha = 1.0f/(sqrtf(3)*sigma);
         alpha = 0.5f/sigma;
+        beta = - 1.0f/(2*sigma*sigma);
     }
 
     // sample the gaussian using a cubic bezier approximation
@@ -48,8 +51,7 @@ public:
     // sample the gaussian using x^2 as the argument instead of x
     // uses a different
     inline float sampleSquared(float x2) {
-        x2 *= alpha * alpha;
-        return expf(-2*x2);
+        return expf(beta * x2);
     }
 
     // sample the integral of a gaussian, computed by analytically
@@ -86,7 +88,7 @@ public:
 
 private:
 
-    float alpha, sigma;
+    float alpha, beta, sigma;
 };
 
 
@@ -355,7 +357,7 @@ private:
 
             // There's probably one sample left over by the rounding
             if (leftSamples + rightSamples != nSamples) {
-                float fval = val*nSamples - rightSamples;
+                float fval = val*nSamples - leftSamples;
                 // if val is high we send it right, if val is low we send it left
                 if (RAND_FLOAT < fval) {
                     leftSamples++;
@@ -609,17 +611,15 @@ private:
 
             // find the longest dimension
             int longest = 0;
-            float diagonal = 0;
             for (int i = 1; i < dimensions; i++) {
                 float delta = dataMaxs[i] - dataMins[i];
-                diagonal += delta*delta;
                 if (delta > dataMaxs[longest] - dataMins[longest]) {
                     longest = i;
                 }
             }
 
             // if it's large enough, cut in that dimension
-            if (diagonal > 4*sizeBound*sizeBound) {
+            if (dataMaxs[longest] - dataMins[longest] > sizeBound) {
                 Split *n = new Split;
                 n->cut_dim = longest;
                 n->cut_val = (dataMaxs[longest] + dataMins[longest])/2;
