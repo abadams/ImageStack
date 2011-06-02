@@ -72,6 +72,8 @@ void loadOperations() {
     operationMap["-save"] = new Save();
     operationMap["-loadframes"] = new LoadFrames();
     operationMap["-saveframes"] = new SaveFrames();
+    operationMap["-loadchannels"] = new LoadChannels();
+    operationMap["-savechannels"] = new SaveChannels();
     operationMap["-loadarray"] = new LoadArray();
     operationMap["-savearray"] = new SaveArray();
     operationMap["-loadblock"] = new LoadBlock();

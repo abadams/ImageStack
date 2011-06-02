@@ -16,6 +16,13 @@ public:
     static Image apply(vector<string> args);
 };
 
+class LoadChannels : public Operation {
+public:
+    void help();
+    void parse(vector<string> args);
+    static Image apply(vector<string> args);
+};
+
 class Save : public Operation {
 public:
     void help();
@@ -24,6 +31,13 @@ public:
 };
 
 class SaveFrames : public Operation {
+public:
+    void help();
+    void parse(vector<string> args);
+    static void apply(Window im, string pattern, string arg = "");
+};
+
+class SaveChannels : public Operation {
 public:
     void help();
     void parse(vector<string> args);

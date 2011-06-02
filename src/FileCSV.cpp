@@ -31,8 +31,6 @@ Image load(string filename) {
         if (c == '\n' && last != '\n') { height++; }
     } while (c != EOF);
 
-    printf("%d %d\n", width, height);
-
     // go back to the start and start reading data
     fseek(f, 0, SEEK_SET);
 
@@ -42,11 +40,9 @@ Image load(string filename) {
         float *outPtr = out(0, y, 0);
         for (int x = 0; x < width-1; x++) {
             assert(fscanf(f, "%f,", outPtr) == 1, "Failed to parse file\n");
-            printf("%f, ", *outPtr);
             outPtr++;
         }
         assert(fscanf(f, "%f", outPtr) == 1, "Failed to parse file\n");
-        printf("%f\n", *outPtr);
     }
 
     fclose(f);

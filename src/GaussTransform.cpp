@@ -268,14 +268,14 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
         return out;
     }
     case GKDTREE: {
-        //printf("Building...\n");
+        printf("Building...\n");
 
         Image ref = Image(splatPositions);
         Scale::apply(ref, invSigma);
 
         vector<float *> points(ref.width*ref.height*ref.frames);
         int i = 0;
-        for (int t = 0; t < ref.frames; t++) {
+        for (int t = 0; t < ref.frames; t++) {            
             for (int x = 0; x < ref.width; x++) {
                 for (int y = 0; y < ref.height; y++) {
                     points[i++] = ref(x, y, t);
@@ -287,18 +287,11 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
 
         tree.finalize();
 
-        //printf("Splatting...\n");
+        printf("Splatting...");
 
         int SPLAT_ACCURACY = 4; 
         int SLICE_ACCURACY = 64;
  
-        //const float SPLAT_STD_DEV = 0.30156;
-        //const float BLUR_STD_DEV = 0.9045;
-        //const float SLICE_STD_DEV = 0.30156;
-        
-        const float SPLAT_STD_DEV = 0.707107;
-        const float SLICE_STD_DEV = 0.707107;
-
         vector<int> indices(max(SPLAT_ACCURACY, SLICE_ACCURACY));
         vector<float> weights(max(SPLAT_ACCURACY, SLICE_ACCURACY));
         Image leafValues(tree.getLeaves(), 1, 1, values.channels);
@@ -306,10 +299,11 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
         float *valuesPtr = values(0, 0, 0);
         float *refPtr = ref(0, 0, 0);
         for (int t = 0; t < values.frames; t++) {
+            printf("."); 
+            fflush(stdout);
             for (int y = 0; y < values.height; y++) {
                 for (int x = 0; x < values.width; x++) {
-                    int results = tree.gaussianLookup(refPtr, SPLAT_STD_DEV,
-                                                      &indices[0], &weights[0], SPLAT_ACCURACY);
+                    int results = tree.gaussianLookup(refPtr, &indices[0], &weights[0], SPLAT_ACCURACY);
                     for (int i = 0; i < results; i++) {
                         float w = weights[i];
                         float *vPtr = leafValues(indices[i], 0);
@@ -322,6 +316,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
+        printf("\n");
 
         Image out(slicePositions.width, slicePositions.height, slicePositions.frames, values.channels);
 
@@ -330,14 +325,16 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
 
         vector<float> pos(slicePositions.channels);
 
+        printf("Slicing...");
         for (int t = 0; t < out.frames; t++) {
+            printf("."); 
+            fflush(stdout);
             for (int y = 0; y < out.height; y++) {
                 for (int x = 0; x < out.width; x++) {
                     for (int c = 0; c < slicePositions.channels; c++) {
                         pos[c] = slicePtr[c] * invSigma[c];
                     }
-                    int results = tree.gaussianLookup(&pos[0], SLICE_STD_DEV,
-                                                      &indices[0], &weights[0], SLICE_ACCURACY);
+                    int results = tree.gaussianLookup(&pos[0], &indices[0], &weights[0], SLICE_ACCURACY);
 
                     for (int i = 0; i < results; i++) {
                         float w = weights[i];
@@ -351,6 +348,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 }
             }
         }
+        printf("\n");
 
         return out;
     }
