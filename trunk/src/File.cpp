@@ -130,6 +130,50 @@ Image LoadFrames::apply(vector<string> args) {
 }
 
 
+void LoadChannels::help() {
+    pprintf("-loadchannels accepts a sequence of images and loads them as the channels of a"
+            "single stack entry. See the help for -load for details on file formats.\n\n"
+            "Usage: ImageStack -loadchannels foo*.jpg bar*.png\n\n");
+}
+
+void LoadChannels::parse(vector<string> args) {
+    push(apply(args));
+}
+
+
+Image LoadChannels::apply(vector<string> args) {
+    assert(args.size() > 0, "-loadchannels requires at least one file argument.\n");
+    int chanSize = 0;
+
+    Image im = Load::apply(args[0]);
+    assert(im.channels == 1, "-loadchannels can only load many single channel images\n");
+    Image result(im.width, im.height, im.frames, (int)args.size());
+    chanSize = im.width * im.height * im.frames;
+    
+    for (size_t i = 0; i < args.size(); i++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                for (int x = 0; x < im.width; x++) {
+                    result(x, y, t)[i] = im(x, y, t)[0];
+                }
+            }
+        }
+
+        if (i+1 < args.size()) {
+            im = Load::apply(args[i+1]);
+            // check dimensions and channels match
+            assert(im.channels == 1, "-loadframes can only load many single frame images\n");
+            assert((im.width == result.width) &&
+                   (im.height == result.height) &&
+                   (im.frames == result.frames),
+                   "-loadframes can only load file sequences of matching size\n");
+        }
+    }
+
+    return result;
+}
+
+
 void Save::help() {
     printf("\n-save stores the image at the top of the stack to a file. The stack is not\n"
            "altered. The following file formats are supported:\n\n");
@@ -244,6 +288,36 @@ void SaveFrames::apply(Window im, string pattern, string arg) {
     }
 }
 
+void SaveChannels::help() {
+    printf("\n-savechannels takes a printf style format argument, and saves all the channels in\n"
+           "the current image as separate files. See the help for save for details on file\n"
+           "formats.\n\n"
+           "Usage: ImageStack -loadchannels *.jpg -savechannels frame%%03d.png\n"
+           "       ImageStack -loadchannels *.jpg -savechannels frame%%03d.ppm 16\n\n");
+}
+
+void SaveChannels::parse(vector<string> args) {
+    assert(args.size() == 1 || args.size() == 2, "-savechannels takes one or two arguments.\n");
+    if (args.size() == 1) { apply(stack(0), args[0], ""); }
+    else { apply(stack(0), args[0], args[1]); }
+}
+
+void SaveChannels::apply(Window im, string pattern, string arg) {
+    char filename[4096];
+
+    Image channel(im.width, im.height, im.frames, 1);
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                for (int x = 0; x < im.width; x++) {
+                    channel(x, y, t)[0] = im(x, y, t)[c];
+                }
+            }
+        }
+        snprintf(filename, 4096, pattern.c_str(), c);
+        Save::apply(channel, filename, arg);
+    }
+}
 void LoadBlock::help() {
     pprintf("-loadblock loads a rectangular portion of a .tmp file. It is roughly"
             " equivalent to a load followed by a crop, except that the file need not"
@@ -343,7 +417,7 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
     off_t frameBytes = header.width*header.height*header.channels*sizeof(float);
     off_t sampleBytes = header.channels*sizeof(float);
     off_t scanlineBytes = header.width*header.channels*sizeof(float);
-    const off_t headerBytes = 5*sizeof(float);
+    const off_t headerBytes = 5*sizeof(int);
 
     int xmin = max(xoff, 0);
     int xmax = min(xoff+width, header.width);
@@ -372,9 +446,10 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
                 fseeko(f, offset, SEEK_SET);
                 fread_(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
                 outPtr = out(xmin-xoff, y-yoff, t-toff);
-                for (int x = 0; x < xmax-xmin; x++) {
+                for (int x = xmin; x < xmax; x++) {
                     for (int c = cmin; c < cmax; c++) {
-                        *outPtr++ = scanline[x*header.channels+c];
+                        out(x-xoff, y-yoff, t-toff)[c-cmin] = 
+                            scanline[x*header.channels+c];
                     }
                 }
             }
