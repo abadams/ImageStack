@@ -1196,13 +1196,11 @@ Image PCA::apply(Window im, int newChannels) {
     Eigenvectors e(im.channels, out.channels);
 
     float *imPtr = im(0, 0);
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                e.add(imPtr);
-                imPtr += im.channels;
-            }
-        }
+    for (int iter = 0; iter < min(10000, im.width*im.height*im.frames); iter++) {
+        int t = randomInt(0, im.frames-1);
+        int x = randomInt(0, im.width-1);
+        int y = randomInt(0, im.height-1);
+        e.add(im(x, y, t));
     }
 
     float *outPtr = out(0, 0);
@@ -1261,7 +1259,7 @@ Image PatchPCA::apply(Window im, float sigma, int newChannels) {
     vector<float> vec(patchSize*patchSize*im.channels);
 
     Eigenvectors e(patchSize*patchSize*im.channels, newChannels);
-    for (int iter = 0; iter < min(1000, im.width*im.height*im.frames); iter++) {
+    for (int iter = 0; iter < min(10000, im.width*im.height*im.frames); iter++) {
         int t = randomInt(0, im.frames-1);
         int x = randomInt(patchSize/2, im.width-1-patchSize/2);
         int y = randomInt(patchSize/2, im.height-1-patchSize/2);

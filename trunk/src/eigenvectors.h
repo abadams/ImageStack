@@ -81,6 +81,16 @@ public:
                 eigenvectors[i *d_out+j] = covariance[i*d_in+j];
             }
         }
+
+        //printf("Covariance:\n");
+        //for (int i = 0; i < d_in; i++) {
+        //    for (int j = 0; j < d_out; j++) {
+        //        printf("%3.4f ", eigenvectors[i*d_out+j]);
+        //    }
+        //    printf("\n");
+        //}        
+
+
         while (1) {
             // orthonormalize
             for (int i = 0; i < d_out; i++) {
@@ -104,6 +114,16 @@ public:
                 for (int k = 0; k < d_in; k++) {
                     dot += eigenvectors[k*d_out+i]*eigenvectors[k*d_out+i];
                 }
+
+                // Add some noise if the column is too small to be normalized
+                while (dot < 1e-10) {
+                    dot = 0;
+                    for (int k = 0; k < d_in; k++) {
+                        eigenvectors[k*d_out+i] += randomFloat(-0.001, 0.001);
+                        dot += eigenvectors[k*d_out+i]*eigenvectors[k*d_out+i];
+                    }
+                }
+
                 dot = ::sqrt(dot);
 
                 dot = 1.0/dot;
@@ -117,6 +137,7 @@ public:
 
             }
 
+            
             /*
             printf("eigenvector matrix:\n");
             for (int i = 0; i < d_in; i++) {
@@ -137,6 +158,8 @@ public:
             }
             if (dist < 0.00001) { break; }
 
+            //printf("%f\n", dist);
+            
             // multiply by the covariance matrix
             for (int i = 0; i < d_in; i++) {
                 for (int j = 0; j < d_out; j++) {

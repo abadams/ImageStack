@@ -287,6 +287,7 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
 
         tree.finalize();
 
+        printf("%d leaves.\n", tree.getLeaves());
         printf("Splatting...");
 
         int SPLAT_ACCURACY = 4; 
@@ -294,7 +295,17 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
  
         vector<int> indices(max(SPLAT_ACCURACY, SLICE_ACCURACY));
         vector<float> weights(max(SPLAT_ACCURACY, SLICE_ACCURACY));
-        Image leafValues(tree.getLeaves(), 1, 1, values.channels);
+        vector<double> leafValues(tree.getLeaves()*values.channels);
+
+        // Compute expected number of samples to arrive at each leaf
+        // and divide by it to keep values at leaves within sane
+        // bounds.
+        float leafScale = tree.getLeaves();
+        leafScale /= SPLAT_ACCURACY;
+        leafScale /= ref.frames;
+        leafScale /= ref.width;
+        leafScale /= ref.height;
+        printf("Multiplying all weights by %f\n", leafScale);
 
         float *valuesPtr = values(0, 0, 0);
         float *refPtr = ref(0, 0, 0);
@@ -305,8 +316,16 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                 for (int x = 0; x < values.width; x++) {
                     int results = tree.gaussianLookup(refPtr, &indices[0], &weights[0], SPLAT_ACCURACY);
                     for (int i = 0; i < results; i++) {
-                        float w = weights[i];
-                        float *vPtr = leafValues(indices[i], 0);
+                        double w = weights[i];
+
+                        // For numerical stability, disallow huge weights
+                        if (w > 1e6) w = 1e6;
+                        // Don't corrupt the tree with nans
+                        if (!isfinite(w)) continue;
+
+                        w *= leafScale;
+
+                        double *vPtr = &leafValues[indices[i]*values.channels];
                         for (int c = 0; c < values.channels; c++) {
                             vPtr[c] += valuesPtr[c]*w;
                         }
@@ -325,6 +344,8 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
 
         vector<float> pos(slicePositions.channels);
 
+        vector<double> outDbl(out.channels);
+
         printf("Slicing...");
         for (int t = 0; t < out.frames; t++) {
             printf("."); 
@@ -336,12 +357,24 @@ Image GaussTransform::apply(Window slicePositions, Window splatPositions, Window
                     }
                     int results = tree.gaussianLookup(&pos[0], &indices[0], &weights[0], SLICE_ACCURACY);
 
+                    for (int c = 0; c < out.channels; c++) {
+                        outDbl[c] = 0;
+                    }
                     for (int i = 0; i < results; i++) {
-                        float w = weights[i];
-                        float *vPtr = leafValues(indices[i], 0);
+                        double w = weights[i];
+                        // For numerical stability, disallow huge weights
+                        if (w > 1e6) w = 1e6;
+                        // Don't corrupt the output with nans
+                        if (!isfinite(w)) continue;
+
+                        double *vPtr = &leafValues[indices[i]*values.channels];
                         for (int c = 0; c < out.channels; c++) {
-                            outPtr[c] += vPtr[c]*w;
+                            outDbl[c] += vPtr[c]*w;
                         }
+                    }                    
+
+                    for (int c = 0; c < out.channels; c++) {
+                        outPtr[c] = (float)outDbl[c];
                     }
                     slicePtr += slicePositions.channels;
                     outPtr += out.channels;

@@ -1,13 +1,3 @@
-#ifndef IMAGESTACK_PERMUTOHEDRAL_LATTICE_H
-#define IMAGESTACK_PERMUTOHEDRAL_LATTICE_H
-#include "header.h"
-
-/*******************************************************************
- * Permutohedral Lattice implementation from:                      *
- * Fast High-Dimensional Filtering using the Permutohedral Lattice *
- * Andrew Adams, Jongmin Baek, Abe Davis                           *
- *******************************************************************/
-
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -60,7 +50,10 @@ public:
     int lookupOffset(short *key, size_t h, bool create = true) {
 
         // Double hash table size if necessary
-        if (filled >= (capacity/2)-1) { grow(); }
+        if (create && filled >= (capacity/2)-1) { 
+            grow(); 
+            h = hash(key) % capacity;
+        }
 
         // Find the entry with the given key
         while (1) {
@@ -184,7 +177,6 @@ public:
 
         // Create lattice
         PermutohedralLattice lattice(ref.channels, im.channels+1, im.width*im.height*im.frames);
-
         // Splat into the lattice
         //printf("Splatting...\n");
 

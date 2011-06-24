@@ -35,7 +35,7 @@ public:
         }
     }
 
-    void ConstructPyramid(Image image, double ratio = 0.8, int minWidth = 30) {
+    void ConstructPyramid(Image image, double ratio = 0.8, int minWidth = 10) {
 
         // the ratio cannot be arbitrary numbers
         if (ratio > 0.98 || ratio < 0.4) {
@@ -98,9 +98,9 @@ void OpticalFlow::parse(vector<string> args) {
 Image OpticalFlow::apply(Window source, Window target) {
 
     // default parameters
-    double alpha = 0.02;
+    double alpha = 0.005;
     double ratio = 0.75;
-    int minWidth = 30;
+    int minWidth = 8;
 
     int nOuterFPIterations = 20;
     int nInnerFPIterations = 1;
@@ -122,9 +122,9 @@ Image OpticalFlow::apply(Window source, Window target) {
 Image OpticalFlow::apply(Window source, Window target, Window initial) {
 
     // default parameters
-    double alpha = 0.02;
+    double alpha = 0.005;
     double ratio = 0.75;
-    int minWidth = 30;
+    int minWidth = 8;
 
     int nOuterFPIterations = 20;
     int nInnerFPIterations = 1;
