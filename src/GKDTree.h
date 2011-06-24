@@ -219,7 +219,7 @@ class GKDTree {
             // There's probably one sample left over by the rounding
             if (leftSamples + rightSamples != nSamples) {
                 float fval = val*nSamples - leftSamples;
-                // if val is high we send it right, if val is low we send it left
+                // if val is high we send it left, if val is low we send it right
                 if (rand_float() < fval) {
                     leftSamples++;
                 } else {
