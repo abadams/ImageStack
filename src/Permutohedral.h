@@ -1,7 +1,10 @@
+#ifndef IMAGESTACK_PERMUTOHEDRAL_H
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "header.h"
 
 /*******************************************************************
  * Hash table implementation for permutohedral lattice             *
