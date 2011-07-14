@@ -162,7 +162,7 @@ void Poisson::help() {
             " method. It takes one argument, which is required RMS error of the"
             " result. This defaults to 0.01 if not given.\n"
             "\n"
-            "Usage: ImageStack -load dx.tmp dy.tmp \n"
+            "Usage: ImageStack -load dx.tmp -load dy.tmp \n"
             "                  -poisson 0.0001 -save out.tga\n\n");
 }
 
