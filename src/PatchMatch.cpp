@@ -349,6 +349,9 @@ void BidirectionalSimilarity::help() {
             " specifies how many iterations of patchmatch should be performed each"
             " time it is run. This also defaults to five.\n"
             "\n"
+            "This is an implementation of the paper \"Summarizing visual data using"
+            " bidirectional similarity\" by Simakov et al. from CVPR 2008.\n"
+            "\n"
             "Usage: ImageStack -load source.jpg -load target.jpg -bidirectional 0.5 -display\n");
 }
 
