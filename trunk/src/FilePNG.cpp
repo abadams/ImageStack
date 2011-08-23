@@ -66,7 +66,7 @@ Image load(string filename) {
 
     row_pointers = new png_bytep[im.height];
     for (int y = 0; y < im.height; y++) {
-        row_pointers[y] = new png_byte[info_ptr->rowbytes];
+        row_pointers[y] = new png_byte[png_get_rowbytes(png_ptr, info_ptr)];
     }
 
     png_read_image(png_ptr, row_pointers);
@@ -151,7 +151,7 @@ void save(Window im, string filename) {
     // convert the floats to bytes
     row_pointers = new png_bytep[im.height];
     for (int y = 0; y < im.height; y++) {
-        row_pointers[y] = new png_byte[info_ptr->rowbytes];
+	row_pointers[y] = new png_byte[png_get_rowbytes(png_ptr, info_ptr)];
         png_bytep dstPtr = row_pointers[y];
         for (int x = 0; x < im.width; x++) {
             for (int c = 0; c < im.channels; c++) {
