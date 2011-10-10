@@ -39,6 +39,7 @@ IMAGESTACK_OBJECTS = \
 	Panorama.o \
 	PatchMatch.o \
 	Parser.o \
+        Plugin.o \
 	Prediction.o \
 	Projection.o \
 	Stack.o \
