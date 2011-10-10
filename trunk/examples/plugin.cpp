@@ -4,8 +4,11 @@
 // g++ -c plugin.cpp -I ../src
 // ld -dylib plugin.o -o plugin.so -undefined dynamic_lookup
 //
+// On linux you compile it like this:
+// g++ -shared plugin.cpp -o plugin.so -I ../src -fPIC
+// 
 // And use it like this:
-// ImageStack -load ../pics/dog1.jpg -plugin plugin.so -help foo -foo -display
+// ImageStack -load ../pics/dog1.jpg -plugin ./plugin.so -help foo -foo -display
 
 #include <ImageStack.h>
 
