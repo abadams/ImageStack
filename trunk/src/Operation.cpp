@@ -35,7 +35,7 @@
 #include "LAHBPCG.h"
 #include "WLS.h"
 #include "OpticalFlow.h"
-
+#include "Plugin.h"
 #include "header.h"
 
 
@@ -238,6 +238,9 @@ void loadOperations() {
     // Optical Flow stuff
     operationMap["-opticalflow"] = new OpticalFlow();
     operationMap["-opticalflowwarp"] = new OpticalFlowWarp();
+
+    // Plugin loading
+    operationMap["-plugin"] = new Plugin();
 
 }
 
