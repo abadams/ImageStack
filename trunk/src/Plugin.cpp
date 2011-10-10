@@ -7,7 +7,7 @@ typedef void (*init_imagestack_plugin)(map<string, Operation *> &);
 
 void Plugin::parse(vector<string> args) {
     void *handle = dlopen(args[0].c_str(), RTLD_LAZY);
-    assert(handle, "Could not open %s as a shared library\n", args[0].c_str());
+    assert(handle, "Could not open %s as a shared library: %s\n", args[0].c_str(), dlerror());
 
     void *function = dlsym(handle, "init_imagestack_plugin");
     assert(function, "Could not find symbol init_imagestack_plugin (with C linkage) in %s\n", args[0].c_str());
