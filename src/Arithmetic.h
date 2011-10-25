@@ -7,6 +7,7 @@ public:
     void help();
     void parse(vector<string> args);
     static void apply(Window a, Window b);
+    static void apply(Window a, Window b, float coefficient);
 };
 
 class Multiply : public Operation {

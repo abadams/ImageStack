@@ -14,6 +14,38 @@ void Add::parse(vector<string> args) {
     pop();
 }
 
+void Add::apply(Window a, Window b, float coefficient) {
+    assert(a.width == b.width &&
+           a.height == b.height &&
+           a.frames == b.frames &&
+           (a.channels == b.channels || b.channels == 1),
+           "Cannot add images of different sizes or channel numbers\n");
+
+    if (a.channels != 1 && b.channels == 1) {
+        for (int t = 0; t < a.frames; t++) {
+            for (int y = 0; y < a.height; y++) {
+                for (int c = 0; c < a.channels; c++) {
+                    float *aPtr = a(0, y, t)+c;
+                    float *bPtr = b(0, y, t);
+                    for (int x = 0; x < a.width; x++) {
+                        aPtr[x *a.channels] += bPtr[x] * coefficient;
+                    }
+                }
+            }
+        }
+    } else {
+        for (int t = 0; t < a.frames; t++) {
+            for (int y = 0; y < a.height; y++) {
+                float *aPtr = a(0, y, t);
+                float *bPtr = b(0, y, t);
+                for (int x = 0; x < a.width*a.channels; x++) {
+                    aPtr[x] += bPtr[x] * coefficient;
+                }
+            }
+        }
+    }
+}
+
 void Add::apply(Window a, Window b) {
     assert(a.width == b.width &&
            a.height == b.height &&
