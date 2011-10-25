@@ -498,7 +498,7 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
     /* DECONVOLUTION                                              */
     /**************************************************************/
     if (iteration == kernel_scale.size()) break;
-    guess = Deconvolution::apply(Blurry, K);
+    guess = Deconvolution::applyCho2009(Blurry, K);
     toc = currentTime(); printf(" Deconvolve: %.3f sec\n", toc - tic); tic = toc;
   }
   return K;
