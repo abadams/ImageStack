@@ -4,9 +4,10 @@
 #include "Complex.h"
 #include "Deconvolution.h"
 #include "DFT.h"
+#include "File.h"
 #include "GaussTransform.h"
 #include "Geometry.h"
-#include "File.h"
+#include "KernelEstimation.h"
 #include "header.h"
 
 #define FourierTransform(X) (FFT::apply(X, true, true, false))
@@ -25,7 +26,7 @@ void Deconvolution::help() {
 }
 
 void Deconvolution::parse(vector<string> args) {
-  assert(args.size() == 1, "-deconvolution takes exactly one argument");  
+  assert(args.size() == 1, "-deconvolution takes exactly one argument.\n");
   Window kernel = stack(0);
   Window im = stack(1);
   if (args[0] == "cho")
@@ -37,7 +38,6 @@ void Deconvolution::parse(vector<string> args) {
 }
 
 Image Deconvolution::applyShan2008(Window B, Window K) {
-  panic("This method is not yet implemented.\n");
 #ifdef NO_FFTW
   panic("FFTW library has not been linked. Please recompile with proper flags.\n");
   return Image(1,1,1,1);
@@ -48,43 +48,50 @@ Image Deconvolution::applyShan2008(Window B, Window K) {
   assert(K.width % 2 == 1 && K.height % 2 ==1,
 	 "The kernel dimensions must be odd.\n");
 
-  // Compute the smoothness map.
-  Image filter(K.width, K.height, 1, 1);
-  Offset::apply(filter, 1.f / (K.width * K.height));
+  // Prepare constants and images.
   Image Bgray = (B.channels == 3) ? ColorConvert::apply(B, "rgb", "y") : B;
-  Image Bgray_avg = Convolve::apply(Bgray, filter, Convolve::Homogeneous);
-  Multiply::apply(Bgray, Bgray, Multiply::Elementwise);
-  Multiply::apply(Bgray_avg, Bgray_avg, Multiply::Elementwise);  
-  Subtract::apply(Bgray_avg, Convolve::apply(Bgray, filter, Convolve::Homogeneous));
-  Threshold::apply(Bgray_avg, - 25.0f / (256.f * 256.f));
-  Image& smoothness_map = Bgray_avg;
-
-  // sum w_i | K * (deriv_i L) - (deriv_i I) | ^ 2 
-  //   + gamma |Psi_x - deriv_x L|^2 + |Psi_y - deriv_y L|^2 (Psi_x,Psi_y are redundant variables to follow deriv_x L, deriv_y L
-  //   + lambda_2 | Psi_x - deriv_x I|^2 + |Psi_y - deriv_y I|^2, dot product with smoothness-Map
-  //   + lambda_1 | non-linear prior on Psi_x, Psi_y |
-
-  float lambda_1 = 0.1f, lambda_2 = 15.f;
-  
-  // Prepare Fourier domain stuff.
-  Image B_large = applyPadding((B.channels == 3) ? ColorConvert::apply(B, "rgb", "y") : B);  
-  Image K_large(B_large.width, B_large.height, 1, 2);
-  for (int y = 0; y < K.height; y++) {
-    int new_y = (y - (K.height >> 1) + B_large.height) % B_large.height;
-    int new_x =  - (K.width >> 1) + B_large.width;
-    for (int x = 0; x < K.width; x++, new_x++) {
-      if (new_x == B_large.width) new_x = 0;
-      K_large(new_x, new_y)[0] = K(x, y)[0];
-    }
-  }
+  Image B_large = applyPadding(Bgray);
+  Image K_large = KernelEstimation::EnlargeKernel(K, B_large.width, B_large.height);
+  Image smoothness_map;
   const int x_padding = (B_large.width - B.width) / 2;
   const int y_padding = (B_large.height - B.height) / 2;
-  smoothness_map = Crop::apply(smoothness_map, -x_padding, -y_padding, 0, B_large.width, B_large.height, 1);
+
+  // Compute the smoothness map.
+  {
+    Image filter_x(K.width, 1, 1, 1);
+    Image filter_y(1, K.height, 1, 1);
+    Offset::apply(filter_x, 1.f / K.width);
+    Offset::apply(filter_y, 1.f / K.height);
+    if (K.width % 2 == 0) filter_x = Crop::apply(filter_x, 0, 0, K.width+1, 1);
+    if (K.height %2 == 0) filter_y = Crop::apply(filter_y, 0, 0, 1, K.height+1);
+    Image tmp = Convolve::apply(Convolve::apply(Bgray, filter_x, Convolve::Clamp),
+				     filter_y, Convolve::Clamp);
+    tmp = Multiply::apply(tmp, tmp, Multiply::Elementwise);
+    smoothness_map = Bgray.copy();
+    smoothness_map = Multiply::apply(smoothness_map, smoothness_map, Multiply::Elementwise);
+    smoothness_map = Convolve::apply(Convolve::apply(smoothness_map, filter_x, Convolve::Clamp),
+			  filter_y, Convolve::Clamp);
+    Subtract::apply(smoothness_map, tmp);
+    Scale::apply(smoothness_map, -1.f);
+
+    Threshold::apply(smoothness_map, -25.0f / (256.f * 256.f));
+    smoothness_map = Crop::apply(smoothness_map, -x_padding, -y_padding, 0, B_large.width, B_large.height, 1);
+  }
+
+  // Prepare Fourier domain stuff.
   FourierTransform(K_large); // K_large = F(K).
-  Image FK2 = K_large.copy();
-  ComplexConjugate::apply(K_large); // K_large = F(K)^T
-  ComplexMultiply::apply(FK2, K_large, false); // FK2 = |F(K)|^2
+  Image FK2 = K_large.copy(); // FK2 = F(K).
+  ComplexConjugate::apply(K_large); // K_large = F(K)^T.
+  ComplexMultiply::apply(FK2, K_large, false); // FK2 = |F(K)|^2.
+  B_large = RealComplex::apply(B_large);
   FourierTransform(B_large);
+
+  // sum w_i | K * (deriv_i L) - (deriv_i I) | ^ 2 
+  //   + gamma |Psi_x - deriv_x L|^2 + |Psi_y - deriv_y L|^2
+  //        (Psi_x,Psi_y are redundant variables to follow deriv_x L, deriv_y L)
+  //   + lambda_2 | Psi_x - deriv_x I|^2 + |Psi_y - deriv_y I|^2, masked by smoothness-Map
+  //   + lambda_1 | non-linear prior on Psi_x, Psi_y |
+  float lambda_1 = 0.1f, lambda_2 = 15.f;
 
   Image numerator_base(B_large.width, B_large.height, 1, 2);
   Image denominator_base(B_large.width, B_large.height, 1, 2);
@@ -99,8 +106,8 @@ Image Deconvolution::applyShan2008(Window B, Window K) {
       FDeriv[i](0, 0, 0)[0] = 1.f; break;
     case 1: // dx
       w_i = 25.f;
-      FDeriv[i](0, 0, 0)[0] = 1.f;
-      FDeriv[i](1, 0, 0)[0] = -1.f; break;
+      FDeriv[i](0, 0, 0)[0] = -1.f;
+      FDeriv[i](1, 0, 0)[0] = 1.f; break;
     case 2: // dxx
       w_i = 12.5f;
       FDeriv[i](0, 0, 0)[0] = 1.f;
@@ -108,8 +115,8 @@ Image Deconvolution::applyShan2008(Window B, Window K) {
       FDeriv[i](2, 0, 0)[0] = 1.f; break;
     case 3: // dy
       w_i = 25.f;
-      FDeriv[i](0, 0, 0)[0] = 1.f;
-      FDeriv[i](0, 1, 0)[0] = -1.f; break;
+      FDeriv[i](0, 0, 0)[0] = -1.f;
+      FDeriv[i](0, 1, 0)[0] = 1.f; break;
     case 4: // dyy
       w_i = 12.5f;
       FDeriv[i](0, 0, 0)[0] = 1.f;
@@ -124,7 +131,7 @@ Image Deconvolution::applyShan2008(Window B, Window K) {
     }
     FourierTransform(FDeriv[i]);
     Image tmp = FDeriv[i].copy();
-    ComplexConjugate::apply(FDeriv[i]);
+    ComplexConjugate::apply(FDeriv[i]); // FDeriv[i] = F(deriv_i)^T
     ComplexMultiply::apply(tmp, FDeriv[i], false); // tmp = |F(deriv_i)|^2
     Image tmq = tmp.copy();
     ComplexMultiply::apply(tmp, FK2, false); // tmp = |F(K)|^2 |F(deriv_i)|^2
@@ -134,51 +141,228 @@ Image Deconvolution::applyShan2008(Window B, Window K) {
     Add::apply(numerator_base, tmq, w_i);
   }
 
+  Image dIdx = Convolve::apply(B_large, Crop::apply(FDeriv[1], -1, 0, 3, 1), Convolve::Wrap);
+  Image dIdy = Convolve::apply(B_large, Crop::apply(FDeriv[3], 0, -1, 1, 3), Convolve::Wrap);
   Image L, FPsi_x, FPsi_y;
-  float gamma = 1.0f; /////////////////////////// TODO
+  Image Psi_x(B_large.width, B_large.height, 1, 2);
+  Image Psi_y(B_large.width, B_large.height, 1, 2);
+  float gamma = 2.0f;
+  const int MAX_ITERATION = 2;
 
-  for (int iterations = 0; iterations < 10; iterations++) {
-    // **** Optimize over Psi.
-    
+  // Non-linear prior for gradient (for 8-bit int pixels)
+  float k = 2.7f;
+  float a = 0.00061f;
+  float b = 5.0f;
+  float lt = 1.85263f;
+  k *= 255.f; a *= 255.f * 255.f; lt /= 255.f; // adjustment for floating point
 
-    // **** Optimize over L.
-    // In Fourier domain,   sum w_i F(K)^T F(deriv_i)^T (F(K) F(deriv_i) F(L) - F(deriv_i) F(I))
-    //                          + gamma F(deriv_x)^T (F(deriv_x) F(L) - F(Psi_x)) + ... = 0
-    // F(L) = N/D where
+  for (int iterations = 1; iterations <= MAX_ITERATION; iterations++) {
+    printf(" Starting iteration %d of %d\n", iterations, MAX_ITERATION);
+    /******************************************/
+    /* Optimize over Psi                      */
+    /******************************************/
+    // Fixing L makes the objective the following:
+    //   gamma |Psi_x - deriv_x L|^2 + |Psi_y - deriv_y L|^2
+    //   + lambda_2 | Psi_x - deriv_x I|^2 + |Psi_y - deriv_y I|^2, masked by smoothness-Map
+    //   + lambda_1 | non-linear prior on Psi_x, Psi_y |
+    // This can be done in the spatial domain entirely component-wise,
+    // also independent for x and y.
+    //  2 gamma (Psi_x - deriv_x L) + 2 lambda_2 (Psi_x - deriv_x I) .* mask
+    //   + lambda_1 (non-linear prior on Psi_x)' = 0.
+    float ans_x, ans_y, tmp, fscore, tmpscore;
+    bool fscore_valid;
+    Image dLdx = Convolve::apply(L, Crop::apply(FDeriv[1], -1, 0, 3, 1), Convolve::Wrap);
+    Image dLdy = Convolve::apply(L, Crop::apply(FDeriv[3], 0, -1, 1, 3), Convolve::Wrap);
+    for (int y = 0; y < B_large.height; y++) {
+      for (int x = 0; x < B_large.width; x++) {
+	fscore_valid = false;
+	// 1) Quadratic region:
+	//  2 gamma (Psi_x - deriv_x L) + 2 lambda_2 (Psi_x - deriv_x I) .* mask
+	//   + lambda_1 (-2a Psi_x) = 0.
+	// Rearranging gives:
+	//     (gamma + lambda_2 - a * lambda_1) psi_x = (gamma deriv_x L + lambda_2 deriv_x I .* mask)
+	tmp = (gamma * dLdx(x, y)[0] + lambda_2 * dIdx(x, y)[0] * smoothness_map(x, y)[0])
+	  / (gamma + lambda_2 - a * lambda_1);
+	tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
+	  + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
+	  + lambda_1 * (-(a*tmp*tmp + b));
+	if (fabs(tmp) > lt && (!fscore_valid || fscore > tmpscore)) {
+	  fscore = tmpscore; ans_x = tmp; fscore_valid = true;
+	}
+	// 2) Positive linear region:
+	//  2 gamma (Psi_x - deriv_x L) + 2 lambda_2 (Psi_x - deriv_x I) .* mask
+	//   + lambda_1 (-k) = 0.
+	// Rearranging gives:
+	//     (gamma + lambda_2) psi_x = (gamma deriv_x L + lambda_2 deriv_x I .* mask + lambda_1 k)
+	tmp = (gamma * dLdx(x, y)[0] + lambda_2 * dIdx(x, y)[0] * smoothness_map(x, y)[0] + lambda_1 * k)
+	  / (gamma + lambda_2);
+	tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
+	  + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
+	  + lambda_1 * (-k * tmp);
+	if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
+	  fscore = tmpscore; ans_x = tmp; fscore_valid = true;
+	}
+	// 3) Negative linear region:
+	//  2 gamma (Psi_x - deriv_x L) + 2 lambda_2 (Psi_x - deriv_x I) .* mask
+	//   + lambda_1 (k) = 0.
+	// Rearranging gives:
+	//     (gamma + lambda_2) psi_x = (gamma deriv_x L + lambda_2 deriv_x I .* mask - lambda_1 k)
+	tmp = (gamma * dLdx(x, y)[0] + lambda_2 * dIdx(x, y)[0] * smoothness_map(x, y)[0] - lambda_1 * k)
+	  / (gamma + lambda_2);
+	tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
+	  + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
+	  + lambda_1 * (k * tmp);
+	if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
+	  fscore = tmpscore; ans_x = tmp; fscore_valid = true;
+	} 
+	// 4) Zero
+	tmp = 0.f;
+	tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
+	  + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0];
+	if (!fscore_valid || fscore > tmpscore) {
+	  fscore = tmpscore; ans_x = tmp; fscore_valid = true;
+	}
+	// 5) lt
+	tmp = lt;
+	tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
+	  + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
+	  - lambda_1 * (-k * lt);
+	if (!fscore_valid || fscore > tmpscore) {
+	  fscore = tmpscore; ans_x = tmp; fscore_valid = true;
+	}
+	// 6) -lt
+	tmp = -lt;
+	tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
+	  + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
+	  - lambda_1 * (k * lt);
+	if (!fscore_valid || fscore > tmpscore) {
+	  fscore = tmpscore; ans_x = tmp; fscore_valid = true;
+	}
+	Psi_x(x, y)[0] = ans_x;
+      }
+    }
+    for (int y = 0; y < B_large.height; y++) {
+      for (int x = 0; x < B_large.width; x++) {
+	fscore_valid = false;
+	// 1) Quadratic region:
+	//  2 gamma (Psi_y - deriv_y L) + 2 lambda_2 (Psi_y - deriv_y I) .* mask
+	//   + lambda_1 (-2a Psi_y) = 0.
+	// Rearranging gives:
+	//     (gamma + lambda_2 - a * lambda_1) psi_y = (gamma deriv_y L + lambda_2 deriv_y I .* mask)
+	tmp = (gamma * dLdy(x, y)[0] + lambda_2 * dIdy(x, y)[0] * smoothness_map(x, y)[0])
+	  / (gamma + lambda_2 - a * lambda_1);
+	tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
+	  + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
+	  + lambda_1 * (-(a*tmp*tmp + b));
+	if (fabs(tmp) > lt && (!fscore_valid || fscore > tmpscore)) {
+	  fscore = tmpscore; ans_y = tmp; fscore_valid = true;
+	}
+	// 2) Positive linear region:
+	//  2 gamma (Psi_y - deriv_y L) + 2 lambda_2 (Psi_y - deriv_y I) .* mask
+	//   + lambda_1 (-k) = 0.
+	// Rearranging gives:
+	//     (gamma + lambda_2) psi_y = (gamma deriv_y L + lambda_2 deriv_y I .* mask + lambda_1 k)
+	tmp = (gamma * dLdy(x, y)[0] + lambda_2 * dIdy(x, y)[0] * smoothness_map(x, y)[0] + lambda_1 * k)
+	  / (gamma + lambda_2);
+	tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
+	  + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
+	  + lambda_1 * (-k * tmp);
+	if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
+	  fscore = tmpscore; ans_y = tmp; fscore_valid = true;
+	}
+	// 3) Negative linear region:
+	//  2 gamma (Psi_y - deriv_y L) + 2 lambda_2 (Psi_y - deriv_y I) .* mask
+	//   + lambda_1 (k) = 0.
+	// Rearranging gives:
+	//     (gamma + lambda_2) psi_y = (gamma deriv_y L + lambda_2 deriv_y I .* mask - lambda_1 k)
+	tmp = (gamma * dLdy(x, y)[0] + lambda_2 * dIdy(x, y)[0] * smoothness_map(x, y)[0] - lambda_1 * k)
+	  / (gamma + lambda_2);
+	tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
+	  + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
+	  + lambda_1 * (k * tmp);
+	if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
+	  fscore = tmpscore; ans_y = tmp; fscore_valid = true;
+	} 
+	// 4) Zero
+	tmp = 0.f;
+	tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
+	  + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0];
+	if (!fscore_valid || fscore > tmpscore) {
+	  fscore = tmpscore; ans_y = tmp; fscore_valid = true;
+	}
+	// 5) lt
+	tmp = lt;
+	tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
+	  + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
+	  - lambda_1 * (-k * lt);
+	if (!fscore_valid || fscore > tmpscore) {
+	  fscore = tmpscore; ans_y = tmp; fscore_valid = true;
+	}
+	// 6) -lt
+	tmp = -lt;
+	tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
+	  + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
+	  - lambda_1 * (k * lt);
+	if (!fscore_valid || fscore > tmpscore) {
+	  fscore = tmpscore; ans_y = tmp; fscore_valid = true;
+	}
+	Psi_y(x, y)[0] = ans_y;
+      }
+    }    
+
+    FPsi_x = Psi_x.copy(); FourierTransform(FPsi_x);
+    FPsi_y = Psi_y.copy(); FourierTransform(FPsi_y);
+    /******************************************/
+    /* Optimize over L                        */
+    /******************************************/
+    // Fix Psi. Then the gradient of the objective becomes, in the Fourier domain:
+    //    sum w_i F(K)^T F(deriv_i)^T (F(K) F(deriv_i) F(L) - F(deriv_i) F(I))
+    //           + gamma F(deriv_x)^T (F(deriv_x) F(L) - F(Psi_x)) + ... = 0
+    // Solving this yields F(L) = N/D,  where
     //   N = sum w_i F(K)^T |F(deriv_i)|^2 F(I) + gamma (F(deriv_x)^T F(Psi_x) +  ... )
     //   D = sum w_i |F(K)|^2 |F(deriv_i)|^2  + gamma |F(deriv_x)|^2 + |F(deriv_y)|^2
+    // Note that the first term of N and D are independent of L or Psi or gamma.
     Image denominator = denominator_base.copy();
     Image numerator = numerator_base.copy();
-
-    Image fderiv_x2 = FDeriv[1].copy(); ComplexMultiply::apply(fderiv_x2, FDeriv[1], true);
-    Image fderiv_y2 = FDeriv[3].copy(); ComplexMultiply::apply(fderiv_y2, FDeriv[3], true);
-    Add::apply(denominator, fderiv_x2, gamma);
-    Add::apply(denominator, fderiv_y2, gamma);
-
-    Image tmp;
-
-    tmp = FDeriv[1].copy();
-    ComplexMultiply::apply(tmp, FPsi_x, false);
-    Add::apply(numerator, tmp, gamma);
-    tmp = FDeriv[3].copy();
-    ComplexMultiply::apply(tmp, FPsi_y, false);
-    Add::apply(numerator, tmp, gamma);
-
+    // Append the variable terms.
+    for (int y = 0; y < B_large.height; y++)
+      for (int x = 0; x < B_large.width; x++) {
+	denominator(x, y)[0] += gamma * (FDeriv[1](x, y)[0] * FDeriv[1](x, y)[0]
+					 + FDeriv[1](x, y)[1] * FDeriv[1](x, y)[1]);
+	denominator(x, y)[0] += gamma * (FDeriv[3](x, y)[0] * FDeriv[3](x, y)[0]
+					 + FDeriv[3](x, y)[1] * FDeriv[3](x, y)[1]);
+	numerator(x, y)[0] += gamma * (FDeriv[1](x, y)[0] * FPsi_x(x, y)[0]
+				       - FDeriv[1](x, y)[1] * FPsi_x(x, y)[1]);
+	numerator(x, y)[0] += gamma * (FDeriv[3](x, y)[0] * FPsi_y(x, y)[0]
+				       - FDeriv[3](x, y)[1] * FPsi_y(x, y)[1]);
+      }
     ComplexDivide::apply(numerator, denominator, false);
-    IFFT::apply(numerator, true, true, false);
-    L = numerator.copy();
-    
-    lambda_1 /= 1.2f; lambda_2 /= 1.5f;
-  }
+    InverseFourierTransform(numerator);
+    L = ComplexReal::apply(numerator);
 
+    char filename_c[20];
+    sprintf(filename_c, "output%02d.tmp", iterations);
+    std::string filename(filename_c);
+    FileTMP::save(L, filename, "float");
+
+    /******************************************/
+    /* Bookkeeping                            */
+    /******************************************/
+    lambda_1 /= 1.2f; lambda_2 /= 1.5f; gamma *= 2.f;
+  }
+  // Crop L as before.
+  L = Crop::apply(L, x_padding, y_padding, B.width, B.height);
   return L;
 #endif
 }
 
+/*
+ * A poor man's version of "Reducing Boundary Artifacts in Image Deconvolution" (ICCP 2008)
+ * by Liu and Jia.
+ */
 Image Deconvolution::applyPadding(Window B) {
-  // A poor man's version of "Reducing Boundary Artifacts in Image Deconvolution" (ICCP 2008)
-  // by Liu and Jia.
-  int alpha = 10;
+  // Calculate the margin size.
+  int alpha = 10; 
   if (B.width / 3 < alpha) alpha = B.width / 3;
   if (B.height / 3 < alpha) alpha = B.height / 3;
   int x_padding = B.width / 2;
@@ -186,8 +370,10 @@ Image Deconvolution::applyPadding(Window B) {
   if (x_padding < alpha * 3) x_padding = alpha * 3;
   if (y_padding < alpha * 3) y_padding = alpha * 3;
 
-  Image ret = Crop::apply(B, -x_padding, -y_padding, 0, B.width+x_padding*2, B.height+y_padding*2, B.frames);
+  // Prepare the enlarged canvas.
   float* prev = new float[B.channels];
+  Image ret = Crop::apply(B, -x_padding, -y_padding, 0,
+			  B.width+x_padding*2, B.height+y_padding*2, B.frames);
   for (int t = 0; t < B.frames; t++) {
     // Populate the top 'A' region.
     for (int y = 0; y < alpha; y++) {
@@ -261,7 +447,7 @@ Image Deconvolution::applyPadding(Window B) {
 
 Image Deconvolution::applyCho2009(Window Blurred, Window K) {
 #ifdef NO_FFTW
-  assert(false, "FFTW library has not been linked. Please recompile with proper flags.\n");
+  panic("FFTW library has not been linked. Please recompile with proper flags.\n");
   return Image(1,1,1,1);
 #else
   assert(K.width % 2 == 1 && K.height % 2 ==1,
@@ -364,8 +550,7 @@ Image Deconvolution::applyCho2009(Window Blurred, Window K) {
   const int x_padding = (B.width - Blurred.width) / 2;
   const int y_padding = (B.height - Blurred.height) / 2;
   return Crop::apply(Transpose::apply(ComplexMagnitude::apply(FB), 'c', 't'),
-		     x_padding, y_padding, 0, Blurred.width, Blurred.height, Blurred.frames);
-  
+		     x_padding, y_padding, 0, Blurred.width, Blurred.height, Blurred.frames);  
 #endif
 }
 
