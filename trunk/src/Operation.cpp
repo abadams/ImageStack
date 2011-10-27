@@ -15,6 +15,8 @@
 #include "Stack.h"
 #include "Geometry.h"
 #include "Convolve.h"
+#include "Deconvolution.h"
+#include "KernelEstimation.h"
 #include "Color.h"
 #include "Complex.h"
 #include "LightField.h"
@@ -139,6 +141,8 @@ void loadOperations() {
     // convolutions
     operationMap["-convolve"] = new Convolve();
     operationMap["-deconvolve"] = new Deconvolve();
+    operationMap["-deconvolution"] = new Deconvolution();
+    operationMap["-kernelestimation"] = new KernelEstimation();
 
     // calculus
     operationMap["-gradient"] = new Gradient();
@@ -208,6 +212,7 @@ void loadOperations() {
     operationMap["-percentilefilter"] = new PercentileFilter();
     operationMap["-envelope"] = new Envelope();
     operationMap["-hotpixelsuppression"] = new HotPixelSuppression();
+    //    operationMap["-laplacianpyramid"] = new LaplacianFilter();
 
     // Filters that use a Gauss transform
     operationMap["-gausstransform"] = new GaussTransform();
@@ -238,6 +243,7 @@ void loadOperations() {
     // Optical Flow stuff
     operationMap["-opticalflow"] = new OpticalFlow();
     operationMap["-opticalflowwarp"] = new OpticalFlowWarp();
+    // operationMap["-densecorresp"] = new DenseCorrespondence();
 
     // Plugin loading
     operationMap["-plugin"] = new Plugin();
