@@ -362,7 +362,7 @@ Image Deconvolution::applyShan2008(Window B, Window K) {
  */
 Image Deconvolution::applyPadding(Window B) {
   // Calculate the margin size.
-  int alpha = 10; 
+  int alpha = 1; 
   if (B.width / 3 < alpha) alpha = B.width / 3;
   if (B.height / 3 < alpha) alpha = B.height / 3;
   int x_padding = B.width / 2;
@@ -377,9 +377,10 @@ Image Deconvolution::applyPadding(Window B) {
   for (int t = 0; t < B.frames; t++) {
     // Populate the top 'A' region.
     for (int y = 0; y < alpha; y++) {
-      memcpy(ret(x_padding, y, t), ret(x_padding, y - alpha + B.height + y_padding, t),
+      int realy = y; // alpha - 1 - y;
+      memcpy(ret(x_padding, realy, t), ret(x_padding, y - alpha + B.height + y_padding, t),
 	     sizeof(float) * B.channels * B.width);
-      memcpy(ret(x_padding, y_padding - alpha + y, t), ret(x_padding, y + y_padding, t),
+      memcpy(ret(x_padding, y_padding - alpha + realy, t), ret(x_padding, y + y_padding, t),
 	     sizeof(float) * B.channels * B.width);
     }
     for (int y = alpha; y < y_padding - alpha; y++) {
@@ -402,15 +403,16 @@ Image Deconvolution::applyPadding(Window B) {
       }
     }
     // Populate the bottom 'A' region
-    for (int y = 0; y < y_padding; y++)
+    for (int y = 0; y < y_padding; y++) {
       memcpy(ret(x_padding, y + B.height + y_padding, t), ret(x_padding, y, t),
 	     sizeof(float) * B.channels * B.width);
     // Populate the left 'C-B-C' region
     for (int y = 0; y < B.height + y_padding * 2; y++) {
       for (int x = 0; x < alpha; x++) {
+	int realx = x; // alpha - 1 - x;
 	for (int c = 0; c < B.channels; c++) {
-	  ret(x, y, t)[c] = ret(B.width + x_padding - alpha + x, y, t)[c];
-	  ret(x_padding - alpha + x, y, t)[c] = ret(x_padding + x, y, t)[c];
+	  ret(realx, y, t)[c] = ret(B.width + x_padding - alpha + x, y, t)[c];
+	  ret(x_padding - alpha + realx, y, t)[c] = ret(x_padding + x, y, t)[c];
 	}
       }
     }
@@ -439,13 +441,14 @@ Image Deconvolution::applyPadding(Window B) {
     for (int y = 0; y < B.height + y_padding * 2; y++)
       memcpy(ret(B.width + x_padding, y, t), ret(0, y, t), sizeof(float)
 	     * B.channels * x_padding);
+    }
   }
   ret = Crop::apply(ret, x_padding/2, y_padding/2, 0, B.width + x_padding, B.height + y_padding, B.frames);
   delete[] prev;
   return ret;
 }
-
-Image Deconvolution::applyCho2009(Window Blurred, Window K) {
+  
+  Image Deconvolution::applyCho2009(Window Blurred, Window K) {
 #ifdef NO_FFTW
   panic("FFTW library has not been linked. Please recompile with proper flags.\n");
   return Image(1,1,1,1);
@@ -468,17 +471,10 @@ Image Deconvolution::applyCho2009(Window Blurred, Window K) {
   //          |F(K)|^2 sum_i w_i |F(deriv_i)|^2  + alpha (|F(dx)|^2+|F(dy)|^2)
 
   Image B  = applyPadding(Blurred);
+  FileTMP::save(B, std::string("padded.tmp"), "float");
 
-  float alpha = 0.2f; // TODO
-  Image FK(B.width, B.height, 1, 2);
-  for (int y = 0; y < K.height; y++) { 
-    int y2 = y - (K.height >> 1);
-    y2 += (y2 < 0) ? B.height : 0;
-    for (int x = 0; x < (K.width >> 1); x++)
-      FK(B.width - (K.width >> 1) + x, y2)[0] = K(x, y)[0];
-    for (int x = 0; x <= (K.width >> 1); x++)
-      FK(x, y2)[0] = K(x + (K.width >> 1), y)[0];
-  }
+  float alpha = 1.f; // TODO
+  Image FK = KernelEstimation::EnlargeKernel(K, B.width, B.height);
   Image FB = RealComplex::apply(Transpose::apply(B, 'c', 't'));
   FFT::apply(FK, true, true, false);
   FFT::apply(FB, true, true, false);
@@ -549,7 +545,7 @@ Image Deconvolution::applyCho2009(Window Blurred, Window K) {
   IFFT::apply(FB, true, true, false);
   const int x_padding = (B.width - Blurred.width) / 2;
   const int y_padding = (B.height - Blurred.height) / 2;
-  return Crop::apply(Transpose::apply(ComplexMagnitude::apply(FB), 'c', 't'),
+  return Crop::apply(Transpose::apply(ComplexReal::apply(FB), 'c', 't'),
 		     x_padding, y_padding, 0, Blurred.width, Blurred.height, Blurred.frames);  
 #endif
 }
