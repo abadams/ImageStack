@@ -174,7 +174,7 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
   float sigma_r = 0.5f;
   float gradient_threshold = 0.f;
   #define PI 3.14159265f
-  #define CG_ITERATIONS 8
+  #define CG_ITERATIONS 10
   int primes[] = {2, 3, 5, 7};
 
   /******************************* Compute Kernel Sizes */
@@ -214,6 +214,10 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
 
     // Generate the important images at the current scale.
     Blurry = BilinearResample(Bgray, newwidth, newheight);
+
+    //    if (iteration <= 3)
+    //      guess = ColorConvert::apply(Load::apply("DeblurTest/input3.tmp"), "rgb", "y");
+
     guess = BilinearResample(iteration == 1 ? Bgray : guess, newwidth, newheight);
 
     K = BilinearResample(K, m, m);
@@ -225,6 +229,11 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
     /**************************************************************/
     BilateralFilterIteration(guess, sigma_r);
     ShockFilterIteration(guess, dt);
+
+    char filename_c[20];
+    sprintf(filename_c, "prediction%d.tmp", iteration);
+    FileTMP::save(guess, std::string(filename_c), "float");
+
     // Compute gradient and generate an angular histogram.
     if (iteration == 1) {
       // Compute the gradient histogram.
@@ -255,7 +264,7 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
 	if (cutoff_index >= 0 && cutoff < GRAD_HIST[i][cutoff_index])
 	  cutoff = GRAD_HIST[i][cutoff_index];
       }
-      gradient_threshold = cutoff;
+      gradient_threshold = cutoff * 0.1f;
     } else {
       gradient_threshold *= 0.9f * 0.9f;
     }
@@ -281,6 +290,8 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
     dt *= 0.9f;
     sigma_r *= 0.9f;    
     toc = currentTime(); printf(" Prediction: %.3f sec\n", toc - tic); tic = toc;
+    sprintf(filename_c, "edges%d.tmp", iteration);
+    FileTMP::save(Adjoin::apply(Px, Py, 't'), std::string(filename_c), "float");
    
     /**************************************************************/
     /* KERNEL ESTIMATION                                          */
@@ -360,6 +371,8 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
     
     // Actual conjugate gradient iterations.
     for (int i = 0; i < CG_ITERATIONS && i < m * m; i++) {
+      sprintf(filename_c, "kernel%d_%d.tmp", iteration, i);
+      FileTMP::save(ContractKernel(K, m), std::string(filename_c), "float");
 
       /*      // Compute f and print it out = 1/2 K^T CoeffA K - CoeffB K.
       Image K2 = K.copy();
@@ -452,7 +465,7 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
 	    denominator += CoeffADi(x_old, y_old)[0] * Di(x_old, y_old)[0];
 	  }
 	}
-	alpha = numerator / denominator; 
+	alpha = numerator / denominator;
 	for (int y = 0; y < m; y++) {
 	  int y_old = (y - (m >> 1) + padded_height) % padded_height;
 	  int x_old = ( - (m >> 1) + padded_width) % padded_width;
@@ -462,10 +475,6 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
 	  }
 	}
       }
-      /*      char filename_c[20];
-      sprintf(filename_c, "kernel%d_%d.tmp", iteration, i);
-      std::string filename(filename_c);
-      FileTMP::save(ContractKernel(K, m), filename, "float");*/
     }
     K = ContractKernel(K, m);
     // Threshold K.
@@ -488,8 +497,8 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
 	avg_x += x * K(x,y)[0];
 	avg_y += y * K(x,y)[0];
       }
-    int offset_x = (avg_x + 0.5f) - (m >> 1);
-    int offset_y = (avg_y + 0.5f) - (m >> 1);
+    int offset_x = (int)((avg_x + 0.5f) - (m >> 1));
+    int offset_y = (int)((avg_y + 0.5f) - (m >> 1));
     K = Crop::apply(K, offset_x, offset_y, m, m);
     NormalizeSum(K);
     toc = currentTime(); printf(" CG        : %.3f sec\n", toc - tic); tic = toc;
@@ -499,6 +508,10 @@ Image KernelEstimation::apply(Window B, int kernel_size) {
     /**************************************************************/
     if (iteration == kernel_scale.size()) break;
     guess = Deconvolution::applyCho2009(Blurry, K);
+
+    sprintf(filename_c, "guess%d.tmp", iteration);
+    FileTMP::save(guess, std::string(filename_c), "float");
+
     toc = currentTime(); printf(" Deconvolve: %.3f sec\n", toc - tic); tic = toc;
   }
   return K;

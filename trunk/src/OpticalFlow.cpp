@@ -17,6 +17,7 @@
 #include "Convolve.h"
 #include "Color.h"
 #include "Paint.h"
+#include "Brox/CTrack.h"
 #include "header.h"
 
 class GaussianPyramid {
@@ -865,6 +866,179 @@ Image OpticalFlowWarp::apply(Window input, Window from, Window to) {
     Image output = Warp::apply(coord, input);
 
     return output;
+}
+
+void DenseCorrespondence::help() {
+  printf("-densecorresp computes the displacement field between two images or more\n"
+	 "using Sundaram, Brox, Keutzer 2010. No argument causes the top two images\n"
+	 "in the stack to be used. They must each be single frame. One argument will\n"
+	 "compute the displacement from the specified frame of the image at the top\n"
+	 "of the stack to the rest of its frames. The displacement field is placed at\n"
+	 "the top of the stack.\n"
+	 "\n"
+	 "Usage: ImageStack -load target.jpg -load source.jpg -densecorresp -save flow.tmp\n"
+	 "       ImageStack -loadframes f0 f1 ... fn -densecorresp 3 -saveframes flow%%d.tmp\n\n");
+}
+
+void DenseCorrespondence::parse(vector<string> args) {
+  assert(args.size() <= 1, "-densecorresp takes zero or one argument.\n");
+  Image result;
+  if (args.size() == 0) {
+    assert(stack(0).frames == 1 && stack(1).frames == 1,
+	   "-densecorresp with zero argument requires the top two images in the stack to be single-framed.\n");
+    result = apply(stack(1), stack(0));
+    push(result);
+  } else {
+    int frame_count = stack(0).frames;
+    int base_frame = readInt(args[0]);
+    assert(base_frame >= 0 && base_frame < frame_count,
+	   "The specified frame index exceeds the number of frames in the image.\n");
+    Image result_stack(stack(0).width, stack(0).height, stack(0).frames, stack(0).channels);
+    for (int i = 0; i < stack(0).frames; i++) {
+      if (i == base_frame) {
+	Scale::apply(result, 0.f);
+      } else
+	result = apply(stack(0), stack(0), base_frame, i);
+      for (int y = 0; y < stack(0).height; y++) {
+	for (int x = 0; x < stack(0).width; x++) {
+	  for (int c = 0; c < stack(0).channels; c++) {
+	    result_stack(x, y, i)[c] = result(x, y)[c];
+	  }
+	}
+      }
+    }
+    push(result_stack);
+  }
+}
+
+Image DenseCorrespondence::apply(Window source, Window target,
+				 const int source_frame_index, const int target_frame_index) {
+#ifdef NO_BROX
+  assert(0, "Brox' CUDA code is not linked. Please recompile appropriately.\n");
+  Image result;
+  return result;
+#else
+  assert(source.width == target.width && source.height == target.height &&
+	 source.channels == target.channels && (source.channels == 1 || source.channels == 3),
+	 "The source and target images must have the same dimensions and must be 1-or-3-channel.\n");
+  assert(source_frame_index >= 0 && target_frame_index >= 0 &&
+	 source_frame_index < source.frames && target_frame_index < target.frames, 
+	 "The specified frame indices are invalid.\n");
+
+  CVector<float>color = CVector<float>(3);
+
+  BroxExecutable instance;
+  instance.buildColorCode();
+  instance.mStartFrame = 0;
+  instance.mStep = 1;
+
+  // Load the images
+  CTensor<float>* aImage1 = new CTensor<float>;
+  CTensor<float>* aImage2 = new CTensor<float>;
+  //  aImage1->readFromPPM("/home/admin/eccv2010_trackingGPU/good.ppm");
+  //  aImage2->readFromPPM("/home/admin/eccv2010_trackingGPU/bad.ppm");
+
+  aImage1->mZSize = aImage2->mZSize = source.channels;
+  aImage1->mXSize = aImage2->mXSize = source.width;
+  aImage1->mYSize = aImage2->mYSize = source.height;
+  delete[] aImage1->mData;
+  delete[] aImage2->mData;
+  aImage1->mData = new float[aImage1->mXSize*aImage1->mYSize*aImage1->mZSize];
+  aImage2->mData = new float[aImage2->mXSize*aImage2->mYSize*aImage2->mZSize];
+  for (int az = 0; az < aImage1->mZSize; az++) {
+    int count = az * aImage1->mXSize * aImage1->mYSize;
+    for (int ay = 0; ay < aImage1->mYSize; ay++) {
+      for (int ax = 0; ax < aImage1->mXSize; ax++, count++) {
+	aImage1->mData[count] = source(ax, ay, source_frame_index)[az] * 255.f;
+	aImage2->mData[count] = target(ax, ay, target_frame_index)[az] * 255.f;
+      }
+    }
+  }
+
+  instance.mXSize = aImage1->xSize();
+  instance.mYSize = aImage1->ySize();
+  instance.mTracks.clear();
+  CMatrix<float> aCorners;
+  CMatrix<float> aCovered(instance.mXSize,instance.mYSize);
+  int aSize = instance.mXSize*instance.mYSize;
+
+  // Smooth first image (can be removed from optical flow computation then)
+  NFilter::recursiveSmoothX(*aImage1,0.8f);
+  NFilter::recursiveSmoothY(*aImage1,0.8f);  
+  NFilter::recursiveSmoothX(*aImage2,0.8f);
+  NFilter::recursiveSmoothY(*aImage2,0.8f);
+
+  // Mark areas sufficiently covered by tracks
+  aCovered = 1e20;
+  // Set up new tracking points in uncovered areas
+  instance.computeCorners(*aImage1,aCorners,3.0f);
+  float aCornerAvg = aCorners.avg();
+  for (int ay = 4; ay < instance.mYSize-4; ay+=instance.mStep)
+    for (int ax = 4; ax < instance.mXSize-4; ax+=instance.mStep) {
+      if (aCovered(ax,ay) < instance.mStep*instance.mStep) continue;
+      float distToImageBnd = exp(-0.1*NMath::min(NMath::min(NMath::min(ax,ay),
+							    instance.mXSize-ax),instance.mYSize-ay));
+      if (aCorners(ax,ay) < 1.0* (aCornerAvg*(0.1+distToImageBnd))) continue;
+      if (aCorners(ax,ay) < 1.0*(1.0f+distToImageBnd)) continue;
+      instance.mTracks.push_back(CTrack());
+      CTrack& newTrack = instance.mTracks.back();
+      newTrack.mox = ax;
+      newTrack.moy = ay;
+      newTrack.mLabel = -1;
+      newTrack.mSetupTime = 0;
+    }
+  // Compute bidirectional LDOF or read from file when available
+  CTensor<float> aForward,aBackward;
+  ldof(*aImage1,*aImage2,aForward,aBackward);
+  Image ret(aImage1->xSize(), aImage1->ySize(), 1, 3);
+
+  for (int ay = 0; ay < instance.mYSize; ay++) {
+    for (int ax = 0; ax < instance.mXSize; ax++) {
+      ret(ax, ay)[0] = aForward(ax, ay, 0);
+      ret(ax, ay)[1] = aForward(ax, ay, 1);
+    }
+  }
+
+  // Check consistency of forward flow via backward flow
+  CTensor<float> dx(instance.mXSize,instance.mYSize,2);
+  CTensor<float> dy(instance.mXSize,instance.mYSize,2);
+  CDerivative<float> aDev(3);
+  NFilter::filter(aForward,dx,aDev,1,1);
+  NFilter::filter(aForward,dy,1,aDev,1);
+  CMatrix<float> aMotionEdge(instance.mXSize,instance.mYSize,0);
+  for (int i = 0; i < aSize; i++) {
+    aMotionEdge.data()[i] += dx.data()[i]*dx.data()[i];
+    aMotionEdge.data()[i] += dx.data()[aSize+i]*dx.data()[aSize+i];
+    aMotionEdge.data()[i] += dy.data()[i]*dy.data()[i];
+    aMotionEdge.data()[i] += dy.data()[aSize+i]*dy.data()[aSize+i];
+  }
+  for (int ay = 0; ay < aForward.ySize(); ay++)
+    for (int ax = 0; ax < aForward.xSize(); ax++) {
+      float bx = ax+aForward(ax,ay,0);
+      float by = ay+aForward(ax,ay,1);
+      int x1 = (int)bx;
+      int y1 = (int)by;
+      int x2 = x1+1;
+      int y2 = y1+1;
+      if (x1 < 0 || x2 >= instance.mXSize || y1 < 0 || y2 >= instance.mYSize) { ret(ax, ay)[2] = 1.0f; continue;}
+      float alphaX = bx-x1; float alphaY = by-y1;
+      float a = (1.0-alphaX)*aBackward(x1,y1,0)+alphaX*aBackward(x2,y1,0);
+      float b = (1.0-alphaX)*aBackward(x1,y2,0)+alphaX*aBackward(x2,y2,0);
+      float u = (1.0-alphaY)*a+alphaY*b;
+      a = (1.0-alphaX)*aBackward(x1,y1,1)+alphaX*aBackward(x2,y1,1);
+      b = (1.0-alphaX)*aBackward(x1,y2,1)+alphaX*aBackward(x2,y2,1);
+      float v = (1.0-alphaY)*a+alphaY*b;
+      float cx = bx+u;
+      float cy = by+v;
+      float u2 = aForward(ax,ay,0);
+      float v2 = aForward(ax,ay,1);
+      if (((cx-ax)*(cx-ax)+(cy-ay)*(cy-ay)) >= 0.01*(u2*u2+v2*v2+u*u+v*v)+0.5f) { ret(ax, ay)[2] = 1.0f; continue;}
+      if (aMotionEdge(ax,ay) > 0.01*(u2*u2+v2*v2)+0.002f) { ret(ax, ay)[2] = 1.0f; continue;}
+    }
+  delete aImage1;
+  delete aImage2;
+  return ret;
+#endif
 }
 
 #include "footer.h"
