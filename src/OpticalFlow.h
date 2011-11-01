@@ -2,14 +2,14 @@
 #define IMAGESTACK_OPTICALFLOW_H
 #include "header.h"
 
-class DenseCorrespondence : public Operation {
+/*class DenseCorrespondence : public Operation {
  public:
   void help();
   void parse(vector<string> args);
   static Image apply(Window source, Window target,
 		     const int from=0, const int to=0);
  private:
-};
+ };*/
 
 class OpticalFlow : public Operation {
 public:
@@ -51,3 +51,4 @@ public:
 
 #include "footer.h"
 #endif
+
