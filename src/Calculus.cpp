@@ -137,15 +137,14 @@ void GradMag::parse(vector<string> args) {
 }
 
 Image GradMag::apply(Window im) {
-    Image out(im);
-    Gradient::apply(im, 'x');
-    Gradient::apply(out, 'y');
-
+    Image out(im.width, im.height, im.frames, im.channels);
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    out(x, y, t)[c] = im(x, y, t)[c] * im(x, y, t)[c] + out(x, y, t)[c] * out(x, y, t)[c];
+                    float dx = im(x, y, t)[c] - (x > 0 ? im(x-1, y, t)[c] : 0);
+                    float dy = im(x, y, t)[c] - (y > 0 ? im(x, y-1, t)[c] : 0);
+                    out(x, y, t)[c] = dx*dx + dy*dy;
                 }
             }
         }
