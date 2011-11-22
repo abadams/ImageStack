@@ -31,6 +31,7 @@ IMAGESTACK_OBJECTS = \
 	KernelEstimation.o \
 	LAHBPCG.o \
 	LightField.o \
+        LocalLaplacian.o \
 	Arithmetic.o \
 	Alignment.o \
 	NetworkOps.o \
@@ -48,7 +49,6 @@ IMAGESTACK_OBJECTS = \
 	Statistics.o \
 	Wavelet.o \
 	WLS.o \
-	LaplacianFilter.o \
 	main.o \
 
 
