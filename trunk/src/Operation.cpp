@@ -38,6 +38,7 @@
 #include "WLS.h"
 #include "OpticalFlow.h"
 #include "Plugin.h"
+#include "LocalLaplacian.h"
 #include "header.h"
 
 
@@ -228,6 +229,8 @@ void loadOperations() {
 
     // Weighted-Least-Squares filtering
     operationMap["-wls"] = new WLS();
+
+    operationMap["-locallaplacian"] = new LocalLaplacian();
 
     // projection stuff
     operationMap["-sinugram"] = new Sinugram();

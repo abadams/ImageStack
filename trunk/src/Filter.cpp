@@ -160,6 +160,8 @@ void FastBlur::apply(Window im, float filterWidth, float filterHeight, float fil
     if (im.height == 1) { filterHeight = 0; }
     if (im.frames == 1) { filterFrames = 0; }
 
+    //printf("%d %d %d\n", im.width, im.height, im.frames);
+
     // Filter in very narrow directions using the regular Gaussian, as
     // the IIR requires a few pixels to get going. If the Gaussian
     // blur is very narrow, also revert to the naive method, as IIR
