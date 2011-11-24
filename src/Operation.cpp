@@ -141,9 +141,6 @@ void loadOperations() {
 
     // convolutions
     operationMap["-convolve"] = new Convolve();
-    operationMap["-deconvolve"] = new Deconvolve();
-    operationMap["-deconvolution"] = new Deconvolution();
-    operationMap["-kernelestimation"] = new KernelEstimation();
 
     // calculus
     operationMap["-gradient"] = new Gradient();
@@ -168,8 +165,10 @@ void loadOperations() {
     operationMap["-fft"] = new FFT();
     operationMap["-ifft"] = new IFFT();
     operationMap["-fftconvolve"] = new FFTConvolve();
-    operationMap["-fftdeconvolve"] = new FFTDeconvolve();
     operationMap["-fftpoisson"] = new FFTPoisson();
+    operationMap["-deconvolve"] = new Deconvolve();
+    operationMap["-kernelestimation"] = new KernelEstimation();
+
 #endif
 
     // painting stuff

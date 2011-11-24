@@ -33,13 +33,6 @@ public:
     static Image apply(Window im, Window filter, Convolve::BoundaryCondition b, Multiply::Mode m);
 };
 
-class FFTDeconvolve: public Operation {
-public:
-    void help();
-    void parse(vector<string> args);
-    static Image apply(Window im, Window filter, float weight);
-};
-
 class FFTPoisson : public Operation {
 public:
     void help();
