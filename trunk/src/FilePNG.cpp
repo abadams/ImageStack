@@ -90,8 +90,9 @@ Image load(string filename) {
             png_bytep srcPtr = row_pointers[y];
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    im(x, y)[c] = LDR16toHDR(*srcPtr);  // Note: Endian issues may be possible here, seems to work in WinXP
-                    srcPtr+=2;
+                    unsigned short val = srcPtr[0]*256 + srcPtr[1];
+                    im(x, y)[c] = LDR16toHDR(val);
+                    srcPtr += 2;
                 }
             }
         }
