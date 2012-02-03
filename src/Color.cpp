@@ -91,6 +91,10 @@ Image ColorConvert::apply(Window im, string from, string to) {
         return xyz2lab(im);
     } else if (from == "lab" && to == "xyz") {
         return lab2xyz(im);
+    } else if (from == "argb" && to == "xyz") {
+        return argb2xyz(im);
+    } else if (from == "xyz" && to == "argb") {
+        return xyz2argb(im);
     } else if (from != "rgb" && to != "rgb") {
         // conversions that go through rgb
         Image halfway = apply(im, from, "rgb");
@@ -107,6 +111,8 @@ Image ColorConvert::apply(Window im, string from, string to) {
             return rgb2y(im);
         } else if (to == "lab") {
             return rgb2lab(im);
+        } else if (to == "argb") {
+            return rgb2argb(im);
         } else {
             panic("Unknown color space %s\n", to.c_str());
         }
@@ -126,6 +132,8 @@ Image ColorConvert::apply(Window im, string from, string to) {
             return uyvy2rgb(im);
         } else if (from == "yuyv") {
             return yuyv2rgb(im);
+        } else if (from == "argb") {
+            return argb2rgb(im);
         } else {
             panic("Unknown color space %s\n", from.c_str());
         }
@@ -418,27 +426,64 @@ Image ColorConvert::yuv2rgb(Window im) {
 Image ColorConvert::rgb2xyz(Window im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
-    float mat[9] = {0.412453, 0.212671, 0.019334,
-                    0.357580, 0.715160, 0.119193,
-                    0.180423, 0.072169, 0.950227
-                   };
-    vector<float> matrix(mat, mat+9);
+    Image out(im.width, im.height, im.frames, 3);
 
-    return ColorMatrix::apply(im, matrix);
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
+                float r = im(x, y, t)[0];
+                float g = im(x, y, t)[1];
+                float b = im(x, y, t)[2];
+                // Apply inverse of the srgb gamma curve
+                float c1 = 0.04045f;
+                float c2 = 1.0f/12.92f;
+                float c3 = 0.055f;
+                float c4 = 1.0f/(1.0f + c3);
+                float c5 = 2.4f; // gamma
+                r = (r <= c1 ? (r*c2) : powf((r + c3)*c4, c5));
+                g = (g <= c1 ? (g*c2) : powf((g + c3)*c4, c5));
+                b = (b <= c1 ? (b*c2) : powf((b + c3)*c4, c5));
+                // Apply linear transform
+                out(x, y, t)[0] = 0.4124f * r + 0.3576f * g + 0.1805f * b;
+                out(x, y, t)[1] = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                out(x, y, t)[2] = 0.0193f * r + 0.1192f * g + 0.9505f * b;
+                
+            }
+        }
+    }
 
+    return out;
 }
 
 Image ColorConvert::xyz2rgb(Window im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
-    float mat[9] = {3.240479, -0.969256, 0.055648,
-                    -1.537150, 1.875992, -0.204043,
-                    -0.498535, 0.041556, 1.057311
-                   };
-    vector<float> matrix(mat, mat+9);
+    Image out(im.width, im.height, im.frames, 3);
 
-    return ColorMatrix::apply(im, matrix);
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
+                float X = im(x, y, t)[0];
+                float Y = im(x, y, t)[1];
+                float Z = im(x, y, t)[2];
+                // Apply linear transform
+                float r =  3.2406f * X - 1.5372f * Y - 0.4986f * Z;
+                float g = -0.9689f * X + 1.8758f * Y + 0.0415f * Z;
+                float b =  0.0557f * X - 0.2040f * Y + 1.0570f * Z;
+                // Apply srgb gamma curve
+                float c1 = 0.0031308f;
+                float c2 = 12.92f;
+                float c3 = 1.055f;
+                float c4 = 0.055f;
+                float c5 = 1.0f/2.4f;
+                out(x, y, t)[0] = (r <= c1 ? c2*r : c3 * powf(r, c5) - c4);
+                out(x, y, t)[1] = (g <= c1 ? c2*g : c3 * powf(g, c5) - c4);
+                out(x, y, t)[2] = (b <= c1 ? c2*b : c3 * powf(b, c5) - c4);
+            }
+        }
+    }
 
+    return out;
 }
 
 Image ColorConvert::uyvy2yuv(Window im) {
@@ -505,13 +550,67 @@ Image ColorConvert::yuyv2rgb(Window im) {
     return yuv2rgb(yuyv2yuv(im));
 }
 
-//TODO: rgb2lab
-//lab2rgb
-//xyz2lab
-//lab2xyz
+Image ColorConvert::argb2xyz(Window im) {
+    assert(im.channels == 3, "Image does not have 3 channels\n");
 
+    Image out(im.width, im.height, im.frames, 3);
 
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
+                float r = im(x, y, t)[0];
+                float g = im(x, y, t)[1];
+                float b = im(x, y, t)[2];                
+                // Apply inverse adobe rgb gamma curve
+                float gamma = 563.0f/256;
+                r = powf(r, gamma);
+                g = powf(g, gamma);
+                b = powf(b, gamma);
+                // Apply linear transform
+                out(x, y, t)[0] = 0.57667f * r + 0.18556f * g + 0.18823f * b;
+                out(x, y, t)[1] = 0.29734f * r + 0.62736f * g + 0.07529f * b;
+                out(x, y, t)[2] = 0.02703f * r + 0.07069f * g + 0.99134f * b;                
+            }
+        }
+    }
 
+    return out;
+}
+
+Image ColorConvert::xyz2argb(Window im) {
+    assert(im.channels == 3, "Image does not have 3 channels\n");
+
+    Image out(im.width, im.height, im.frames, 3);
+
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
+                float X = im(x, y, t)[0];
+                float Y = im(x, y, t)[1];
+                float Z = im(x, y, t)[2];
+                // Apply linear transform
+                float r =  2.04159f * X - 0.56501f * Y - 0.34473f * Z;
+                float g = -0.96924f * X + 1.87597f * Y + 0.04156f * Z;
+                float b =  0.01344f * X - 0.11836f * Y + 1.01517f * Z;
+                // Apply adobe rgb gamma curve
+                float gamma = 256/563.0f;
+                out(x, y, t)[0] = powf(r, gamma);
+                out(x, y, t)[1] = powf(g, gamma);
+                out(x, y, t)[2] = powf(b, gamma);
+            }
+        }
+    }
+
+    return out;
+}
+
+Image ColorConvert::argb2rgb(Window im) {
+    return xyz2rgb(argb2xyz(im));
+}
+
+Image ColorConvert::rgb2argb(Window im) {
+    return xyz2argb(rgb2xyz(im));
+}
 
 void Demosaic::help() {
     printf("\n-demosaic demosaics a raw bayer mosaiced image camera. It should be a one\n"

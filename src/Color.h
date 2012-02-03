@@ -32,6 +32,12 @@ public:
 
     static Image uyvy2rgb(Window im);
     static Image yuyv2rgb(Window im);
+
+    static Image argb2xyz(Window im);
+    static Image xyz2argb(Window im);
+
+    static Image argb2rgb(Window im);
+    static Image rgb2argb(Window im);
 };
 
 class Demosaic : public Operation {
