@@ -72,6 +72,4 @@ Image Inpaint::apply(Window im, Window mask) {
 }
 
 
-
-
 #include "footer.h"
