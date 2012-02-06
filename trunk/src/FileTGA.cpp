@@ -28,20 +28,22 @@ Image load(string filename) {
     FILE *f = fopen(filename.c_str(), "rb");
     assert(f, "Could not open file %s\n", filename.c_str());
 
-    unsigned char identsize, colormaptype, imagetype, bits, descriptor;
-    int xstart, ystart, width, height;
+    unsigned char identsize, colormaptype, imagetype, bits;
+    int width, height;
 
     identsize = fgetc(f);
     colormaptype = fgetc(f);
     imagetype = fgetc(f);
     // skip the colormap
     for (int i = 0; i < 5; i++) { fgetc(f); }
-    xstart = fgetc(f) + (fgetc(f) << 8);
-    ystart = fgetc(f) + (fgetc(f) << 8);
+    // skip xstart and ystart
+    for (int i = 0; i < 4; i++) { fgetc(f); }
     width  = fgetc(f) + (fgetc(f) << 8);
     height = fgetc(f) + (fgetc(f) << 8);
     bits = fgetc(f);
-    descriptor = fgetc(f);
+
+    // skip the descriptor
+    fgetc(f);
 
     // skip the ident stuff
     for (int i = 0; i < identsize; i++) { fgetc(f); }
