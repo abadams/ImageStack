@@ -143,12 +143,10 @@ void LoadChannels::parse(vector<string> args) {
 
 Image LoadChannels::apply(vector<string> args) {
     assert(args.size() > 0, "-loadchannels requires at least one file argument.\n");
-    int chanSize = 0;
 
     Image im = Load::apply(args[0]);
     assert(im.channels == 1, "-loadchannels can only load many single channel images\n");
     Image result(im.width, im.height, im.frames, (int)args.size());
-    chanSize = im.width * im.height * im.frames;
     
     for (size_t i = 0; i < args.size(); i++) {
         for (int t = 0; t < im.frames; t++) {
@@ -413,7 +411,6 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
 
     Image out(width, height, frames, channels);
 
-    float *outPtr;
     off_t frameBytes = header.width*header.height*header.channels*sizeof(float);
     off_t sampleBytes = header.channels*sizeof(float);
     off_t scanlineBytes = header.width*header.channels*sizeof(float);
@@ -445,7 +442,6 @@ Image LoadBlock::apply(string filename, int xoff, int yoff, int toff, int coff,
                 off_t offset = (t*frameBytes + y*scanlineBytes + xmin*sampleBytes + headerBytes);
                 fseeko(f, offset, SEEK_SET);
                 fread_(&scanline[0], sizeof(float), (xmax-xmin)*header.channels, f);
-                outPtr = out(xmin-xoff, y-yoff, t-toff);
                 for (int x = xmin; x < xmax; x++) {
                     for (int c = cmin; c < cmax; c++) {
                         out(x-xoff, y-yoff, t-toff)[c-cmin] = 

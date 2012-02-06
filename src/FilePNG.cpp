@@ -22,7 +22,6 @@ Image load(string filename) {
     png_byte header[8];        // 8 is the maximum size that can be checked
     png_structp png_ptr;
     png_infop info_ptr;
-    int number_of_passes;
     png_bytep *row_pointers;
 
     /* open file and test for it being a png */
@@ -58,7 +57,7 @@ Image load(string filename) {
 
     Image im(width, height, 1, channels);
 
-    number_of_passes = png_set_interlace_handling(png_ptr);
+    //number_of_passes = png_set_interlace_handling(png_ptr);
     png_read_update_info(png_ptr, info_ptr);
 
     // read the file
