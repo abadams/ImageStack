@@ -108,6 +108,7 @@ void loadOperations() {
     operationMap["-push"] = new Push();
     operationMap["-pull"] = new Pull();
     operationMap["-dup"] = new Dup();
+    operationMap["-stash"] = new Stash();
 
     // geometry
     operationMap["-resample"] = new Resample();
