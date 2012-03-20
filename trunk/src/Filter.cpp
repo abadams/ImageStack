@@ -1043,133 +1043,208 @@ void Envelope::help() {
             " smooth, and less than (or greater than) the input. The first argument"
             " should be \"lower\" or \"upper\". The second argument is the desired"
             " smoothness, which should be greater than zero and strictly less than"
-            " one. The last argument is the degree of edge preserving. If zero, the"
-            " output will be smooth everywhere. Larger values produce output that is"
-            " permitted to have edges where the input does, in a manner similar to a"
-            " bilateral filter.\n"
+            " one.\n"
             "\n"
-            "Usage: ImageStack -load a.jpg -envelope upper 0.5 1 -display\n"
+            "Usage: ImageStack -load a.jpg -envelope upper 0.5 -display\n"
             "\n"
             "To locally maximize contrast:\n"
-            "ImageStack -load a.jpg -dup -scale 1.1 -envelope lower 0.9 1 -pull 1\n"
-            "           -subtract -envelope upper 0.9 1 -offset 1 -pull 1 -pull 2\n"
+            "ImageStack -load a.jpg -dup -scale 1.1 -envelope lower 0.9 -pull 1\n"
+            "           -subtract -envelope upper 0.9 -offset 1 -pull 1 -pull 2\n"
             "           -add -divide -display\n");
 }
 
 void Envelope::parse(vector<string> args) {
-    assert(args.size() == 3, "-envelope takes three arguments\n");
+    assert(args.size() == 2, "-envelope takes two arguments\n");
     Mode m;
     if (args[0] == "lower") { m = Lower; }
     else if (args[0] == "upper") { m = Upper; }
     else { panic("Unknown mode: %s. Must be lower or upper.\n", args[0].c_str()); }
 
-    Image envelope = apply(stack(0), m, readFloat(args[1]), readFloat(args[2]));
-    push(envelope);
-
+    apply(stack(0), m, readFloat(args[1]));
 }
 
-Image Envelope::apply(Window im, Mode m, float smoothness, float edgePreserving) {
+void Envelope::apply(Window im, Mode m, float smoothness) {
+    Image out(im.width, im.height, im.frames, im.channels);
+    Image tmp(im);
 
-    Image out(im);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    Add::apply(out, tmp);
 
-    for (int i = 0; i < 3; i++) {
-        for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {
-                for (int c = 0; c < im.channels; c++) {
-                    // forward X pass
-                    float *refPtr = im(0, y, t) + c;
-                    float *outPtr = out(0, y, t) + c;
-                    float lastIm = *outPtr;
-                    float lastOut = lastIm;
-                    for (int x = 0; x < im.width; x++) {
-                        float thisIm = *outPtr;
-                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
-                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
-                        if (m == Lower) {
-                            if (thisOut > thisIm) { thisOut = thisIm; }
-                        } else {
-                            if (thisOut < thisIm) { thisOut = thisIm; }
-                        }
-                        *outPtr = thisOut;
-                        lastOut = thisOut;
-                        lastIm = thisIm;
-                        outPtr += out.channels;
-                        refPtr += im.channels;
-                    }
-                    // backward X pass
-                    refPtr = im(im.width-1, y, t) + c;
-                    outPtr = out(out.width-1, y, t) + c;
-                    lastOut = *outPtr;
-                    lastIm = lastOut;
-                    for (int x = 0; x < im.width; x++) {
-                        float thisIm = *outPtr;
-                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
-                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
-                        if (m == Lower) {
-                            if (thisOut > thisIm) { thisOut = thisIm; }
-                        } else {
-                            if (thisOut < thisIm) { thisOut = thisIm; }
-                        }
-                        *outPtr = thisOut;
-                        lastOut = thisOut;
-                        lastIm = thisIm;
-                        outPtr -= out.channels;
-                        refPtr -= im.channels;
-                    }
-                }
-            }
+    Paste::apply(tmp, im, 0, 0);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    Add::apply(out, tmp);
 
+    Paste::apply(tmp, im, 0, 0);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    Add::apply(out, tmp);
+
+    Paste::apply(tmp, im, 0, 0);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    Add::apply(out, tmp);
+
+    Paste::apply(tmp, im, 0, 0);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    Add::apply(out, tmp);
+
+    Paste::apply(tmp, im, 0, 0);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    Add::apply(out, tmp);
+
+    Paste::apply(tmp, im, 0, 0);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    Add::apply(out, tmp);
+
+    Paste::apply(tmp, im, 0, 0);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    yPassU(tmp, m, smoothness);
+    xPassR(tmp, m, smoothness);
+    yPassD(tmp, m, smoothness);
+    xPassL(tmp, m, smoothness);
+    Add::apply(out, tmp);
+
+    float scale = 1.0f/8;
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 for (int c = 0; c < im.channels; c++) {
-                    // forward Y pass
-                    float *outPtr = out(x, 0, t) + c;
-                    float *refPtr = im(x, 0, t) + c;
-                    float lastIm = *outPtr;
-                    float lastOut = lastIm;
-                    for (int y = 0; y < im.height; y++) {
-                        float thisIm = *outPtr;
-                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
-                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
-                        if (m == Lower) {
-                            if (thisOut > thisIm) { thisOut = thisIm; }
-                        } else {
-                            if (thisOut < thisIm) { thisOut = thisIm; }
-                        }
-                        *outPtr = thisOut;
-                        lastOut = thisOut;
-                        lastIm = thisIm;
-                        outPtr += out.ystride;
-                        refPtr += im.ystride;
-                    }
-
-                    // backward Y pass
-                    outPtr = out(x, out.height-1, t) + c;
-                    refPtr = im(x, im.height-1, t) + c;
-                    lastIm = *outPtr;
-                    lastOut = lastIm;
-                    for (int y = 0; y < im.height; y++) {
-                        float thisIm = *outPtr;
-                        float alpha = smoothness/(edgePreserving*fabs(thisIm - lastIm) + 1);
-                        float thisOut = alpha*lastOut + (1-alpha)*thisIm;
-                        if (m == Lower) {
-                            if (thisOut > thisIm) { thisOut = thisIm; }
-                        } else {
-                            if (thisOut < thisIm) { thisOut = thisIm; }
-                        }
-                        *outPtr = thisOut;
-                        lastOut = thisOut;
-                        lastIm = thisIm;
-                        outPtr -= out.ystride;
-                        refPtr -= im.ystride;
-                    }
+                    im(x, y, t)[c] = out(x, y, t)[c] * scale;
                 }
             }
         }
     }
-
-    return out;
 }
 
+void Envelope::xPassR(Window im, Mode m, float smoothness) {
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int c = 0; c < im.channels; c++) {
+                float out = im(0, y, t)[c];
+                for (int x = 0; x < im.width; x++) {
+                    float next = im(x, y, t)[c];
+                    out = smoothness * out + (1-smoothness) * next;
+                    if (m == Lower) {
+                        out = min(out, next);
+                    } else {
+                        out = max(out, next);
+                    }
+                    im(x, y, t)[c] = out;
+                }
+            }
+        }
+    }
+}
+
+void Envelope::xPassL(Window im, Mode m, float smoothness) {
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int c = 0; c < im.channels; c++) {
+                float out = im(im.width-1, y, t)[c];
+                for (int x = im.width-1; x >= 0; x--) {
+                    float next = im(x, y, t)[c];
+                    out = smoothness * out + (1-smoothness) * next;
+                    if (m == Lower) {
+                        out = min(out, next);
+                    } else {
+                        out = max(out, next);
+                    }
+                    im(x, y, t)[c] = out;
+                }
+            }
+        }
+    }
+}
+
+void Envelope::yPassU(Window im, Mode m, float smoothness) {
+    for (int t = 0; t < im.frames; t++) {
+        for (int x = 0; x < im.width; x++) {
+            for (int c = 0; c < im.channels; c++) {
+                float out = im(x, im.height-1, t)[c];
+                for (int y = im.height-1; y >= 0; y--) {
+                    float next = im(x, y, t)[c];
+                    out = smoothness * out + (1-smoothness) * next;
+                    if (m == Lower) {
+                        out = min(out, next);
+                    } else {
+                        out = max(out, next);
+                    }
+                    im(x, y, t)[c] = out;
+                }
+            }
+        }
+    }
+}
+
+void Envelope::yPassD(Window im, Mode m, float smoothness) {
+    for (int t = 0; t < im.frames; t++) {
+        for (int x = 0; x < im.width; x++) {
+            for (int c = 0; c < im.channels; c++) {
+                float out = im(x, 0, t)[c];
+                for (int y = 0; y < im.height; y++) {
+                    float next = im(x, y, t)[c];
+                    out = smoothness * out + (1-smoothness) * next;
+                    if (m == Lower) {
+                        out = min(out, next);
+                    } else {
+                        out = max(out, next);
+                    }
+                    im(x, y, t)[c] = out;
+                }
+            }
+        }
+    }
+}
 
 void HotPixelSuppression::help() {
     pprintf("-hotpixelsuppression removes salt-and-pepper noise from an image by"

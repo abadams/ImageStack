@@ -25,7 +25,7 @@ class Expression {
     Funct0  -> mean | sum | max | min | stddev | var | skew | kurtosis
     Funct1  -> sin | cos | tan | log | abs | mean | sum | max | min | stddev | variance | skew | kurtosis
     Funct2  -> covariance
-    Var     -> x | y | t | c | X | Y | T | val
+    Var     -> x | y | t | c | val
     Uniform -> width | height | frames | channels
     Const   -> e | pi
     Sample  -> [IfThenElse, IfThenElse, IfThenElse] | [IfThenElse, IfThenElse] | [IfThenElse]

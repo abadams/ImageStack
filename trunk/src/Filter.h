@@ -72,7 +72,12 @@ public:
     void help();
     void parse(vector<string> args);
     enum Mode {Lower = 0, Upper};
-    static Image apply(Window im, Mode m, float smoothness, float edgePreserving);
+    static void apply(Window im, Mode m, float smoothness);
+ private:
+    static void xPassR(Window im, Mode m, float smoothness);
+    static void yPassD(Window im, Mode m, float smoothness);
+    static void xPassL(Window im, Mode m, float smoothness);
+    static void yPassU(Window im, Mode m, float smoothness);
 };
 
 class HotPixelSuppression : public Operation {
