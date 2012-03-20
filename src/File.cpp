@@ -287,11 +287,12 @@ void SaveFrames::apply(Window im, string pattern, string arg) {
 }
 
 void SaveChannels::help() {
-    printf("\n-savechannels takes a printf style format argument, and saves all the channels in\n"
-           "the current image as separate files. See the help for save for details on file\n"
-           "formats.\n\n"
-           "Usage: ImageStack -loadchannels *.jpg -savechannels frame%%03d.png\n"
-           "       ImageStack -loadchannels *.jpg -savechannels frame%%03d.ppm 16\n\n");
+    pprintf("-savechannels takes a printf style format argument, and saves all the"
+            " channels in the current image as separate files. See the help for"
+            " save for details on file formats.\n"
+            "\n"
+            "Usage: ImageStack -loadchannels *.jpg -savechannels frame%%03d.png\n"
+            "       ImageStack -loadchannels *.jpg -savechannels frame%%03d.ppm 16\n\n");
 }
 
 void SaveChannels::parse(vector<string> args) {
