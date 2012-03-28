@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-const float INF = std::numeric_limits<float>::infinity();
-
 float rand_float() {
     return rand()/(RAND_MAX+1.0f);
 }

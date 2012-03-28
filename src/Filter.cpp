@@ -831,12 +831,180 @@ Image LanczosBlur::apply(Window im, float filterWidth, float filterHeight, float
 }
 
 
+void MinFilter::help() {
+    pprintf("-minfilter applies a min filter with square support. The sole argument "
+            "is the pixel radius of the filter. For circular support, see "
+            "-percentilefilter.\n"
+            "\n"
+            "Usage: ImageStack -load input.jpg -minfilter 10 -save output.jpg\n");
+}
+
+void MinFilter::parse(vector<string> args) {
+    assert(args.size() == 1, "-minfilter takes on argument\n");
+    int radius = readInt(args[0]);
+    assert(radius > -1, "radius must be positive");
+    apply(stack(0), radius);
+}
+
+void MinFilter::apply(Window im, int radius) {
+    // Make a heap with (2*radius + 1) leaves. Unlike a regular heap,
+    // each internal node is a _copy_ of the smaller child. The leaf
+    // nodes act as a circular buffer. Every time we introduce a new
+    // pixel (and evict an old one), we update all of its parents up
+    // to the root.
+
+    vector<float> heap(4*radius+1);
+    
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int c = 0; c < im.channels; c++) {
+                // Initialize the heap to contain all inf
+                std::fill(heap.begin(), heap.end(), INF);
+                size_t pos = 2*radius;
+                for (int x = 0; x < im.width + radius; x++) {                                        
+                    // Get the next input
+                    float val;
+                    if (x < im.width) val = im(x, y, t)[c];
+                    else val = INF;
+                    // Stuff it in the heap                    
+                    heap[pos] = val;
+                    // Update parents
+                    size_t p = pos;
+                    do {
+                        p--; p>>=1;
+                        heap[p] = min(heap[2*p+1], heap[2*p+2]);
+                    } while (p);
+
+                    // Maybe write out min
+                    if (x-radius > 0)
+                        im(x-radius, y, t)[c] = heap[0];
+                    // Update position in circular buffer
+                    pos++;
+                    if (pos == heap.size()) pos = 2*radius;
+                }
+            }
+        }
+
+        for (int x = 0; x < im.width; x++) {
+            for (int c = 0; c < im.channels; c++) {
+                // Initialize the heap to contain all inf
+                std::fill(heap.begin(), heap.end(), INF);
+                size_t pos = 2*radius;
+                for (int y = 0; y < im.height + radius; y++) {                                        
+                    float val;
+                    if (y < im.height) val = im(x, y, t)[c];
+                    else val = INF;
+                    // stuff it in the heap                    
+                    heap[pos] = val;
+                    // update parents
+                    size_t p = pos;
+                    do {
+                        p--; p>>=1;
+                        heap[p] = min(heap[2*p+1], heap[2*p+2]);
+                    } while (p);
+                    // write out min
+                    if (y-radius > 0) 
+                        im(x, y-radius, t)[c] = heap[0];
+                    // update position in circular buffer
+                    pos++;
+                    if (pos == heap.size()) pos = 2*radius;
+                }
+            }
+        }
+    }
+
+}
+
+void MaxFilter::help() {
+    pprintf("-maxfilter applies a max filter with square support. The sole argument "
+            "is the pixel radius of the filter. For circular support, see "
+            "-percentilefilter.\n"
+            "\n"
+            "Usage: ImageStack -load input.jpg -maxfilter 10 -save output.jpg\n");
+}
+
+void MaxFilter::parse(vector<string> args) {
+    assert(args.size() == 1, "-maxfilter takes on argument\n");
+    int radius = readInt(args[0]);
+    assert(radius > -1, "radius must be positive");
+    apply(stack(0), radius);
+}
+
+void MaxFilter::apply(Window im, int radius) {
+    // Make a heap with (2*radius + 1) leaves. Unlike a regular heap,
+    // each internal node is a _copy_ of the smaller child. The leaf
+    // nodes act as a circular buffer. Every time we introduce a new
+    // pixel (and evict an old one), we update all of its parents up
+    // to the root.
+
+    vector<float> heap(4*radius+1);
+    
+    for (int t = 0; t < im.frames; t++) {
+        for (int y = 0; y < im.height; y++) {
+            for (int c = 0; c < im.channels; c++) {
+                // Initialize the heap to contain all inf
+                std::fill(heap.begin(), heap.end(), -INF);
+                size_t pos = 2*radius;
+                for (int x = 0; x < im.width + radius; x++) {                                        
+                    // Get the next input
+                    float val;
+                    if (x < im.width) val = im(x, y, t)[c];
+                    else val = -INF;
+                    // Stuff it in the heap                    
+                    heap[pos] = val;
+                    // Update parents
+                    size_t p = pos;
+                    do {
+                        p--; p>>=1;
+                        heap[p] = max(heap[2*p+1], heap[2*p+2]);
+                    } while (p);
+
+                    // Maybe write out max
+                    if (x-radius > 0)
+                        im(x-radius, y, t)[c] = heap[0];
+                    // Update position in circular buffer
+                    pos++;
+                    if (pos == heap.size()) pos = 2*radius;
+                }
+            }
+        }
+
+        for (int x = 0; x < im.width; x++) {
+            for (int c = 0; c < im.channels; c++) {
+                // Initialize the heap to contain all inf
+                std::fill(heap.begin(), heap.end(), -INF);
+                size_t pos = 2*radius;
+                for (int y = 0; y < im.height + radius; y++) {                                        
+                    float val;
+                    if (y < im.height) val = im(x, y, t)[c];
+                    else val = -INF;
+                    // Stuff it in the heap                    
+                    heap[pos] = val;
+                    // Update parents
+                    size_t p = pos;
+                    do {
+                        p--; p>>=1;
+                        heap[p] = max(heap[2*p+1], heap[2*p+2]);
+                    } while (p);
+                    // write out max
+                    if (y-radius > 0) 
+                        im(x, y-radius, t)[c] = heap[0];
+                    // update position in circular buffer
+                    pos++;
+                    if (pos == heap.size()) pos = 2*radius;
+                }
+            }
+        }
+    }
+
+}
 
 
 void MedianFilter::help() {
-    printf("-medianfilter applies a median filter with a circular support. The sole argument is\n"
-           "the pixel radius of the filter.\n\n"
-           "Usage: ImageStack -load input.jpg -median 10 -save output.jpg\n\n");
+    pprintf("-medianfilter applies a median filter with a circular support. The " 
+            "sole argument is the pixel radius of the filter.\n"
+            "\n"
+            "Usage: ImageStack -load input.jpg -medianfilter 10 -save output.jpg\n");
 }
 
 void MedianFilter::parse(vector<string> args) {
@@ -965,9 +1133,11 @@ Image PercentileFilter::apply(Window im, int radius, float percentile) {
 
 
 void CircularFilter::help() {
-    printf("\n-circularfilter convolves the image with a uniform circular kernel. It is a good\n"
-           "approximate to out of focus blur. The sole argument is the radius of the filter.\n\n"
-           "Usage: ImageStack -load in.jpg -circularfilter 10 -save out.jpg\n\n");
+  pprintf("-circularfilter convolves the image with a uniform circular kernel. It"
+          "is a good approximation to out-of-focus blur. The sole argument is the"
+          "radius of the filter.\n"
+          "\n"
+          "Usage: ImageStack -load in.jpg -circularfilter 10 -save out.jpg\n\n");
 }
 
 void CircularFilter::parse(vector<string> args) {
@@ -1022,7 +1192,7 @@ Image CircularFilter::apply(Window im, int radius) {
                     for (int i = 0; i < radius*2+1; i++) {
                         int realXOld = max(0, x-edge[i]);
                         int realXNew = min(x+edge[i]+1, im.width-1);
-                        int realY = clamp(0, y+i-radius, im.height-1);
+                        int realY = clamp(y+i-radius, 0, im.height-1);
 
                         // add new value, subtract old value
                         average += im(realXNew, realY, t)[c];
@@ -1042,15 +1212,9 @@ void Envelope::help() {
     pprintf("-envelope computes a lower or upper envelope of the input, which is"
             " smooth, and less than (or greater than) the input. The first argument"
             " should be \"lower\" or \"upper\". The second argument is the desired"
-            " smoothness, which should be greater than zero and strictly less than"
-            " one.\n"
+            " smoothness, which is roughly proportional to the pixel radius of a blur.\n"
             "\n"
-            "Usage: ImageStack -load a.jpg -envelope upper 0.5 -display\n"
-            "\n"
-            "To locally maximize contrast:\n"
-            "ImageStack -load a.jpg -dup -scale 1.1 -envelope lower 0.9 -pull 1\n"
-            "           -subtract -envelope upper 0.9 -offset 1 -pull 1 -pull 2\n"
-            "           -add -divide -display\n");
+            "Usage: ImageStack -load a.jpg -envelope upper 50 -display\n");
 }
 
 void Envelope::parse(vector<string> args) {
@@ -1060,189 +1224,24 @@ void Envelope::parse(vector<string> args) {
     else if (args[0] == "upper") { m = Upper; }
     else { panic("Unknown mode: %s. Must be lower or upper.\n", args[0].c_str()); }
 
-    apply(stack(0), m, readFloat(args[1]));
+    apply(stack(0), m, readInt(args[1]));
 }
 
-void Envelope::apply(Window im, Mode m, float smoothness) {
-    Image out(im.width, im.height, im.frames, im.channels);
-    Image tmp(im);
-
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    Paste::apply(tmp, im, 0, 0);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    yPassU(tmp, m, smoothness);
-    xPassR(tmp, m, smoothness);
-    yPassD(tmp, m, smoothness);
-    xPassL(tmp, m, smoothness);
-    Add::apply(out, tmp);
-
-    float scale = 1.0f/8;
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {
-                    im(x, y, t)[c] = out(x, y, t)[c] * scale;
-                }
-            }
-        }
+void Envelope::apply(Window im, Mode m, int radius) {
+    if (m == Upper) {
+        MaxFilter::apply(im, radius);
+        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
+        radius = (radius+2)/3;
+        MaxFilter::apply(im, radius);
+        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);  
     }
-}
 
-void Envelope::xPassR(Window im, Mode m, float smoothness) {
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int c = 0; c < im.channels; c++) {
-                float out = im(0, y, t)[c];
-                for (int x = 0; x < im.width; x++) {
-                    float next = im(x, y, t)[c];
-                    out = smoothness * out + (1-smoothness) * next;
-                    if (m == Lower) {
-                        out = min(out, next);
-                    } else {
-                        out = max(out, next);
-                    }
-                    im(x, y, t)[c] = out;
-                }
-            }
-        }
-    }
-}
-
-void Envelope::xPassL(Window im, Mode m, float smoothness) {
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int c = 0; c < im.channels; c++) {
-                float out = im(im.width-1, y, t)[c];
-                for (int x = im.width-1; x >= 0; x--) {
-                    float next = im(x, y, t)[c];
-                    out = smoothness * out + (1-smoothness) * next;
-                    if (m == Lower) {
-                        out = min(out, next);
-                    } else {
-                        out = max(out, next);
-                    }
-                    im(x, y, t)[c] = out;
-                }
-            }
-        }
-    }
-}
-
-void Envelope::yPassU(Window im, Mode m, float smoothness) {
-    for (int t = 0; t < im.frames; t++) {
-        for (int x = 0; x < im.width; x++) {
-            for (int c = 0; c < im.channels; c++) {
-                float out = im(x, im.height-1, t)[c];
-                for (int y = im.height-1; y >= 0; y--) {
-                    float next = im(x, y, t)[c];
-                    out = smoothness * out + (1-smoothness) * next;
-                    if (m == Lower) {
-                        out = min(out, next);
-                    } else {
-                        out = max(out, next);
-                    }
-                    im(x, y, t)[c] = out;
-                }
-            }
-        }
-    }
-}
-
-void Envelope::yPassD(Window im, Mode m, float smoothness) {
-    for (int t = 0; t < im.frames; t++) {
-        for (int x = 0; x < im.width; x++) {
-            for (int c = 0; c < im.channels; c++) {
-                float out = im(x, 0, t)[c];
-                for (int y = 0; y < im.height; y++) {
-                    float next = im(x, y, t)[c];
-                    out = smoothness * out + (1-smoothness) * next;
-                    if (m == Lower) {
-                        out = min(out, next);
-                    } else {
-                        out = max(out, next);
-                    }
-                    im(x, y, t)[c] = out;
-                }
-            }
-        }
+    if (m == Lower) {
+        MinFilter::apply(im, radius);
+        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
+        radius = (radius+2)/3;
+        MinFilter::apply(im, radius);
+        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);            
     }
 }
 
