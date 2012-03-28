@@ -211,6 +211,8 @@ void loadOperations() {
     operationMap["-circularfilter"] = new CircularFilter();
     operationMap["-medianfilter"] = new MedianFilter();
     operationMap["-percentilefilter"] = new PercentileFilter();
+    operationMap["-minfilter"] = new MinFilter();
+    operationMap["-maxfilter"] = new MaxFilter();
     operationMap["-envelope"] = new Envelope();
     operationMap["-hotpixelsuppression"] = new HotPixelSuppression();
     //    operationMap["-laplacianpyramid"] = new LaplacianFilter();

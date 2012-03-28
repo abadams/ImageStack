@@ -51,6 +51,8 @@ inline T clamp(const T &a, const T &b, const T &c) {
 #define E 2.7182818284590451
 #endif
 
+#define INF (std::numeric_limits<float>::infinity())
+
 // Map high dynamic range values to [0, 255], so that 0->0, and 1->255
 static inline unsigned char HDRtoLDR(float x) {
     if (x < 0) { return 0; }
@@ -66,7 +68,6 @@ static inline float LDRtoHDR(unsigned char x) {
 static inline float LDR16toHDR(unsigned short x) {
     return x * (1.0f/65535);
 }
-
 
 // stuff below here makes up for C99 not being supported (I'm looking at you msvc!)
 #ifndef isnan
@@ -106,7 +107,6 @@ static inline float isinf(float x) {
     return exp255 && (!mantissa);
 }
 #endif
-
 
 #include "footer.h"
 #endif

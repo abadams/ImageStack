@@ -52,6 +52,20 @@ public:
     static Image apply(Window im, int radius);
 };
 
+class MinFilter : public Operation {
+  public:
+    void help();
+    void parse(vector<string> args);
+    static void apply(Window im, int radius);
+};
+
+class MaxFilter : public Operation {
+  public:
+    void help();
+    void parse(vector<string> args);
+    static void apply(Window im, int radius);
+};
+
 class PercentileFilter : public Operation {
 public:
     void help();
@@ -72,12 +86,7 @@ public:
     void help();
     void parse(vector<string> args);
     enum Mode {Lower = 0, Upper};
-    static void apply(Window im, Mode m, float smoothness);
- private:
-    static void xPassR(Window im, Mode m, float smoothness);
-    static void yPassD(Window im, Mode m, float smoothness);
-    static void xPassL(Window im, Mode m, float smoothness);
-    static void yPassU(Window im, Mode m, float smoothness);
+    static void apply(Window im, Mode m, int radius);
 };
 
 class HotPixelSuppression : public Operation {
