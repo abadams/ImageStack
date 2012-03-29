@@ -118,7 +118,7 @@ void Multiply::parse(vector<string> args) {
         b = tmp;
     }
 
-    if (m == Elementwise || b.channels == 1) {
+    if (m == Elementwise) {
         applyElementwise(a, b);
         pop();
     } else {
@@ -138,7 +138,7 @@ Image Multiply::apply(Window a, Window b, Mode m) {
            "Cannot multiply images of different sizes\n");
 
     assert(a.channels % b.channels == 0,
-           "One input have a number of channels which is a multiple of the other's\n");
+           "One input must have a number of channels which is a multiple of the other's\n");
 
     Image out;
 
