@@ -164,10 +164,6 @@ Expression::Node *Expression::parseTerm() {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_tan(parseIfThenElse());
         assert(consume(")"), "Function call missing closing parenthesis.\n");
-    } else if (consume("atan")) {
-        assert(consume("("), "Function call missing opening parenthesis.\n");
-        result = new Funct_atan(parseIfThenElse());
-        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("asin")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_asin(parseIfThenElse());
@@ -183,6 +179,10 @@ Expression::Node *Expression::parseTerm() {
         Node *arg2 = parseIfThenElse();
         assert(consume(")"), "Function call missing closing parenthesis.\n");
         result = new Funct_atan2(arg1, arg2);
+    } else if (consume("atan")) {
+        assert(consume("("), "Function call missing opening parenthesis.\n");
+        result = new Funct_atan(parseIfThenElse());
+        assert(consume(")"), "Function call missing closing parenthesis.\n");
     } else if (consume("abs")) {
         assert(consume("("), "Function call missing opening parenthesis.\n");
         result = new Funct_abs(parseIfThenElse());
