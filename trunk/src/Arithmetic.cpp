@@ -110,17 +110,26 @@ void Multiply::parse(vector<string> args) {
         panic("Unknown vector-vector multiplication: %s\n", args[0].c_str());
     }
 
+    bool swapped = false;
+
     Window a = stack(1);
     Window b = stack(0);
     if (a.channels < b.channels) {
         Window tmp = a;
         a = b;
         b = tmp;
+        swapped = true;
     }
 
-    if (m == Elementwise) {
+    if (m == Elementwise || b.channels == 1) {
         applyElementwise(a, b);
-        pop();
+        if (!swapped) pop();
+        else {
+          Image im = stack(0);
+          pop();
+          pop();
+          push(im);
+        }
     } else {
         Image im = apply(a, b, m);
         pop();
