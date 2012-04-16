@@ -19,7 +19,9 @@
 #include <limits>
 #include <list>
 #include <sstream>
+#include <memory>
 
+using ::std::shared_ptr;
 using ::std::string;
 using ::std::vector;
 using ::std::pair;

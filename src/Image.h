@@ -4,6 +4,78 @@
 #include "tables.h"
 #include "header.h"
 
+class NewImage {
+  public:
+    NewImage(int w, int h) {
+        init(w, h, 1, 1);
+    }
+
+    NewImage(int w, int h, int c) {
+        init(w, h, 1, c);
+    }
+
+    NewImage(int w, int h, int f, int c) {
+        init(w, h, f, c);
+    }
+
+    float &operator()(int x, int y) {
+        return base[x + y*ystride];
+    }
+
+    float &operator()(int x, int y, int c) {
+        return base[x + y*ystride + c*cstride];
+    }
+
+    float &operator()(int x, int y, int t, int c) {
+        return base[x + y*ystride + t*tstride + c*cstride];
+    }
+
+    const float &operator()(int x, int y) const {
+        return base[x + y*ystride];
+    }
+
+    const float &operator()(int x, int y, int c) const {
+        return base[x + y*ystride + c*cstride];
+    }
+
+    const float &operator()(int x, int y, int t, int c) const {
+        return base[x + y*ystride + t*tstride + c*cstride];
+    }
+
+    float *baseAddress() {
+        return base;
+    }
+
+    NewImage copy() {
+        NewImage m(width, height, frames, channels);
+        memcpy(m.baseAddress(), baseAddress(), sizeof(float)*width*height*frames*channels);
+        return m;
+    }
+
+  private:
+
+    void init(int w, int h, int f, int c) {
+        width = w;
+        height = h;
+        frames = f;
+        channels = c;
+
+        cstride = width*height*frames;
+        tstride = width*height;
+        ystride = width;
+
+        data.reset(new vector<float>(w*h*f*c+3));
+        base = &((*data)[0]);
+        while (((size_t)base) & 0xf) base++;
+    }
+
+    std::shared_ptr<std::vector<float> > data;
+    float *base;
+    int frames, width, height, channels;
+    int ystride, tstride, cstride;
+};
+
+
 class Window {
 public:
     Window() {
