@@ -1,6 +1,7 @@
 #include "main.h"
 #include "File.h"
 #include "header.h"
+#include <stdint.h>
 
 namespace FileTMP {
 enum TypeCode {FLOAT32 = 0, FLOAT64, UINT8, INT8, UINT16, INT16, UINT32, INT32, UINT64, INT64};
@@ -83,35 +84,35 @@ void save(Window im, string filename, string type) {
     } else if (type == "uint8" || type == "unsigned char") {
         typeCode = UINT8;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<unsigned char>(f, im);
+        saveData<uint8_t>(f, im);
     } else if (type == "int8" || type == "char") {
         typeCode = INT8;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<signed char>(f, im);
+        saveData<int8_t>(f, im);
     } else if (type == "uint16" || type == "unsigned short") {
         typeCode = UINT16;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<unsigned short>(f, im);
+        saveData<uint16_t>(f, im);
     } else if (type == "int16" || type == "short") {
         typeCode = INT16;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<signed short>(f, im);
+        saveData<int16_t>(f, im);
     } else if (type == "uint32" || type == "unsigned int") {
         typeCode = UINT32;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<unsigned long>(f, im);
+        saveData<uint32_t>(f, im);
     } else if (type == "int32" || type == "int") {
         typeCode = INT32;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<signed long>(f, im);
+        saveData<int32_t>(f, im);
     } else if (type == "uint64") {
         typeCode = UINT64;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<unsigned long long>(f, im);
+        saveData<uint64_t>(f, im);
     } else if (type == "int64") {
         typeCode = INT64;
         fwrite(&typeCode, sizeof(int), 1, f);
-        saveData<signed long long>(f, im);
+        saveData<int64_t>(f, im);
     }
     fclose(f);
 }
@@ -174,21 +175,21 @@ Image load(string filename) {
     } else if (h.typeCode == FLOAT64) {
         im = loadData<double>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == UINT8) {
-        im = loadData<unsigned char>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint8_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == INT8) {
-        im = loadData<signed char>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int8_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == UINT16) {
-        im = loadData<unsigned short>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint16_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == INT16) {
-        im = loadData<signed short>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int16_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == UINT32) {
-        im = loadData<unsigned long>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint32_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == INT32) {
-        im = loadData<signed long>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int32_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == UINT64) {
-        im = loadData<unsigned long long>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint64_t>(file, h.frames, h.width, h.height, h.channels);
     } else if (h.typeCode == INT64) {
-        im = loadData<signed long long>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int64_t>(file, h.frames, h.width, h.height, h.channels);
     } else {
         printf("Unknown type code %d. Possibly trying to load an old-style tmp file.\n", h.typeCode);
         fseek(file, 16, SEEK_SET);

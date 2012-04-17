@@ -1041,29 +1041,186 @@ void PercentileFilter::parse(vector<string> args) {
 }
 
 Image PercentileFilter::apply(Window im, int radius, float percentile) {
-    // make the histogram
-    const int buckets = 256;
+    struct SlidingWindow {
 
-    vector<int> histogram(buckets);
+        // We'll use a pair of heap-like data structures, with a circular
+        // buffer as the leaves. The internal nodes point to the smaller
+        // or greater child. Each node in the buffer belongs to at most
+        // one of the two heaps at any given time.
+        
+        // Buffer to contain pixel values
+        vector<float> buf;
+ 
+        // The pair represents:
+        // 1) Index in the circular buffer of the value at this node
+        // 2) How many valid children this node has. If zero, then 1) is meaningless.
+        vector<pair<int, int> > minHeap, maxHeap;
+
+        SlidingWindow(int maxKey) {
+            buf.resize(maxKey);
+            size_t heapSize = 1;
+            while (heapSize < 2*buf.size()-1) {
+                // Add a new level
+                heapSize += heapSize+1;
+            }
+            minHeap.resize(heapSize);
+            maxHeap.resize(heapSize);
+
+            for (size_t i = 0; i < heapSize; i++) {
+                minHeap[i].first = 0;
+                minHeap[i].second = 0;
+                maxHeap[i].first = 0;
+                maxHeap[i].second = 0;
+            }
+
+            // Set the initial pointers at the leaves
+            for (size_t i = 0; i < buf.size(); i++) {
+                minHeap[i+buf.size()-1].first = i;
+                maxHeap[i+buf.size()-1].first = i;
+            }
+        }
+
+        void insert(int key, float val) {
+            float p = pivot();
+            buf[key] = val;
+            int heapIdx = key + buf.size() - 1;            
+            if (isEmpty() || val < p) {
+                // add to the max heap
+                maxHeap[heapIdx].second = 1;
+                minHeap[heapIdx].second = 0;
+            } else {
+                // add to the min heap
+                maxHeap[heapIdx].second = 0;
+                minHeap[heapIdx].second = 1;
+            }
+            // Fix the heaps
+            updateFrom(heapIdx);
+        }
+
+        void updateFrom(int pos) {
+            // walk up both heaps from the same leaf fixing pointers
+            int p = pos;
+            while (p) {
+                // Move to the parent
+                p = (p-1)/2;
+
+                // Examine both children, and update the parent accordingly
+                pair<int, int> a = minHeap[p*2+1];
+                pair<int, int> b = minHeap[p*2+2];
+                pair<int, int> parent;
+                parent.second = a.second + b.second;
+                if (a.second && b.second) {
+                    parent.first = (buf[a.first] < buf[b.first]) ? a.first : b.first;
+                } else if (b.second) {
+                    parent.first = b.first;
+                } else {
+                    parent.first = a.first;
+                }
+                if (minHeap[p] == parent) break;
+                minHeap[p] = parent;
+            }
+                 
+            p = pos;
+            while (p) {
+                p = (p-1)/2;
+                pair<int, int> a = maxHeap[p*2+1];
+                pair<int, int> b = maxHeap[p*2+2];
+                pair<int, int> parent;
+                parent.second = a.second + b.second;
+                if (a.second && b.second) {
+                    parent.first = (buf[a.first] > buf[b.first]) ? a.first : b.first;
+                } else if (b.second) {
+                    parent.first = b.first;
+                } else {
+                    parent.first = a.first;
+                }
+                if (maxHeap[p] == parent) break;
+                maxHeap[p] = parent;
+            }
+        }
+
+        void remove(int key) {
+            int heapIdx = key+buf.size()-1;
+            minHeap[heapIdx].second = 0;
+            maxHeap[heapIdx].second = 0;
+            updateFrom(heapIdx);
+        }
+
+        void rebalance(float percentile) {
+            int total = maxHeap[0].second + minHeap[0].second;
+
+            int desiredMinHeapSize = clamp(int(total * (1.0f - percentile)), 0, total-1);
+
+            // Make sure there aren't too few things in the maxHeap
+            while (minHeap[0].second > desiredMinHeapSize) {
+                // switch the smallest thing in the minHeap into the maxHeap
+                int heapIdx = minHeap[0].first + (buf.size()-1);
+                minHeap[heapIdx].second = 0;
+                maxHeap[heapIdx].second = 1;
+                updateFrom(heapIdx);
+            }
+
+            // Make sure there aren't too many things in the maxHeap
+            while (minHeap[0].second < desiredMinHeapSize) {
+                // Switch the largest thing in the maxHeap into the minHeap
+                int heapIdx = maxHeap[0].first + (buf.size()-1);
+                minHeap[heapIdx].second = 1;
+                maxHeap[heapIdx].second = 0;
+                updateFrom(heapIdx);                
+            }
+        }
+        
+        bool isEmpty() {
+            return ((maxHeap[0].second + minHeap[0].second) == 0);
+        }
+
+        float pivot() {
+            return buf[maxHeap[0].first];
+        }
+
+        void debug() {
+            int heapSize = minHeap.size();
+            printf("min heap:\n");            
+            for (int sz = heapSize+1; sz > 1; sz /= 2) {
+                for (int i = sz/2-1; i < sz-1; i++) {
+                    pair<int, int> node = minHeap[i];
+                    if (node.second)
+                        printf("%02d ", (int)(buf[node.first]*100));
+                    else
+                        printf("-- ");                    
+                }
+                printf("\n");
+            }
+            printf("max heap:\n");            
+            for (int sz = heapSize+1; sz > 1; sz /= 2) {
+                for (int i = sz/2-1; i < sz-1; i++) {
+                    pair<int, int> node = maxHeap[i];
+                    if (node.second)
+                        printf("%02d ", (int)(buf[node.first]*100));
+                    else
+                        printf("-- ");                    
+                }
+                printf("\n");
+            }
+        }
+
+    };
 
     Image out(im.width, im.height, im.frames, im.channels);
 
     // make the filter edge profile
-    vector<int> edge(radius*2+1);
+    int d = 2*radius+1;
+    vector<int> edge(d);
 
-    for (int i = 0; i < 2*radius+1; i++) {
+    for (int i = 0; i < d; i++) {
         edge[i] = (int)(sqrtf(radius*radius - (i - radius)*(i-radius)) + 0.0001f);
     }
 
     for (int c = 0; c < im.channels; c++) {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
-                // initialize the histogram for this scanline
-                for (int i = 0; i < buckets; i++) { histogram[i] = 0; }
-                int lteq = 0;
-                int total = 0;
-                int medianBucket = buckets/2;
-
+                // initialize the sliding window for this scanline
+                SlidingWindow window(d*d);
                 for (int i = 0; i < 2*radius+1; i++) {
                     int xoff = edge[i];
                     int yoff = i - radius;
@@ -1074,29 +1231,17 @@ Image PercentileFilter::apply(Window im, int radius, float percentile) {
                     for (int j = 0; j <= xoff; j++) {
                         if (j >= im.width) { break; }
                         float val = im(j, y+yoff, t)[c];
-                        int bucket = HDRtoLDR(val);
-                        histogram[bucket]++;
-                        if (bucket <= medianBucket) { lteq++; }
-                        total++;
+                        window.insert(i*d + j, val);
                     }
                 }
 
                 for (int x = 0; x < im.width; x++) {
-                    // adjust the median bucket downwards
-                    while (lteq > total * percentile && medianBucket > 0) {
-                        lteq -= histogram[medianBucket];
-                        medianBucket--;
-                    }
+                    window.rebalance(percentile);
+                    //window.debug();
 
-                    // adjust the median bucket upwards
-                    while (lteq <= total * percentile && medianBucket < buckets-1) {
-                        medianBucket++;
-                        lteq += histogram[medianBucket];
-                    }
+                    out(x, y, t)[c] = window.pivot();
 
-                    out(x, y, t)[c] = LDRtoHDR(medianBucket);
-
-                    // move the histogram to the right
+                    // move the support one to the right
                     for (int i = 0; i < radius*2+1; i++) {
                         int xoff = edge[i];
                         int yoff = i - radius;
@@ -1106,20 +1251,13 @@ Image PercentileFilter::apply(Window im, int radius, float percentile) {
 
                         // subtract old value
                         if (x - xoff >= 0) {
-                            float val = im(x-xoff, y+yoff, t)[c];
-                            int bucket = HDRtoLDR(val);
-                            histogram[bucket]--;
-                            if (bucket <= medianBucket) { lteq--; }
-                            total--;
+                            window.remove(i*d + (x-xoff)%d);
                         }
 
                         // add new value
                         if (x + xoff + 1 < im.width) {
                             float val = im(x+xoff+1, y+yoff, t)[c];
-                            int bucket = HDRtoLDR(val);
-                            histogram[bucket]++;
-                            if (bucket <= medianBucket) { lteq++; }
-                            total++;
+                            window.insert(i*d + (x+xoff+1)%d, val);
                         }
                     }
                 }
