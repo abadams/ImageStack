@@ -4,6 +4,8 @@
 #include "Calculus.h"
 #include "Arithmetic.h"
 #include "Convolve.h"
+#include "Statistics.h"
+#include "Geometry.h"
 #include <list>
 #include "header.h"
 
@@ -24,12 +26,12 @@ class PCG {
         float SW;
     };
 public:
-    PCG(Window d, Window gx, Window gy, Window w, Window sx, Window sy)
+    PCG(Image d, Image gx, Image gy, Image w_, Image sx_, Image sy_)
         : AW(d.width, d.height, 1, 1),
           AN(d.width, d.height, 1, 1),
-          w(w),
-          sx(sx),
-          sy(sy),
+          w(w_),
+          sx(sx_),
+          sy(sy_),
           b(d.width, d.height, 1, d.channels),
           f(d.width, d.height, 1, d.channels),
           hbRes(d.width, d.height, 1, d.channels),
@@ -51,45 +53,45 @@ public:
                     if (y == b.height-1) {
                         add_y = 0;
                     } else {
-                        add_y = sy(x,y+1,t)[0];
+                        add_y = sy(x,y+1,t,0);
                     }
 
                     if (x == b.width-1) {
                         add_x = 0;
                     } else {
-                        add_x = sx(x+1,y,t)[0];
+                        add_x = sx(x+1,y,t,0);
                     }
 
-                    AD(x,y,t)[0] = sx(x,y,t)[0] + add_x + w(x,y,t)[0] + sy(x,y,t)[0] + add_y;
+                    AD(x,y,t,0) = sx(x,y,t,0) + add_x + w(x,y,t,0) + sy(x,y,t,0) + add_y;
 
                     if (y == sy.height-1) {
-                        AN(x,y,t)[0] = 0;
+                        AN(x,y,t,0) = 0;
                     } else {
-                        AN(x,y,t)[0] = -sy(x,y+1)[0];
+                        AN(x,y,t,0) = -sy(x,y+1,t,0);
                     }
 
                     if (x == sx.width-1) {
-                        AW(x,y,t)[0] = 0;
+                        AW(x,y,t,0) = 0;
                     } else {
-                        AW(x,y,t)[0] = -sx(x+1,y)[0];
+                        AW(x,y,t,0) = -sx(x+1,y,t,0);
                     }
 
                     for (int c = 0; c < b.channels; c++) {
                         if (y == b.height-1) {
                             sub_y = 0;
                         } else {
-                            sub_y = gy(x,y+1,t)[c]*sy(x,y+1,t)[0];
+                            sub_y = gy(x,y+1,t,c)*sy(x,y+1,t,0);
                         }
 
                         if (x == b.width-1) {
                             sub_x = 0;
                         } else {
-                            sub_x = gx(x+1,y,t)[c]*sx(x+1,y,t)[0];
+                            sub_x = gx(x+1,y,t,c)*sx(x+1,y,t,0);
                         }
 
-                        b(x,y,t)[c] = (gy(x,y,t)[c]*sy(x,y,t)[0] - sub_y +
-                                       gx(x,y,t)[c]*sx(x,y,t)[0] - sub_x
-                                       + w(x,y,t)[0]*d(x,y,t)[c]);
+                        b(x,y,t,c) = (gy(x,y,t,c)*sy(x,y,t,0) - sub_y +
+                                      gx(x,y,t,c)*sx(x,y,t,0) - sub_x
+                                      + w(x,y,t,0)*d(x,y,t,c));
                     }
                 }
             }
@@ -100,16 +102,16 @@ public:
         constructPreconditioner();
     }
 
-    void solve(Window guess, int max_iter, float tol);
+    void solve(Image guess, int max_iter, float tol);
 
 private:
-    Image Ax(Window im); // apply A to "x" the image
+    Image Ax(Image im); // apply A to "x" the image
 
     Image hbPrecondition(Image r); // apply the preconditioner to the residual r
 
-    float dot(Window a, Window b);
+    float dot(Image a, Image b);
 
-    void alphax(float alpha, Window im);
+    void alphax(float alpha, Image im);
 
     void RBBmaps();
     void constructPreconditioner();
@@ -130,9 +132,9 @@ private:
     //Image ADcoarse;
     Image AW;
     Image AN;
-    Window w;
-    Window sx;
-    Window sy;
+    Image w;
+    Image sx;
+    Image sy;
 
     Image b; // const?
 
@@ -271,33 +273,35 @@ void PCG::constructPreconditioner() {
         vector< float > AD_old; // retain old values of AD
 
         //printf("dn1 %d, dn2 %d\n", dn1, dn2);
-        S_elems elems;// = {0, 0, 0, 0};
+
         // on this level, we use the indices in index_map[k]
         for (vector<unsigned int>::iterator idx = index_map[k].begin();
              idx != index_map[k].end(); ++idx) {
             //int x, y, x1, y1;// x2, y2;
 
+            S_elems elems;
+
             ind2xy(*idx, x, y);
 
-            elems.SS = -AN(x,y)[0]/(AD(x,y)[0]); // SS
-            elems.SE = -AW(x,y)[0]/(AD(x,y)[0]); // SE
+            elems.SS = -AN(x,y)/(AD(x,y)); // SS
+            elems.SE = -AW(x,y)/(AD(x,y)); // SE
 
             if (*idx < dn1) { // *idx - dn1 < 0
                 ind2xy(max_length + (*idx) - dn1, x1, y1);
             } else {
                 ind2xy((*idx - dn1) % max_length, x1, y1);
             }
-            elems.SN = -AN(x1,y1)[0]/(AD(x,y)[0]); // SN
+            elems.SN = -AN(x1,y1)/(AD(x,y)); // SN
 
             if (*idx < dn2) { // *idx - dn2 < 0
                 ind2xy(max_length + (*idx) - dn2, x1, y1);
             } else {
                 ind2xy((*idx - dn2) % max_length, x1, y1);
             }
-            elems.SW = -AW(x1,y1)[0]/(AD(x,y)[0]); // SW
+            elems.SW = -AW(x1,y1)/(AD(x,y)); // SW
 
             S_elem_vec.push_back(elems);
-            AD_old.push_back(AD(x,y)[0]);
+            AD_old.push_back(AD(x,y));
             //AN(x1,y1)*elems.SN
             //AW(x2,y2)*elems.SW
             //printf("ind: %d, SW: %f\n", *idx, elems.SW);
@@ -318,16 +322,16 @@ void PCG::constructPreconditioner() {
             ind2xy(*idx, x, y);
 
             ind2xy((*idx - dn1) % max_length, x1, y1);
-            AD(x1,y1)[0] += AN(x1,y1)[0]*elems.SN;
+            AD(x1,y1) += AN(x1,y1)*elems.SN;
 
             ind2xy((*idx - dn2) % max_length, x1, y1);
-            AD(x1,y1)[0] += AW(x1,y1)[0]*elems.SW;
+            AD(x1,y1) += AW(x1,y1)*elems.SW;
 
             ind2xy((*idx + dn1) % max_length, x1, y1);
-            AD(x1,y1)[0] += AN(x,y)[0]*elems.SS;
+            AD(x1,y1) += AN(x,y)*elems.SS;
 
             ind2xy((*idx + dn2) % max_length, x1, y1);
-            AD(x1,y1)[0] += AW(x,y)[0]*elems.SE;
+            AD(x1,y1) += AW(x,y)*elems.SE;
 
             /* end modify AD */
 
@@ -361,8 +365,8 @@ void PCG::constructPreconditioner() {
                     ns_weight = -AD_old[i]*elems.SW*elems.SE;
                 }
 
-                AD(n_x, n_y)[0] += ns_weight;
-                AD(s_x, s_y)[0] += ns_weight;
+                AD(n_x, n_y) += ns_weight;
+                AD(s_x, s_y) += ns_weight;
                 //printf("ns_weight: %f\n", ns_weight);
             }
 
@@ -381,8 +385,8 @@ void PCG::constructPreconditioner() {
                     we_weight = -AD_old[i]*elems.SN*elems.SS;
                 }
 
-                AD(w_x, w_y)[0] += we_weight;
-                AD(e_x, e_y)[0] += we_weight;
+                AD(w_x, w_y) += we_weight;
+                AD(e_x, e_y) += we_weight;
                 //printf("we_weight: %f\n", we_weight);
             }
 
@@ -392,45 +396,45 @@ void PCG::constructPreconditioner() {
             if (oddLevel) {
                 if (n_ind < max_length && w_ind < max_length) {
                     nw_weight = AD_old[i]*elems.SN*elems.SW;
-                    AN_tmp(w_x, w_y)[0] -= nw_weight;
+                    AN_tmp(w_x, w_y) -= nw_weight;
                 }
                 if (w_ind < max_length && s_ind < max_length) {
                     ws_weight = AD_old[i]*elems.SW*elems.SS;
-                    AW_tmp(w_x, w_y)[0] -= ws_weight;
+                    AW_tmp(w_x, w_y) -= ws_weight;
                     //printf("nw_weight: %f\n", nw_weight);
                 }
                 if (e_ind < max_length && s_ind < max_length) {
                     se_weight = AD_old[i]*elems.SE*elems.SS;
-                    AN_tmp(s_x, s_y)[0] -= se_weight;
+                    AN_tmp(s_x, s_y) -= se_weight;
                     //printf("nw_weight: %f\n", nw_weight);
                 }
                 if (e_ind < max_length && n_ind < max_length) {
                     en_weight = AD_old[i]*elems.SE*elems.SN;
-                    AW_tmp(n_x, n_y)[0] -= en_weight;
+                    AW_tmp(n_x, n_y) -= en_weight;
                     //printf("nw_weight: %f\n", nw_weight);
                 }
 
             } else {
                 if (n_ind < max_length && w_ind < max_length) {
                     nw_weight = AD_old[i]*elems.SN*elems.SW;
-                    AN_tmp(n_x, n_y)[0] -= nw_weight;
+                    AN_tmp(n_x, n_y) -= nw_weight;
                     //printf("n_ind: %d, ind: %d, ni_weight: %f, wi_weight: %f\n", n_ind, *idx, elems.SW, elems.SN); // how to index into S...?
 
                     //printf("nw_weight: %f\n", nw_weight);
                 }
                 if (w_ind < max_length && s_ind < max_length) {
                     ws_weight = AD_old[i]*elems.SN*elems.SE;
-                    AW_tmp(w_x, w_y)[0] -= ws_weight;
+                    AW_tmp(w_x, w_y) -= ws_weight;
                     //printf("nw_weight: %f\n", nw_weight);
                 }
                 if (e_ind < max_length && s_ind < max_length) {
                     se_weight = AD_old[i]*elems.SE*elems.SS;
-                    AN_tmp(e_x, e_y)[0] -= se_weight;
+                    AN_tmp(e_x, e_y) -= se_weight;
                     //printf("nw_weight: %f\n", nw_weight);
                 }
                 if (e_ind < max_length && n_ind < max_length) {
                     en_weight = AD_old[i]*elems.SS*elems.SW;
-                    AW_tmp(n_x, n_y)[0] -= en_weight;
+                    AW_tmp(n_x, n_y) -= en_weight;
                     //printf("nw_weight: %f\n", nw_weight);
                 }
             }
@@ -452,47 +456,47 @@ void PCG::constructPreconditioner() {
                 //printf("nw_weight %f, ws_weight %f, se_weight %f, en_weight %f, distWeight %f\n", nw_weight, ws_weight, se_weight, en_weight, distWeight);
                 if (oddLevel) {
                     if (n_ind < max_length && w_ind < max_length) {
-                        AN_tmp(w_x, w_y)[0] += nw_weight*distWeight;
+                        AN_tmp(w_x, w_y) += nw_weight*distWeight;
                     }
                     if (w_ind < max_length && s_ind < max_length) {
-                        AW_tmp(w_x, w_y)[0] += ws_weight*distWeight;
+                        AW_tmp(w_x, w_y) += ws_weight*distWeight;
                     }
                     if (e_ind < max_length && s_ind < max_length) {
-                        AN_tmp(s_x, s_y)[0] += se_weight*distWeight;
+                        AN_tmp(s_x, s_y) += se_weight*distWeight;
                     }
                     if (e_ind < max_length && n_ind < max_length) {
-                        AW_tmp(n_x, n_y)[0] += en_weight*distWeight;
+                        AW_tmp(n_x, n_y) += en_weight*distWeight;
                     }
                 } else {
                     if (n_ind < max_length && w_ind < max_length) {
-                        AN_tmp(n_x, n_y)[0] += nw_weight*distWeight;
+                        AN_tmp(n_x, n_y) += nw_weight*distWeight;
                     }
                     if (w_ind < max_length && s_ind < max_length) {
-                        AW_tmp(w_x, w_y)[0] += ws_weight*distWeight;
+                        AW_tmp(w_x, w_y) += ws_weight*distWeight;
                     }
                     if (e_ind < max_length && s_ind < max_length) {
-                        AN_tmp(e_x, e_y)[0] += se_weight*distWeight;
+                        AN_tmp(e_x, e_y) += se_weight*distWeight;
                     }
                     if (e_ind < max_length && n_ind < max_length) {
-                        AW_tmp(n_x, n_y)[0] += en_weight*distWeight;
+                        AW_tmp(n_x, n_y) += en_weight*distWeight;
                     }
                 }
 
                 if (n_ind < max_length && w_ind < max_length) {
-                    AD(n_x, n_y)[0] -= nw_weight*distWeight;
-                    AD(w_x, w_y)[0] -= nw_weight*distWeight;
+                    AD(n_x, n_y) -= nw_weight*distWeight;
+                    AD(w_x, w_y) -= nw_weight*distWeight;
                 }
                 if (w_ind < max_length && s_ind < max_length) {
-                    AD(w_x, w_y)[0] -= ws_weight*distWeight;
-                    AD(s_x, s_y)[0] -= ws_weight*distWeight;
+                    AD(w_x, w_y) -= ws_weight*distWeight;
+                    AD(s_x, s_y) -= ws_weight*distWeight;
                 }
                 if (e_ind < max_length && s_ind < max_length) {
-                    AD(s_x, s_y)[0] -= se_weight*distWeight;
-                    AD(e_x, e_y)[0] -= se_weight*distWeight;
+                    AD(s_x, s_y) -= se_weight*distWeight;
+                    AD(e_x, e_y) -= se_weight*distWeight;
                 }
                 if (e_ind < max_length && n_ind < max_length) {
-                    AD(n_x, n_y)[0] -= en_weight*distWeight;
-                    AD(e_x, e_y)[0] -= en_weight*distWeight;
+                    AD(n_x, n_y) -= en_weight*distWeight;
+                    AD(e_x, e_y) -= en_weight*distWeight;
                 }
 
             }
@@ -510,7 +514,7 @@ void PCG::constructPreconditioner() {
 // applies the sparse, pentadiagonal matrix A to x (stored in im)
 // assumes gradient images taken from ImageStack's gradient operator
 // (i.e. backward differences) if not, results could be bogus!
-Image PCG::Ax(Window im) {
+Image PCG::Ax(Image im) {
     float a1,a2,a3;
 
     // (Ax + w)* x
@@ -519,27 +523,27 @@ Image PCG::Ax(Window im) {
             int x = 0;
 
             a1 = 0;
-            a2 = sx(x,y,t)[0] + sx(x+1,y,t)[0]+ w(x,y,t)[0];
-            a3 = -sx(x+1,y,t)[0];
+            a2 = sx(x,y,t,0) + sx(x+1,y,t,0)+ w(x,y,t,0);
+            a3 = -sx(x+1,y,t,0);
             for (int c = 0; c < im.channels; c++) {
-                f(x,y,t)[c] = a2*im(x,y,t)[c] + a3*im(x+1,y,t)[c];
+                f(x,y,t,c) = a2*im(x,y,t,c) + a3*im(x+1,y,t,c);
             }
 
             for (x = 1; x < im.width-1; x++) {
-                a1 = -sx(x,y,t)[0];
-                a2 = sx(x,y,t)[0] + sx(x+1,y,t)[0] + w(x,y,t)[0]; // a_(ij)x_(ij) + w_(ij)*x_(ij)
-                a3 = -sx(x+1,y,t)[0]; // AW
+                a1 = -sx(x,y,t,0);
+                a2 = sx(x,y,t,0) + sx(x+1,y,t,0) + w(x,y,t,0); // a_(ij)x_(ij) + w_(ij)*x_(ij)
+                a3 = -sx(x+1,y,t,0); // AW
                 for (int c = 0; c < im.channels; c++) {
-                    f(x,y,t)[c] = a1*im(x-1,y,t)[c] + a2*im(x,y,t)[c] + a3*im(x+1,y,t)[c];
+                    f(x,y,t,c) = a1*im(x-1,y,t,c) + a2*im(x,y,t,c) + a3*im(x+1,y,t,c);
                 }
             }
 
             x = im.width-1;
-            a1 = -sx(x,y,t)[0];
-            a2 = sx(x,y,t)[0] + w(x,y,t)[0];
+            a1 = -sx(x,y,t,0);
+            a2 = sx(x,y,t,0) + w(x,y,t,0);
             a3 = 0; //AW
             for (int c = 0; c < im.channels; c++) {
-                f(x,y,t)[c] = a1*im(x-1,y,t)[c] + a2*im(x,y,t)[c];
+                f(x,y,t,c) = a1*im(x-1,y,t,c) + a2*im(x,y,t,c);
             }
         }
     }
@@ -552,32 +556,32 @@ Image PCG::Ax(Window im) {
             int y = 0;
             for (int x = x1; (x < x1 + 8) && (x < im.width); x++) {
                 a1 = 0;
-                a2 = sy(x,y,t)[0] + sy(x,y+1,t)[0];
-                a3 = -sy(x,y+1,t)[0]; //AN
+                a2 = sy(x,y,t,0) + sy(x,y+1,t,0);
+                a3 = -sy(x,y+1,t,0); //AN
                 for (int c = 0; c < im.channels; c++) {
-                    f(x,y,t)[c] += a2*im(x,y,t)[c] + a3*im(x,y+1,t)[c];
+                    f(x,y,t,c) += a2*im(x,y,t,c) + a3*im(x,y+1,t,c);
                 }
             }
 
             for (y = 1; y < im.height-1; y++) {
                 for (int x = x1; (x < x1 + 8) && (x < im.width); x++) {
 
-                    a1 = -sy(x,y,t)[0];
-                    a2 = sy(x,y,t)[0] + sy(x,y+1,t)[0];
-                    a3 = -sy(x,y+1,t)[0];
+                    a1 = -sy(x,y,t,0);
+                    a2 = sy(x,y,t,0) + sy(x,y+1,t,0);
+                    a3 = -sy(x,y+1,t,0);
                     for (int c = 0; c < im.channels; c++) {
-                        f(x,y,t)[c] += a1*im(x,y-1,t)[c] + a2*im(x,y,t)[c] + a3*im(x,y+1,t)[c];
+                        f(x,y,t,c) += a1*im(x,y-1,t,c) + a2*im(x,y,t,c) + a3*im(x,y+1,t,c);
                     }
                 }
             }
 
             y = im.height-1;
             for (int x = x1; (x < x1 + 8) && (x < im.width); x++) {
-                a1 = -sy(x,y,t)[0];
-                a2 = sy(x,y,t)[0];
+                a1 = -sy(x,y,t,0);
+                a2 = sy(x,y,t,0);
                 a3 = 0; //AN
                 for (int c = 0; c < im.channels; c++) {
-                    f(x,y,t)[c] += a1*im(x,y-1,t)[c] + a2*im(x,y,t)[c];
+                    f(x,y,t,c) += a1*im(x,y-1,t,c) + a2*im(x,y,t,c);
                 }
             }
         }
@@ -622,7 +626,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx + dn1) % max_length, x1, y1);
                 //y1 %= sy.height; x1 %= sy.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x1, y1)[c] += hbRes(x, y)[c]*elems.SS;
+                    hbRes(x1, y1, c) += hbRes(x, y, c)*elems.SS;
                 }
             }
 
@@ -630,7 +634,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx + dn2) % max_length, x1, y1);
                 //y1 %= sx.height; x1 %= sx.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x1, y1)[c] += hbRes(x, y)[c]*elems.SE;
+                    hbRes(x1, y1, c) += hbRes(x, y, c)*elems.SE;
                 }
             }
 
@@ -638,7 +642,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx - dn1) % max_length, x1, y1);
                 //y1 %= sy.height; x1 %= sy.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x1, y1)[c] += hbRes(x, y)[c]*elems.SN;
+                    hbRes(x1, y1, c) += hbRes(x, y, c)*elems.SN;
                 }
             }
 
@@ -646,7 +650,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx - dn2) % max_length, x1, y1);
                 //y1 %= sx.height; x1 %= sx.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x1, y1)[c] += hbRes(x, y)[c]*elems.SW;
+                    hbRes(x1, y1, c) += hbRes(x, y, c)*elems.SW;
                 }
             }
 
@@ -654,7 +658,10 @@ Image PCG::hbPrecondition(Image r) {
         }
     }
 
-    Divide::apply(hbRes, AD); // invert the diagonal
+    // invert the diagonal
+    for (int c = 0; c < hbRes.channels; c++) {
+        hbRes.channel(c) /= AD;
+    }
 
     // lowest level is identity matrix so it's ignored (not even stored in index_map)
     for (int k = (int) index_map.size() - 1; k >= 0; k--) {
@@ -686,7 +693,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx + dn1) % max_length, x1, y1);
                 //y1 %= sy.height; x1 %= sy.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x, y)[c] += hbRes(x1, y1)[c]*elems.SS;
+                    hbRes(x, y, c) += hbRes(x1, y1, c)*elems.SS;
                 }
             }
 
@@ -694,7 +701,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx + dn2) % max_length, x1, y1);
                 //y1 %= sx.height; x1 %= sx.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x, y)[c] += hbRes(x1, y1)[c]*elems.SE;
+                    hbRes(x, y, c) += hbRes(x1, y1, c)*elems.SE;
                 }
             }
 
@@ -702,7 +709,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx - dn1) % max_length, x1, y1);
                 //y1 %= sy.height; x1 %= sy.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x, y)[c] += hbRes(x1, y1)[c]*elems.SN;
+                    hbRes(x, y, c) += hbRes(x1, y1, c)*elems.SN;
                 }
             }
 
@@ -710,7 +717,7 @@ Image PCG::hbPrecondition(Image r) {
                 ind2xy((*idx - dn2) % max_length, x1, y1);
                 //y1 %= sx.height; x1 %= sx.width;
                 for (int c = 0; c < hbRes.channels; c++) {
-                    hbRes(x, y)[c] += hbRes(x1, y1)[c]*elems.SW;
+                    hbRes(x, y, c) += hbRes(x1, y1, c)*elems.SW;
                 }
             }
 
@@ -723,15 +730,18 @@ Image PCG::hbPrecondition(Image r) {
 }
 
 // compute dot product
-float PCG::dot(Window a, Window b) {
-    assert(a.frames == b.frames && a.height == b.height && a.width == b.width && a.channels == b.channels,
+float PCG::dot(Image im1, Image im2) {
+    assert(im1.frames == im2.frames &&
+           im1.height == im2.height &&
+           im1.width == im2.width &&
+           im1.channels == im2.channels,
            "a and b need to be the same size\n");
     double result = 0;
-    for (int t = 0; t < a.frames; t++) {
-        for (int y = 0; y < a.height; y++) {
-            for (int x = 0; x < a.width; x++) {
-                for (int c = 0; c < a.channels; c++) {
-                    result += a(x,y,t)[c]*b(x,y,t)[c];
+    for (int t = 0; t < im1.frames; t++) {
+        for (int y = 0; y < im1.height; y++) {
+            for (int x = 0; x < im1.width; x++) {
+                for (int c = 0; c < im1.channels; c++) {
+                    result += im1(x,y,t,c)*im2(x,y,t,c);
                 }
             }
         }
@@ -740,12 +750,12 @@ float PCG::dot(Window a, Window b) {
 }
 
 // solve the PCG!
-void PCG::solve(Window guess, int max_iter, float tol) {
+void PCG::solve(Image guess, int max_iter, float tol) {
 
     Image dr_tmp, s;
 
-    Image r(b); // we currently do not use b anywhere else, so i reuse its memory
-    Subtract::apply(r,Ax(guess));
+    Image r(b); // we currently do not use b anywhere else, so reuse its memory
+    r -= Ax(guess);
     Image dr = hbPrecondition(r); // precondition, dr to differentiate from d
 
     float delta = dot(r,dr);
@@ -760,28 +770,19 @@ void PCG::solve(Window guess, int max_iter, float tol) {
         Image wr = Ax(dr);
         float alpha = delta / dot(dr,wr);
 
-        dr_tmp = dr.copy();
-
-        Scale::apply(dr, alpha);
-        Add::apply(guess, dr);    // guess = guess + alpha*dr
-        Scale::apply(wr, alpha);
-        Subtract::apply(r, wr);   // r = r - alpha*wr
-
-        float resNorm = dot(r,r);
+        guess += dr * alpha;
+        r -= wr * alpha;
+        float resNorm = dot(r, r);
         printf("iteration %d, error %f\n", i, resNorm);
-        if (resNorm < epsilon) {
-            break;
-        }
+        if (resNorm < epsilon) break;
 
-        s = hbPrecondition(r);    // precondition
+        s = hbPrecondition(r);
         float delta_old = delta;
         delta = dot(r,s);
-        float beta = delta / delta_old;
 
-        Scale::apply(dr_tmp, beta);
-        dr = s;
-        Add::apply(dr,dr_tmp);
+        dr = s + dr * (delta / delta_old);
     }
+
 }
 
 void LAHBPCG::help() {
@@ -819,6 +820,35 @@ void LAHBPCG::help() {
             "                  -lahbpcg 5 0.001 -save out.png\n");
 }
 
+bool LAHBPCG::test() {
+    Image im = Downsample::apply(Load::apply("pics/dog1.jpg"), 4, 4, 1);
+    Image clean = im.copy();
+    Image dx = im.copy();
+    Gradient::apply(dx, 'x');
+    Image dy = im.copy();
+    Gradient::apply(dy, 'y');
+    // Corrupt each term in certain places
+    Image noise(im.width, im.height, im.frames, 1);
+    Noise::apply(noise, -0.3, 0.3);
+    // Mask is high where we will corrupt the data
+    Image dxMask = Select(noise < -0.2, 1, 0);
+    Image dyMask = Select(noise < -0.1, 1, 0) * (1-dxMask);
+    Image imMask = Select(noise < 0, 1, 0) * (1-dxMask) * (1-dyMask);
+    for (int c = 0; c < im.channels; c++) {
+        im.channel(c) += noise*imMask;
+        dx.channel(c) += noise*dxMask;
+        dy.channel(c) += noise*dyMask;
+    }
+
+    // Mask is high where the data is good
+    dxMask.set(1-dxMask);
+    dyMask.set(1-dyMask);
+    imMask.set(1-imMask);
+
+    Image result = LAHBPCG::apply(im, dx, dy, imMask, dxMask, dyMask, 10, 0.01);
+    return nearlyEqual(result, clean);
+}
+
 void LAHBPCG::parse(vector<string> args) {
     assert(args.size() == 2, "-lahbpcg takes two arguments\n");
 
@@ -832,14 +862,10 @@ void LAHBPCG::parse(vector<string> args) {
     push(result);
 }
 
-Image LAHBPCG::apply(Window d, Window gx, Window gy, Window w, Window sx, Window sy, int max_iter, float tol) {
+Image LAHBPCG::apply(Image d, Image gx, Image gy, Image w, Image sx, Image sy, int max_iter, float tol) {
     // check to make sure have same # of frames and same # of channels
     // assumes gradient images computed using ImageStack's gradient, which is
     // slightly different from the standard convolution gradient
-    /*Image gx1(d);
-      Image gy1(d);
-      Gradient::apply(gx1, 'x');
-      Gradient::apply(gy1, 'y');*/
 
     // runtime is LINEAR in the number of pixels!
 
@@ -873,20 +899,12 @@ Image LAHBPCG::apply(Window d, Window gx, Window gy, Window w, Window sx, Window
 
     // solves frames independently
     for (int t = 0; t < d.frames; t++) {
-        Window dw(d, 0, 0, t, d.width, d.height, 1);
-        Window gxw(gx, 0, 0, t, gx.width, gx.height, 1);
-        Window gyw(gy, 0, 0, t, gy.width, gy.height, 1);
-        Window ww(w, 0, 0, t, w.width, w.height, 1);
-        Window sxw(sx, 0, 0, t, sx.width, sx.height, 1);
-        Window syw(sy, 0, 0, t, sy.width, sy.height, 1);
-
-        Window outw(out, 0, 0, t, out.width, out.height, 1);
-
         printf("Computing preconditioner...\n");
-        PCG solver(dw, gxw, gyw, ww, sxw, syw);
+        PCG solver(d.frame(t), gx.frame(t), gy.frame(t),
+                   w.frame(t), sx.frame(t), sy.frame(t));
 
         printf("Solving...\n");
-        solver.solve(outw, max_iter, tol);
+        solver.solve(out.frame(t), max_iter, tol);
     }
 
     return out;

@@ -6,22 +6,25 @@
 class DCT : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window win, bool x = true, bool y = true, bool t = true);
+    static void apply(Image win, bool x = true, bool y = true, bool t = true);
 };
 
 class FFT : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, bool x = true, bool y = true, bool t = true, bool inverse = false);
+    static void apply(Image im, bool x = true, bool y = true, bool t = true, bool inverse = false);
 };
 
 class IFFT : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, bool x = true, bool y = true, bool t = true);
+    static void apply(Image im, bool x = true, bool y = true, bool t = true);
 };
 
 #include "Convolve.h"
@@ -29,17 +32,21 @@ public:
 class FFTConvolve : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, Window filter, Convolve::BoundaryCondition b, Multiply::Mode m);
+    static Image apply(Image im, Image filter, Convolve::BoundaryCondition b, Multiply::Mode m);
+private:
+    static void convolveSingle(Image im, Image filter, Image out, Convolve::BoundaryCondition b);
 };
 
 class FFTPoisson : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
 
     // Return an image which has gradients dx and dy, and is somewhat similar to the target
-    static Image apply(Window dx, Window dy, Window target, float targetStrength = 0);
+    static Image apply(Image dx, Image dy, Image target, float targetStrength = 0);
 };
 
 #include "footer.h"

@@ -27,7 +27,6 @@ IMAGESTACK_OBJECTS = \
 	GaussTransform.o \
 	Geometry.o \
 	HDR.o \
-	Image.o \
 	KernelEstimation.o \
 	LAHBPCG.o \
 	LightField.o \
@@ -37,14 +36,11 @@ IMAGESTACK_OBJECTS = \
 	NetworkOps.o \
 	Network.o \
 	Operation.o \
-	OpticalFlow.o \
 	Paint.o \
-	Panorama.o \
 	PatchMatch.o \
 	Parser.o \
         Plugin.o \
 	Prediction.o \
-	Projection.o \
 	Stack.o \
 	Statistics.o \
 	Wavelet.o \
@@ -113,7 +109,7 @@ lib/build/%.o: src/%.cpp lib/build/main.h.gch
 # Source Style Fixing    #
 ##########################
 
-STYLE_OPTS = --indent=spaces=4 --brackets=attach --indent-labels --indent-preprocessor --indent-col1-comments --max-instatement-indent=60 --min-conditional-indent=0 --pad-header --unpad-paren --add-brackets --keep-one-line-blocks --keep-one-line-statements --convert-tabs --align-pointer=name --suffix=none --options=none
+STYLE_OPTS = --indent=spaces=4 --brackets=attach --indent-labels --indent-preprocessor --indent-col1-comments --max-instatement-indent=60 --min-conditional-indent=0 --pad-header --unpad-paren --keep-one-line-blocks --keep-one-line-statements --convert-tabs --align-pointer=name --suffix=none --options=none
 
 style:
 	astyle $(STYLE_OPTS) `find . -name '[A-Za-z]*.h'` `find . -name '[A-Za-z]*.cpp'`

@@ -1,4 +1,5 @@
-BIN_CCFLAGS = -O3 -Winvalid-pch -Wall -Werror -pipe -fno-strict-aliasing -fomit-frame-pointer -fexpensive-optimizations -falign-functions=4 -funroll-loops -malign-double -fprefetch-loop-arrays -march=core2 -msse3 -mfpmath=sse -Wno-uninitialized -enable-auto-import
+CXX=g++-4
+BIN_CCFLAGS = -O3 -std=gnu++0x -Winvalid-pch -Wall -Wshadow -Werror -pipe -ffast-math -march=native -fopenmp -Wno-uninitialized 
 
 LIB_CCFLAGS = $(BIN_CCFLAGS)
 
@@ -8,7 +9,7 @@ LIB_CCFLAGS = $(BIN_CCFLAGS)
 
 # Comment out any dependencies you do not wish to include, or do not have
 SDL_CCFLAGS = -I/usr/local/include/SDL
-SDL_LIBS = -lSDL
+SDL_LIBS = -L /usr/local/lib  -lSDL
 
 JPEG_CCFLAGS = 
 JPEG_LIBS = -ljpeg

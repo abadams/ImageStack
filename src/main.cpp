@@ -2,6 +2,7 @@
 #include "main.h"
 #include "time.h"
 #include "Parser.h"
+#include "Statistics.h"
 #ifndef WIN32
 #include <sys/time.h>
 #endif
@@ -23,18 +24,13 @@ void pop() {
 }
 
 void dup() {
-    Image &top = stack(0);
-    Image newTop(top.width, top.height, top.frames, top.channels);
-    memcpy(newTop.data, top.data, top.frames * top.width * top.height * top.channels * sizeof(float));
-    stack_.push_back(newTop);
+    push(stack(0).copy());
 }
 
 void pull(size_t n) {
     assert(n < stack_.size(), "Stack underflow\n");
     for (size_t i = stack_.size() - n - 1; i < stack_.size()-1; i++) {
-        Image tmp = stack_[i+1];
-        stack_[i+1] = stack_[i];
-        stack_[i] = tmp;
+        swap(stack_[i+1], stack_[i]);
     }
 }
 
@@ -44,6 +40,11 @@ int randomInt(int min, int max) {
 
 float randomFloat(float min, float max) {
     return ((float)rand()/(RAND_MAX+1.0)) * (max - min) + min;
+}
+
+bool nearlyEqual(Image a, Image b) {
+    Stats s(a-b);
+    return (nearlyEqual(s.mean(), 0) && nearlyEqual(s.variance(), 0));
 }
 
 #ifdef WIN32
@@ -145,7 +146,7 @@ float readFloat(string arg) {
         needToPop = true;
     }
     Expression::State s(stack(0));
-    float val = e.eval(&s);
+    float val = e.eval(s);
     if (needToPop) { pop(); }
     return val;
 }
@@ -234,7 +235,7 @@ int main(int argc, char **argv) {
     try {
         parseCommands(args);
     } catch (Exception &e) {
-        printf("%s", e.message);
+        printf("%s\n", e.message);
     }
 
     fflush(stdout);

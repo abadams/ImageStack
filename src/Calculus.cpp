@@ -8,17 +8,42 @@
 #include "File.h"
 #include "Display.h"
 #include "LAHBPCG.h"
+#include "Statistics.h"
 #include "header.h"
 
 void Gradient::help() {
-    printf("\n-gradient takes the backward differences in the dimension specified by the\n"
-           "argument. Values outside the image are assumed to be zero, so the first row,\n"
-           "or column, or frame, will not change, effectively storing the initial value\n"
-           "to make later integration easy. Multiple arguments can be given to differentiate\n"
-           "with respect to multiple dimensions in order (although the order does not matter).\n\n"
-           "Warning: Don't expect to differentiate more than twice and be able to get back\n"
-           "the image by integrating. Numerical errors will dominate.\n\n"
-           "Usage: ImageStack -load a.tga -gradient x y -save out.tga\n\n");
+    pprintf("-gradient takes the backward differences in the dimension specified by"
+            " the argument. Values outside the image are assumed to be zero, so the"
+            " first row, or column, or frame, will not change, effectively storing"
+            " the initial value to make later integration easy. Multiple arguments"
+            " can be given to differentiate with respect to multiple dimensions in"
+            " order (although the order does not matter).\n"
+            "\n"
+            "Warning: Don't expect to differentiate more than twice and be able to"
+            " get back the image by integrating. Numerical errors will dominate.\n"
+            "\n"
+            "Usage: ImageStack -load a.jpg -gradient x y -save out.jpg\n");
+}
+
+bool Gradient::test() {
+    Image a(16, 14, 18, 3);
+    Noise::apply(a, 0, 1);
+    Image dx = a.copy();
+    Gradient::apply(dx, 'x');
+    Image dy = a.copy();
+    Gradient::apply(dy, 'y');
+    Image dt = a.copy();
+    Gradient::apply(dt, 't');
+    for (int i = 0; i < 100; i++) {
+        int x = randomInt(1, a.width-1);
+        int y = randomInt(1, a.height-1);
+        int t = randomInt(1, a.frames-1);
+        int c = randomInt(1, a.channels-1);
+        if (!nearlyEqual(dx(x, y, t, c), a(x, y, t, c) - a(x-1, y, t, c))) return false;
+        if (!nearlyEqual(dy(x, y, t, c), a(x, y, t, c) - a(x, y-1, t, c))) return false;
+        if (!nearlyEqual(dt(x, y, t, c), a(x, y, t, c) - a(x, y, t-1, c))) return false;
+    }
+    return true;
 }
 
 void Gradient::parse(vector<string> args) {
@@ -29,13 +54,13 @@ void Gradient::parse(vector<string> args) {
 }
 
 // gradient can be called as gradient('t') or gradient("xyt")
-void Gradient::apply(Window im, string dimensions) {
+void Gradient::apply(Image im, string dimensions) {
     for (size_t i = 0; i < dimensions.size(); i++) {
         apply(im, dimensions[i]);
     }
 }
 
-void Gradient::apply(Window im, char dimension) {
+void Gradient::apply(Image im, char dimension) {
     int mint = 0, minx = 0, miny = 0;
     int dt = 0, dx = 0, dy = 0;
 
@@ -53,11 +78,11 @@ void Gradient::apply(Window im, char dimension) {
     }
 
     // walk backwards through the data, looking at the untouched data for the differences
-    for (int t = im.frames - 1; t >= mint; t--) {
-        for (int y = im.height - 1; y >= miny; y--) {
-            for (int x = im.width - 1; x >= minx; x--) {
-                for (int c = 0; c < im.channels; c++) {
-                    im(x, y, t)[c] -= im(x - dx, y - dy, t - dt)[c];
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = im.frames - 1; t >= mint; t--) {
+            for (int y = im.height - 1; y >= miny; y--) {
+                for (int x = im.width - 1; x >= minx; x--) {
+                    im(x, y, t, c) -= im(x - dx, y - dy, t - dt, c);
                 }
             }
         }
@@ -66,13 +91,24 @@ void Gradient::apply(Window im, char dimension) {
 
 
 void Integrate::help() {
-    printf("\n-integrate computes partial sums along the given dimension. It is the\n"
-           "of the -gradient operator. Multiply dimensions can be given as arguments,\n"
-           "for example -integrate x y will produce a summed area table of an image.\n"
-           "Allowed dimensions are x, y, or t.\n\n"
-           "Warning: Don't expect to integrate more than twice and be able to get back\n"
-           "the image by differentiating. Numerical errors will dominate.\n\n"
-           "Usage: ImageStack -load a.tga -gradient x y -integrate y x -save a.tga\n\n");
+    pprintf("-integrate computes partial sums along the given dimension. It is the"
+            " inverse of the -gradient operator. Multiply dimensions can be given"
+            " as arguments, for example -integrate x y will produce a summed area"
+            " table of an image. Allowed dimensions are x, y, or t.\n"
+            "\n"
+            "Warning: Don't expect to integrate more than twice and be able to get"
+            " back the image by differentiating. Numerical errors will dominate.\n"
+            "\n"
+            "Usage: ImageStack -load a.jpg -gradient x y -integrate y x -save a.jpg\n");
+}
+
+bool Integrate::test() {
+    Image a(23, 13, 32, 3);
+    Noise::apply(a, 0, 1);
+    Image b = a.copy();
+    Gradient::apply(b, "xyt");
+    Integrate::apply(b, "xty");
+    return nearlyEqual(a, b);
 }
 
 void Integrate::parse(vector<string> args) {
@@ -83,13 +119,13 @@ void Integrate::parse(vector<string> args) {
 }
 
 // integrate can be called as integrate('t') or integrate("xyt")
-void Integrate::apply(Window im, string dimensions) {
+void Integrate::apply(Image im, string dimensions) {
     for (size_t i = 0; i < dimensions.size(); i++) {
         apply(im, dimensions[i]);
     }
 }
 
-void Integrate::apply(Window im, char dimension) {
+void Integrate::apply(Image im, char dimension) {
     int minx = 0, miny = 0, mint = 0;
     int dx = 0, dy = 0, dt = 0;
 
@@ -107,11 +143,11 @@ void Integrate::apply(Window im, char dimension) {
     }
 
     // walk forwards through the data, adding up as we go
-    for (int t = mint; t < im.frames; t++) {
-        for (int y = miny; y < im.height; y++) {
-            for (int x = minx; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {
-                    im(x, y, t)[c] += im(x - dx, y - dy, t - dt)[c];
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = mint; t < im.frames; t++) {
+            for (int y = miny; y < im.height; y++) {
+                for (int x = minx; x < im.width; x++) {
+                    im(x, y, t, c) += im(x - dx, y - dy, t - dt, c);
                 }
             }
         }
@@ -121,36 +157,43 @@ void Integrate::apply(Window im, char dimension) {
 
 
 void GradMag::help() {
-    printf("-gradmag computes the square gradient magnitude at each pixel in x and\n"
-           "y. Temporal gradients are ignored. The gradient is estimated using\n"
-           "backward differences, and the image is assumed to be zero outside its\n"
-           "bounds.\n\n"
-           "Usage: ImageStack -load input.jpg -gradmag -save out.jpg\n");
-
+    pprintf("-gradmag computes the square gradient magnitude at each pixel in x and"
+            " y. Temporal gradients are ignored. The gradient is estimated using"
+            " backward differences, and the image is assumed to be zero outside its"
+            " bounds.\n"
+            "\n"
+            "Usage: ImageStack -load input.jpg -gradmag -save out.jpg\n");
 }
+
+bool GradMag::test() {
+    Image a(233, 123, 1, 5);
+    Noise::apply(a, 0, 1);
+    Image dx = a.copy();
+    Gradient::apply(dx, 'x');
+    Image dy = a.copy();
+    Gradient::apply(dy, 'y');
+    GradMag::apply(a);
+    return nearlyEqual(a, dx*dx + dy*dy);
+}
+
 
 void GradMag::parse(vector<string> args) {
-    assert(args.size() == 0, "-laplacian takes no arguments\n");
-    Image im = apply(stack(0));
-    pop();
-    push(im);
+    assert(args.size() == 0, "-gradmag takes no arguments\n");
+    apply(stack(0));
 }
 
-Image GradMag::apply(Window im) {
-    Image out(im.width, im.height, im.frames, im.channels);
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {
-                    float dx = im(x, y, t)[c] - (x > 0 ? im(x-1, y, t)[c] : 0);
-                    float dy = im(x, y, t)[c] - (y > 0 ? im(x, y-1, t)[c] : 0);
-                    out(x, y, t)[c] = dx*dx + dy*dy;
+void GradMag::apply(Image im) {
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = im.height-1; y >=0; y--) {
+                for (int x = im.width-1; x >= 0; x--) {
+                    float dx = im(x, y, t, c) - (x > 0 ? im(x-1, y, t, c) : 0);
+                    float dy = im(x, y, t, c) - (y > 0 ? im(x, y-1, t, c) : 0);
+                    im(x, y, t, c) = dx*dx + dy*dy;
                 }
             }
         }
     }
-
-    return out;
 }
 
 
@@ -162,7 +205,18 @@ void Poisson::help() {
             " result. This defaults to 0.01 if not given.\n"
             "\n"
             "Usage: ImageStack -load dx.tmp -load dy.tmp \n"
-            "                  -poisson 0.0001 -save out.tga\n\n");
+            "                  -poisson 0.0001 -save out.jpg\n\n");
+}
+
+bool Poisson::test() {
+    Image a(233, 123, 1, 5);
+    Noise::apply(a, 0, 1);
+    Image dx = a.copy();
+    Gradient::apply(dx, 'x');
+    Image dy = a.copy();
+    Gradient::apply(dy, 'y');
+    Image b = Poisson::apply(dx, dy, 0.00001);
+    return nearlyEqual(a, b);
 }
 
 void Poisson::parse(vector<string> args) {
@@ -175,7 +229,7 @@ void Poisson::parse(vector<string> args) {
     push(apply(stack(1), stack(0), rms));
 }
 
-Image Poisson::apply(Window dx, Window dy, float rms) {
+Image Poisson::apply(Image dx, Image dy, float rms) {
     assert(dx.width  == dy.width &&
            dx.height == dy.height &&
            dx.frames == dy.frames &&
@@ -186,7 +240,7 @@ Image Poisson::apply(Window dx, Window dy, float rms) {
     Image zerosc(dx.width, dx.height, dx.frames, dx.channels);
     Image zeros1(dx.width, dx.height, dx.frames, 1);
     Image ones1(dx.width, dx.height, dx.frames, 1);
-    Offset::apply(ones1, 1.0f);
+    ones1.set(1);
     return LAHBPCG::apply(zerosc, dx, dy, zeros1, ones1, ones1, 999999, rms);
 }
 

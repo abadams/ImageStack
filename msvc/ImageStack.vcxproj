@@ -124,11 +124,12 @@
       <PreprocessorDefinitions>__WIN32__;WIN32;NO_OPENEXR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;4723;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>Winmm.lib;Ws2_32.lib;libjpeg-x64-static-mt.lib;libtiff-x64-static-mt.lib;zlib-x64-static-mt.lib;libpng-x64-static-mt.lib;libfftw-x64-static-mt.lib;SDL-x64-static-mt.lib;dxguid-x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -182,15 +183,18 @@
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <AdditionalIncludeDirectories>include;include/SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>__WIN32__;WIN32;NO_OPENEXR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__SSE__;__WIN32__;__AVX__;WIN32;NO_OPENEXR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;4723;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <AssemblerOutput>All</AssemblerOutput>
     </ClCompile>
     <Link>
       <AdditionalDependencies>Winmm.lib;Ws2_32.lib;libjpeg-x64-static-mt.lib;libtiff-x64-static-mt.lib;zlib-x64-static-mt.lib;libpng-x64-static-mt.lib;libfftw-x64-static-mt.lib;SDL-x64-static-mt.lib;dxguid-x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -213,11 +217,11 @@
     <ClInclude Include="..\src\Complex.h" />
     <ClInclude Include="..\src\Control.h" />
     <ClInclude Include="..\src\Convolve.h" />
+    <ClInclude Include="..\src\Deconvolution.h" />
     <ClInclude Include="..\src\DenseGrid.h" />
     <ClInclude Include="..\src\DFT.h" />
     <ClInclude Include="..\src\Display.h" />
     <ClInclude Include="..\src\DisplayWindow.h" />
-    <ClInclude Include="..\src\Dual.h" />
     <ClInclude Include="..\src\eigenvectors.h" />
     <ClInclude Include="..\src\Exception.h" />
     <ClInclude Include="..\src\File.h" />
@@ -228,21 +232,23 @@
     <ClInclude Include="..\src\GKDTree.h" />
     <ClInclude Include="..\src\HDR.h" />
     <ClInclude Include="..\src\Image.h" />
+    <ClInclude Include="..\src\KernelEstimation.h" />
     <ClInclude Include="..\src\LAHBPCG.h" />
+    <ClInclude Include="..\src\Lazy.h" />
     <ClInclude Include="..\src\LightField.h" />
     <ClInclude Include="..\src\LinearAlgebra.h" />
+    <ClInclude Include="..\src\LocalLaplacian.h" />
     <ClInclude Include="..\src\macros.h" />
     <ClInclude Include="..\src\main.h" />
     <ClInclude Include="..\src\Network.h" />
     <ClInclude Include="..\src\NetworkOps.h" />
     <ClInclude Include="..\src\Operation.h" />
     <ClInclude Include="..\src\Paint.h" />
-    <ClInclude Include="..\src\Panorama.h" />
     <ClInclude Include="..\src\Parser.h" />
     <ClInclude Include="..\src\PatchMatch.h" />
     <ClInclude Include="..\src\Permutohedral.h" />
+    <ClInclude Include="..\src\Plugin.h" />
     <ClInclude Include="..\src\Prediction.h" />
-    <ClInclude Include="..\src\Projection.h" />
     <ClInclude Include="..\src\Stack.h" />
     <ClInclude Include="..\src\Statistics.h" />
     <ClInclude Include="..\src\tables.h" />
@@ -257,6 +263,7 @@
     <ClCompile Include="..\src\Complex.cpp" />
     <ClCompile Include="..\src\Control.cpp" />
     <ClCompile Include="..\src\Convolve.cpp" />
+    <ClCompile Include="..\src\Deconvolution.cpp" />
     <ClCompile Include="..\src\DFT.cpp" />
     <ClCompile Include="..\src\Display.cpp" />
     <ClCompile Include="..\src\DisplayWindow.cpp" />
@@ -267,6 +274,7 @@
     <ClCompile Include="..\src\FileFLO.cpp" />
     <ClCompile Include="..\src\FileHDR.cpp" />
     <ClCompile Include="..\src\FileJPG.cpp" />
+    <ClCompile Include="..\src\FilePBA.cpp" />
     <ClCompile Include="..\src\FilePNG.cpp" />
     <ClCompile Include="..\src\FilePPM.cpp" />
     <ClCompile Include="..\src\FileTGA.cpp" />
@@ -277,19 +285,19 @@
     <ClCompile Include="..\src\GaussTransform.cpp" />
     <ClCompile Include="..\src\Geometry.cpp" />
     <ClCompile Include="..\src\HDR.cpp" />
-    <ClCompile Include="..\src\Image.cpp" />
+    <ClCompile Include="..\src\KernelEstimation.cpp" />
     <ClCompile Include="..\src\LAHBPCG.cpp" />
     <ClCompile Include="..\src\LightField.cpp" />
+    <ClCompile Include="..\src\LocalLaplacian.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\Network.cpp" />
     <ClCompile Include="..\src\NetworkOps.cpp" />
     <ClCompile Include="..\src\Operation.cpp" />
     <ClCompile Include="..\src\Paint.cpp" />
-    <ClCompile Include="..\src\Panorama.cpp" />
     <ClCompile Include="..\src\Parser.cpp" />
     <ClCompile Include="..\src\PatchMatch.cpp" />
+    <ClCompile Include="..\src\Plugin.cpp" />
     <ClCompile Include="..\src\Prediction.cpp" />
-    <ClCompile Include="..\src\Projection.cpp" />
     <ClCompile Include="..\src\Stack.cpp" />
     <ClCompile Include="..\src\Statistics.cpp" />
     <ClCompile Include="..\src\Wavelet.cpp" />

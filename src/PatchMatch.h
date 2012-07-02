@@ -5,14 +5,15 @@
 class PatchMatch : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window source, Window target, int iterations, int patchSize);
-    static Image apply(Window source, Window target, Window mask, int iterations, int patchSize);
+    static Image apply(Image source, Image target, int iterations, int patchSize);
+    static Image apply(Image source, Image target, Image mask, int iterations, int patchSize);
 
 private:
-    static float distance(Window source, Window target, Window mask,
-                          int st, int sx, int sy,
-                          int tt, int tx, int ty,
+    static float distance(Image source, Image target, Image mask,
+                          int sx, int sy, int st,
+                          int tx, int ty, int tt,
                           int patchSize, float prevDist);
 
 };
@@ -22,9 +23,10 @@ private:
 class BidirectionalSimilarity : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window source, Window target,
-                      Window sourceMask, Window targetMask,
+    static void apply(Image source, Image target,
+                      Image sourceMask, Image targetMask,
                       float alpha, int numIter, int numIterPM = 5);
 
 };
@@ -33,7 +35,9 @@ public:
 class Heal : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
+    void apply(Image image, Image mask, int numIter = 5, int numIterPM = 5);
 };
 
 #include "footer.h"

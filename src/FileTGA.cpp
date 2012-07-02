@@ -1,6 +1,7 @@
 #include "main.h"
 #include "File.h"
 #include "header.h"
+#include "Geometry.h"
 
 namespace FileTGA {
 
@@ -38,8 +39,10 @@ Image load(string filename) {
     for (int i = 0; i < 5; i++) { fgetc(f); }
     // skip xstart and ystart
     for (int i = 0; i < 4; i++) { fgetc(f); }
-    width  = fgetc(f) + (fgetc(f) << 8);
-    height = fgetc(f) + (fgetc(f) << 8);
+    width = fgetc(f);
+    width += (fgetc(f) << 8);
+    height = fgetc(f);
+    height += (fgetc(f) << 8);
     bits = fgetc(f);
 
     // skip the descriptor
@@ -86,44 +89,49 @@ Image load(string filename) {
     bool vflip = true; //!(descriptor & 0x10);
 
 
-    float *maxPtr = im(0, 0, 1);
     if (!rle && channels == 1) {
-        for (float *ptr = im(0, 0, 0); ptr < maxPtr;) {
-            *ptr++ = LDRtoHDR(fgetc(f));
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                im(x, y) = LDRtoHDR(fgetc(f));
+            }
         }
     } else if (!rle && channels == 3) {
-        for (float *ptr = im(0, 0, 0); ptr < maxPtr;) {
-            ptr[2] = LDRtoHDR(fgetc(f));
-            ptr[1] = LDRtoHDR(fgetc(f));
-            ptr[0] = LDRtoHDR(fgetc(f));
-            ptr += 3;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                im(x, y, 2) = LDRtoHDR(fgetc(f));
+                im(x, y, 1) = LDRtoHDR(fgetc(f));
+                im(x, y, 0) = LDRtoHDR(fgetc(f));
+            }
         }
     } else if (!rle && channels == 4) {
-        for (float *ptr = im(0, 0, 0); ptr < maxPtr;) {
-            ptr[2] = LDRtoHDR(fgetc(f));
-            ptr[1] = LDRtoHDR(fgetc(f));
-            ptr[0] = LDRtoHDR(fgetc(f));
-            ptr[3] = LDRtoHDR(fgetc(f));
-            ptr += 4;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                im(x, y, 2) = LDRtoHDR(fgetc(f));
+                im(x, y, 1) = LDRtoHDR(fgetc(f));
+                im(x, y, 0) = LDRtoHDR(fgetc(f));
+                im(x, y, 3) = LDRtoHDR(fgetc(f));
+            }
         }
     } else if (rle && channels == 1) {
-        for (float *ptr = im(0, 0, 0); ptr < maxPtr;) {
+        for (int x = 0, y = 0; y < height;) {
             unsigned char ch = fgetc(f);
             unsigned char runlength = ch & 0x7f;
 
             if (ch & 0x80) { // compressed
                 float val = LDRtoHDR(fgetc(f));
                 for (int j = 0; j < runlength; j++) {
-                    *ptr++ = val;
+                    im(x, y) = val;
+                    x++; if (x == width) {x = 0; y++;}
                 }
             } else { // normal
                 for (int j = 0; j < runlength; j++) {
-                    *ptr++ = LDRtoHDR(fgetc(f));
+                    im(x, y) = LDRtoHDR(fgetc(f));
+                    x++; if (x == width) {x = 0; y++;}
                 }
             }
         }
     } else if (rle && channels == 3) {
-        for (float *ptr = im(0, 0, 0); ptr < maxPtr;) {
+        for (int x = 0, y = 0; y < height;) {
             unsigned char ch = fgetc(f);
             unsigned char runlength = ch & 0x7f;
 
@@ -132,21 +140,22 @@ Image load(string filename) {
                 float g = LDRtoHDR(fgetc(f));
                 float r = LDRtoHDR(fgetc(f));
                 for (int j = 0; j < runlength; j++) {
-                    *ptr++ = r;
-                    *ptr++ = g;
-                    *ptr++ = b;
+                    im(x, y, 0) = r;
+                    im(x, y, 1) = g;
+                    im(x, y, 2) = b;
+                    x++; if (x == width) {x = 0; y++;}
                 }
             } else { // normal
                 for (int j = 0; j < runlength; j++) {
-                    ptr[2] = LDRtoHDR(fgetc(f));
-                    ptr[1] = LDRtoHDR(fgetc(f));
-                    ptr[0] = LDRtoHDR(fgetc(f));
-                    ptr += 3;
+                    im(x, y, 0) = LDRtoHDR(fgetc(f));
+                    im(x, y, 1) = LDRtoHDR(fgetc(f));
+                    im(x, y, 2) = LDRtoHDR(fgetc(f));
+                    x++; if (x == width) {x = 0; y++;}
                 }
             }
         }
     } else if (rle && channels == 4) {
-        for (float *ptr = im(0, 0, 0); ptr < maxPtr;) {
+        for (int x = 0, y = 0; y < height;) {
             unsigned char ch = fgetc(f);
             unsigned char runlength = ch & 0x7f;
 
@@ -156,18 +165,19 @@ Image load(string filename) {
                 float r = LDRtoHDR(fgetc(f));
                 float a = LDRtoHDR(fgetc(f));
                 for (int j = 0; j < runlength; j++) {
-                    *ptr++ = r;
-                    *ptr++ = g;
-                    *ptr++ = b;
-                    *ptr++ = a;
+                    im(x, y, 0) = r;
+                    im(x, y, 1) = g;
+                    im(x, y, 2) = b;
+                    im(x, y, 3) = a;
+                    x++; if (x == width) {x = 0; y++;}
                 }
             } else { // normal
                 for (int j = 0; j < runlength; j++) {
-                    ptr[2] = LDRtoHDR(fgetc(f));
-                    ptr[1] = LDRtoHDR(fgetc(f));
-                    ptr[0] = LDRtoHDR(fgetc(f));
-                    ptr[3] = LDRtoHDR(fgetc(f));
-                    ptr += 4;
+                    im(x, y, 0) = LDRtoHDR(fgetc(f));
+                    im(x, y, 1) = LDRtoHDR(fgetc(f));
+                    im(x, y, 2) = LDRtoHDR(fgetc(f));
+                    im(x, y, 3) = LDRtoHDR(fgetc(f));
+                    x++; if (x == width) {x = 0; y++;}
                 }
             }
         }
@@ -176,21 +186,11 @@ Image load(string filename) {
 
     fclose(f);
 
-
-    if (vflip) {
-        float  *tmp = new float[width*channels];
-        for (int y = 0; y < height/2; y++) {
-            memcpy(tmp, im(0, y, 0), width*channels*sizeof(float));
-            memcpy(im(0, y, 0), im(0, height-y-1, 0), width*channels*sizeof(float));
-            memcpy(im(0, height-y-1, 0), tmp, width*channels*sizeof(float));
-        }
-        delete[] tmp;
-    }
-
+    if (vflip) Flip::apply(im, 'y');
     return im;
 }
 
-void save(Window im, string filename) {
+void save(Image im, string filename) {
     FILE *f = fopen(filename.c_str(), "wb");
     assert(f, "Could not open file %s\n", filename.c_str());
     assert(im.frames == 1, "can only save single frame tgas\n");
@@ -212,35 +212,29 @@ void save(Window im, string filename) {
     fputc(0, f); // descriptor
 
     if (im.channels == 1) {
-        for (int y = im.height-1; y>=0; y--) {
-            float *ptr = im(0, y, 0);
-            for (int i = 0; i < im.width; i++) {
-                fputc(HDRtoLDR(*ptr++), f);
+        for (int y = im.height-1; y >= 0; y--) {
+            for (int x = 0; x < im.width; x++) {
+                fputc(HDRtoLDR(im(x, y)), f);
             }
         }
     } else if (im.channels == 3) {
-        for (int y = im.height-1; y>=0; y--) {
-            float *ptr = im(0, y, 0);
-            for (int i = 0; i < im.width; i++) {
-                fputc(HDRtoLDR(ptr[2]), f);
-                fputc(HDRtoLDR(ptr[1]), f);
-                fputc(HDRtoLDR(ptr[0]), f);
-                ptr += 3;
+        for (int y = im.height-1; y >= 0; y--) {
+            for (int x = 0; x < im.width; x++) {
+                fputc(HDRtoLDR(im(x, y, 2)), f);
+                fputc(HDRtoLDR(im(x, y, 1)), f);
+                fputc(HDRtoLDR(im(x, y, 0)), f);
             }
         }
     } else if (im.channels == 4) {
-        for (int y = im.height-1; y>=0; y--) {
-            float *ptr = im(0, y, 0);
-            for (int i = 0; i < im.width; i++) {
-                fputc(HDRtoLDR(ptr[2]), f);
-                fputc(HDRtoLDR(ptr[1]), f);
-                fputc(HDRtoLDR(ptr[0]), f);
-                fputc(HDRtoLDR(ptr[3]), f);
-                ptr += 4;
+        for (int y = im.height-1; y >= 0; y--) {
+            for (int x = 0; x < im.width; x++) {
+                fputc(HDRtoLDR(im(x, y, 2)), f);
+                fputc(HDRtoLDR(im(x, y, 1)), f);
+                fputc(HDRtoLDR(im(x, y, 0)), f);
+                fputc(HDRtoLDR(im(x, y, 3)), f);
             }
         }
     }
-
 
     fclose(f);
 }

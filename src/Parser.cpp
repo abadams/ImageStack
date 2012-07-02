@@ -299,7 +299,7 @@ Expression::Node *Expression::parseTerm() {
         result = new Uniform_channels();
     } else { // must be a float constant
         float val;
-        int consumed = sscanf(source.c_str() + sourceIndex, "%f", &val);
+        int consumed = sscanf(source.c_str() + sourceIndex, "%20f", &val);
         if (consumed == 0) { panic("Could not parse from here: %s\n", source.c_str() + sourceIndex); }
         result = new Float(val);
         // now we must skip the constant
@@ -324,7 +324,7 @@ Expression::~Expression() {
     delete root;
 }
 
-float Expression::eval(State *state) {
+float Expression::eval(State &state) {
     return root->eval(state);
 }
 

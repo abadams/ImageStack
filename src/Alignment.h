@@ -6,19 +6,21 @@
 class Align : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
 
-    typedef enum {TRANSLATE = 0, SIMILARITY, AFFINE, PERSPECTIVE, RIGID} Mode;
+    typedef enum {Translate = 0, Similarity, Affine, Perspective, Rigid} Mode;
 
-    static Image apply(Window a, Window b, Mode m);
+    static Image apply(Image a, Image b, Mode m);
 
 };
 
 class AlignFrames : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, Align::Mode m);
+    static void apply(Image im, Align::Mode m);
 };
 
 #include "footer.h"

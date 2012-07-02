@@ -1,7 +1,6 @@
 #ifndef NO_FFTW
 #include "main.h"
 #include "Arithmetic.h"
-#include "Color.h"
 #include "Complex.h"
 #include "Deconvolution.h"
 #include "DFT.h"
@@ -9,6 +8,8 @@
 #include "GaussTransform.h"
 #include "Geometry.h"
 #include "KernelEstimation.h"
+#include "Statistics.h"
+#include "Filter.h"
 #include "header.h"
 
 #define FourierTransform(X) (FFT::apply(X, true, true, false))
@@ -28,10 +29,44 @@ void Deconvolve::help() {
 
 }
 
+bool Deconvolve::test() {
+    // Make a lop-sided random kernel
+    Image kernel(9, 9, 1, 1);
+    Noise::apply(kernel, 0, 0.1);
+    Noise::apply(kernel.region(0, 0, 0, 0,
+                               5, 5, 1, 1), 0, 1);
+    kernel /= Stats(kernel).sum();
+    Image input = Downsample::apply(Load::apply("pics/dog1.jpg"), 2, 2, 1);
+    Image blurry = Convolve::apply(input, kernel, Convolve::Zero);
+    Noise::apply(blurry, -0.02, 0.02);
+    Image shanResult = Deconvolve::applyShan2008(blurry, kernel);
+    Image choResult = Deconvolve::applyCho2009(blurry, kernel);
+    Image levinResult = Deconvolve::applyLevin2007(blurry, kernel, 0.02);
+    /*
+    Save::apply(kernel, "kernel.tmp");
+    Save::apply(blurry, "blurry.tmp");
+    Save::apply(shanResult, "shan.tmp");
+    Save::apply(choResult, "cho.tmp");
+    Save::apply(levinResult, "levin.tmp");
+    */
+    Stats shanStats(shanResult - input);
+    Stats choStats(choResult - input);
+    Stats levinStats(levinResult - input);
+    printf("Shan:  %f %f\n"
+           "Cho:   %f %f\n"
+           "Levin: %f %f\n",
+           shanStats.mean(), shanStats.variance(),
+           choStats.mean(), choStats.variance(),
+           levinStats.mean(), levinStats.variance());
+    return (nearlyEqual(shanResult, input) &&
+            nearlyEqual(choResult, input) &&
+            nearlyEqual(levinResult, input));
+}
+
 void Deconvolve::parse(vector<string> args) {
     assert(args.size() >= 1, "-deconvolve takes at least one argument\n");
-    Window kernel = stack(0);
-    Window im = stack(1);
+    Image kernel = stack(0);
+    Image im = stack(1);
     if (args[0] == "cho") {
         assert(args.size() == 1, "-deconvolve cho takes no extra arguments\n");
         push(applyCho2009(im, kernel));
@@ -46,41 +81,40 @@ void Deconvolve::parse(vector<string> args) {
     }
 }
 
-Image Deconvolve::applyShan2008(Window B, Window K) {
-    assert(K.channels == 1 && K.frames == 1 && B.frames == 1,
-           "The kernel must be single-channel, and both the kernel and blurred\n"
-           "image must be single-framed.\n");
-    assert(K.width % 2 == 1 && K.height % 2 ==1,
+Image Deconvolve::applyShan2008(Image B, Image K) {
+    assert(K.channels == 1 && K.frames == 1,
+           "The kernel must have one channel and one frame\n");
+    assert(K.width % 2 == 1 && K.height % 2 == 1,
            "The kernel dimensions must be odd.\n");
 
     // Prepare constants and images.
-    Image Bgray = (B.channels == 3) ? ColorConvert::apply(B, "rgb", "y") : B;
-    Image B_large = applyPadding(Bgray);
-    Image K_large = KernelEstimation::EnlargeKernel(K, B_large.width, B_large.height);
+    if (B.channels > 1 || B.frames > 1) {
+        Image result(B.width, B.height, B.frames, B.channels);
+        for (int c = 0; c < B.channels; c++) {
+            for (int t = 0; t < B.frames; t++) {
+                Image tmp = applyShan2008(B.channel(c).frame(t), K);
+                result.channel(c).frame(t).set(tmp);
+            }
+        }
+        return result;
+    }
+    Image B_large = applyPadding(B);
+    Image K_large = KernelEstimation::enlargeKernel(K, B_large.width, B_large.height);
     Image smoothness_map;
     const int x_padding = (B_large.width - B.width) / 2;
     const int y_padding = (B_large.height - B.height) / 2;
 
+
     // Compute the smoothness map.
     {
-        Image filter_x(K.width, 1, 1, 1);
-        Image filter_y(1, K.height, 1, 1);
-        Offset::apply(filter_x, 1.f / K.width);
-        Offset::apply(filter_y, 1.f / K.height);
-        if (K.width % 2 == 0) filter_x = Crop::apply(filter_x, 0, 0, K.width+1, 1);
-        if (K.height %2 == 0) filter_y = Crop::apply(filter_y, 0, 0, 1, K.height+1);
-        Image tmp = Convolve::apply(Convolve::apply(Bgray, filter_x, Convolve::Clamp),
-                                    filter_y, Convolve::Clamp);
-        tmp = Multiply::apply(tmp, tmp, Multiply::Elementwise);
-        smoothness_map = Bgray.copy();
-        smoothness_map = Multiply::apply(smoothness_map, smoothness_map, Multiply::Elementwise);
-        smoothness_map = Convolve::apply(Convolve::apply(smoothness_map, filter_x, Convolve::Clamp),
-                                         filter_y, Convolve::Clamp);
-        Subtract::apply(smoothness_map, tmp);
-        Scale::apply(smoothness_map, -1.f);
-
+        Image mean = B.copy();
+        RectFilter::apply(mean, K.width | 1, K.height | 1, 1);
+        Image variance = B * B;
+        RectFilter::apply(variance, K.width | 1, K.height | 1, 1);
+        smoothness_map = mean*mean - variance;
         Threshold::apply(smoothness_map, -25.0f / (256.f * 256.f));
         smoothness_map = Crop::apply(smoothness_map, -x_padding, -y_padding, 0, B_large.width, B_large.height, 1);
+        Save::apply(smoothness_map, "smoothness_map.tmp");
     }
 
     // Prepare Fourier domain stuff.
@@ -91,7 +125,7 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
     B_large = RealComplex::apply(B_large);
     FourierTransform(B_large);
 
-    // sum w_i | K * (deriv_i L) - (deriv_i I) | ^ 2 
+    // sum w_i | K * (deriv_i L) - (deriv_i I) | ^ 2
     //   + gamma |Psi_x - deriv_x L|^2 + |Psi_y - deriv_y L|^2
     //        (Psi_x,Psi_y are redundant variables to follow deriv_x L, deriv_y L)
     //   + lambda_2 | Psi_x - deriv_x I|^2 + |Psi_y - deriv_y I|^2, masked by smoothness-Map
@@ -108,31 +142,31 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
         switch (i) {
         case 0: // Original
             w_i = 50.f;
-            FDeriv[i](0, 0, 0)[0] = 1.f; break;
+            FDeriv[i](0, 0) = 1.f; break;
         case 1: // dx
             w_i = 25.f;
-            FDeriv[i](0, 0, 0)[0] = -1.f;
-            FDeriv[i](1, 0, 0)[0] = 1.f; break;
+            FDeriv[i](0, 0) = -1.f;
+            FDeriv[i](1, 0) = 1.f; break;
         case 2: // dxx
             w_i = 12.5f;
-            FDeriv[i](0, 0, 0)[0] = 1.f;
-            FDeriv[i](1, 0, 0)[0] = -2.f;
-            FDeriv[i](2, 0, 0)[0] = 1.f; break;
+            FDeriv[i](0, 0) = 1.f;
+            FDeriv[i](1, 0) = -2.f;
+            FDeriv[i](2, 0) = 1.f; break;
         case 3: // dy
             w_i = 25.f;
-            FDeriv[i](0, 0, 0)[0] = -1.f;
-            FDeriv[i](0, 1, 0)[0] = 1.f; break;
+            FDeriv[i](0, 0) = -1.f;
+            FDeriv[i](0, 1) = 1.f; break;
         case 4: // dyy
             w_i = 12.5f;
-            FDeriv[i](0, 0, 0)[0] = 1.f;
-            FDeriv[i](0, 1, 0)[0] = -2.f;
-            FDeriv[i](0, 2, 0)[0] = 1.f; break;
+            FDeriv[i](0, 0) = 1.f;
+            FDeriv[i](0, 1) = -2.f;
+            FDeriv[i](0, 2) = 1.f; break;
         case 5: // dxy
             w_i = 12.5f;
-            FDeriv[i](0, 0, 0)[0] = 1.f;
-            FDeriv[i](1, 0, 0)[0] = -1;
-            FDeriv[i](0, 1, 0)[0] = -1;
-            FDeriv[i](1, 1, 0)[0] = 1; break;
+            FDeriv[i](0, 0) = 1.f;
+            FDeriv[i](1, 0) = -1;
+            FDeriv[i](0, 1) = -1;
+            FDeriv[i](1, 1) = 1; break;
         }
         FourierTransform(FDeriv[i]);
         Image tmp = FDeriv[i].copy();
@@ -142,17 +176,20 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
         ComplexMultiply::apply(tmp, FK2, false); // tmp = |F(K)|^2 |F(deriv_i)|^2
         ComplexMultiply::apply(tmq, K_large, false); // tmq = F(K)^T |F(deriv_i)|^2
         ComplexMultiply::apply(tmq, B_large, false); // tmq = F(K)^T |F(deriv_i)|^2 F(I)
-        Add::apply(denominator_base, tmp, w_i);
-        Add::apply(numerator_base, tmq, w_i);
+        tmp *= w_i;
+        tmq *= w_i;
+        denominator_base += tmp;
+        numerator_base += tmq;
     }
 
     Image dIdx = Convolve::apply(B_large, Crop::apply(FDeriv[1], -1, 0, 3, 1), Convolve::Wrap);
     Image dIdy = Convolve::apply(B_large, Crop::apply(FDeriv[3], 0, -1, 1, 3), Convolve::Wrap);
-    Image L, FPsi_x, FPsi_y;
+    Image L = B_large;
+    Image FPsi_x, FPsi_y;
     Image Psi_x(B_large.width, B_large.height, 1, 2);
     Image Psi_y(B_large.width, B_large.height, 1, 2);
     float gamma = 2.0f;
-    const int MAX_ITERATION = 2;
+    const int MAX_ITERATION = 1;
 
     // Non-linear prior for gradient (for 8-bit int pixels)
     float k = 2.7f;
@@ -162,7 +199,6 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
     k *= 255.f; a *= 255.f * 255.f; lt /= 255.f; // adjustment for floating point
 
     for (int iterations = 1; iterations <= MAX_ITERATION; iterations++) {
-        printf(" Starting iteration %d of %d\n", iterations, MAX_ITERATION);
         /******************************************/
         /* Optimize over Psi                      */
         /******************************************/
@@ -174,7 +210,7 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
         // also independent for x and y.
         //  2 gamma (Psi_x - deriv_x L) + 2 lambda_2 (Psi_x - deriv_x I) .* mask
         //   + lambda_1 (non-linear prior on Psi_x)' = 0.
-        float ans_x, ans_y, tmp, fscore, tmpscore;
+        float ans_x = 0, ans_y = 0, tmp, fscore = 0, tmpscore;
         bool fscore_valid;
         Image dLdx = Convolve::apply(L, Crop::apply(FDeriv[1], -1, 0, 3, 1), Convolve::Wrap);
         Image dLdy = Convolve::apply(L, Crop::apply(FDeriv[3], 0, -1, 1, 3), Convolve::Wrap);
@@ -186,11 +222,11 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
                 //   + lambda_1 (-2a Psi_x) = 0.
                 // Rearranging gives:
                 //     (gamma + lambda_2 - a * lambda_1) psi_x = (gamma deriv_x L + lambda_2 deriv_x I .* mask)
-                tmp = (gamma * dLdx(x, y)[0] + lambda_2 * dIdx(x, y)[0] * smoothness_map(x, y)[0])
-                    / (gamma + lambda_2 - a * lambda_1);
-                tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
-                    + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
-                    + lambda_1 * (-(a*tmp*tmp + b));
+                tmp = (gamma * dLdx(x, y) + lambda_2 * dIdx(x, y) * smoothness_map(x, y))
+                      / (gamma + lambda_2 - a * lambda_1);
+                tmpscore = gamma * (tmp - dLdx(x, y)) * (tmp - dLdx(x, y))
+                           + lambda_2 * (tmp - dIdx(x, y)) * (tmp - dIdx(x, y)) * smoothness_map(x, y)
+                           + lambda_1 * (-(a*tmp*tmp + b));
                 if (fabs(tmp) > lt && (!fscore_valid || fscore > tmpscore)) {
                     fscore = tmpscore; ans_x = tmp; fscore_valid = true;
                 }
@@ -199,11 +235,11 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
                 //   + lambda_1 (-k) = 0.
                 // Rearranging gives:
                 //     (gamma + lambda_2) psi_x = (gamma deriv_x L + lambda_2 deriv_x I .* mask + lambda_1 k)
-                tmp = (gamma * dLdx(x, y)[0] + lambda_2 * dIdx(x, y)[0] * smoothness_map(x, y)[0] + lambda_1 * k)
-                    / (gamma + lambda_2);
-                tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
-                    + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
-                    + lambda_1 * (-k * tmp);
+                tmp = (gamma * dLdx(x, y) + lambda_2 * dIdx(x, y) * smoothness_map(x, y) + lambda_1 * k)
+                      / (gamma + lambda_2);
+                tmpscore = gamma * (tmp - dLdx(x, y)) * (tmp - dLdx(x, y))
+                           + lambda_2 * (tmp - dIdx(x, y)) * (tmp - dIdx(x, y)) * smoothness_map(x, y)
+                           + lambda_1 * (-k * tmp);
                 if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
                     fscore = tmpscore; ans_x = tmp; fscore_valid = true;
                 }
@@ -212,38 +248,38 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
                 //   + lambda_1 (k) = 0.
                 // Rearranging gives:
                 //     (gamma + lambda_2) psi_x = (gamma deriv_x L + lambda_2 deriv_x I .* mask - lambda_1 k)
-                tmp = (gamma * dLdx(x, y)[0] + lambda_2 * dIdx(x, y)[0] * smoothness_map(x, y)[0] - lambda_1 * k)
-                    / (gamma + lambda_2);
-                tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
-                    + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
-                    + lambda_1 * (k * tmp);
+                tmp = (gamma * dLdx(x, y) + lambda_2 * dIdx(x, y) * smoothness_map(x, y) - lambda_1 * k)
+                      / (gamma + lambda_2);
+                tmpscore = gamma * (tmp - dLdx(x, y)) * (tmp - dLdx(x, y))
+                           + lambda_2 * (tmp - dIdx(x, y)) * (tmp - dIdx(x, y)) * smoothness_map(x, y)
+                           + lambda_1 * (k * tmp);
                 if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
                     fscore = tmpscore; ans_x = tmp; fscore_valid = true;
-                } 
+                }
                 // 4) Zero
                 tmp = 0.f;
-                tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
-                    + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0];
+                tmpscore = gamma * (tmp - dLdx(x, y)) * (tmp - dLdx(x, y))
+                           + lambda_2 * (tmp - dIdx(x, y)) * (tmp - dIdx(x, y)) * smoothness_map(x, y);
                 if (!fscore_valid || fscore > tmpscore) {
                     fscore = tmpscore; ans_x = tmp; fscore_valid = true;
                 }
                 // 5) lt
                 tmp = lt;
-                tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
-                    + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
-                    - lambda_1 * (-k * lt);
+                tmpscore = gamma * (tmp - dLdx(x, y)) * (tmp - dLdx(x, y))
+                           + lambda_2 * (tmp - dIdx(x, y)) * (tmp - dIdx(x, y)) * smoothness_map(x, y)
+                           - lambda_1 * (-k * lt);
                 if (!fscore_valid || fscore > tmpscore) {
                     fscore = tmpscore; ans_x = tmp; fscore_valid = true;
                 }
                 // 6) -lt
                 tmp = -lt;
-                tmpscore = gamma * (tmp - dLdx(x, y)[0]) * (tmp - dLdx(x, y)[0])
-                    + lambda_2 * (tmp - dIdx(x, y)[0]) * (tmp - dIdx(x, y)[0]) * smoothness_map(x, y)[0]
-                    - lambda_1 * (k * lt);
+                tmpscore = gamma * (tmp - dLdx(x, y)) * (tmp - dLdx(x, y))
+                           + lambda_2 * (tmp - dIdx(x, y)) * (tmp - dIdx(x, y)) * smoothness_map(x, y)
+                           - lambda_1 * (k * lt);
                 if (!fscore_valid || fscore > tmpscore) {
                     fscore = tmpscore; ans_x = tmp; fscore_valid = true;
                 }
-                Psi_x(x, y)[0] = ans_x;
+                Psi_x(x, y) = ans_x;
             }
         }
         for (int y = 0; y < B_large.height; y++) {
@@ -254,11 +290,11 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
                 //   + lambda_1 (-2a Psi_y) = 0.
                 // Rearranging gives:
                 //     (gamma + lambda_2 - a * lambda_1) psi_y = (gamma deriv_y L + lambda_2 deriv_y I .* mask)
-                tmp = (gamma * dLdy(x, y)[0] + lambda_2 * dIdy(x, y)[0] * smoothness_map(x, y)[0])
-                    / (gamma + lambda_2 - a * lambda_1);
-                tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
-                    + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
-                    + lambda_1 * (-(a*tmp*tmp + b));
+                tmp = (gamma * dLdy(x, y) + lambda_2 * dIdy(x, y) * smoothness_map(x, y))
+                      / (gamma + lambda_2 - a * lambda_1);
+                tmpscore = gamma * (tmp - dLdy(x, y)) * (tmp - dLdy(x, y))
+                           + lambda_2 * (tmp - dIdy(x, y)) * (tmp - dIdy(x, y)) * smoothness_map(x, y)
+                           + lambda_1 * (-(a*tmp*tmp + b));
                 if (fabs(tmp) > lt && (!fscore_valid || fscore > tmpscore)) {
                     fscore = tmpscore; ans_y = tmp; fscore_valid = true;
                 }
@@ -267,11 +303,11 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
                 //   + lambda_1 (-k) = 0.
                 // Rearranging gives:
                 //     (gamma + lambda_2) psi_y = (gamma deriv_y L + lambda_2 deriv_y I .* mask + lambda_1 k)
-                tmp = (gamma * dLdy(x, y)[0] + lambda_2 * dIdy(x, y)[0] * smoothness_map(x, y)[0] + lambda_1 * k)
-                    / (gamma + lambda_2);
-                tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
-                    + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
-                    + lambda_1 * (-k * tmp);
+                tmp = (gamma * dLdy(x, y) + lambda_2 * dIdy(x, y) * smoothness_map(x, y) + lambda_1 * k)
+                      / (gamma + lambda_2);
+                tmpscore = gamma * (tmp - dLdy(x, y)) * (tmp - dLdy(x, y))
+                           + lambda_2 * (tmp - dIdy(x, y)) * (tmp - dIdy(x, y)) * smoothness_map(x, y)
+                           + lambda_1 * (-k * tmp);
                 if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
                     fscore = tmpscore; ans_y = tmp; fscore_valid = true;
                 }
@@ -280,40 +316,40 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
                 //   + lambda_1 (k) = 0.
                 // Rearranging gives:
                 //     (gamma + lambda_2) psi_y = (gamma deriv_y L + lambda_2 deriv_y I .* mask - lambda_1 k)
-                tmp = (gamma * dLdy(x, y)[0] + lambda_2 * dIdy(x, y)[0] * smoothness_map(x, y)[0] - lambda_1 * k)
-                    / (gamma + lambda_2);
-                tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
-                    + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
-                    + lambda_1 * (k * tmp);
+                tmp = (gamma * dLdy(x, y) + lambda_2 * dIdy(x, y) * smoothness_map(x, y) - lambda_1 * k)
+                      / (gamma + lambda_2);
+                tmpscore = gamma * (tmp - dLdy(x, y)) * (tmp - dLdy(x, y))
+                           + lambda_2 * (tmp - dIdy(x, y)) * (tmp - dIdy(x, y)) * smoothness_map(x, y)
+                           + lambda_1 * (k * tmp);
                 if (tmp >= 0 && tmp <= lt && (!fscore_valid || fscore > tmpscore)) {
                     fscore = tmpscore; ans_y = tmp; fscore_valid = true;
-                } 
+                }
                 // 4) Zero
                 tmp = 0.f;
-                tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
-                    + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0];
+                tmpscore = gamma * (tmp - dLdy(x, y)) * (tmp - dLdy(x, y))
+                           + lambda_2 * (tmp - dIdy(x, y)) * (tmp - dIdy(x, y)) * smoothness_map(x, y);
                 if (!fscore_valid || fscore > tmpscore) {
                     fscore = tmpscore; ans_y = tmp; fscore_valid = true;
                 }
                 // 5) lt
                 tmp = lt;
-                tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
-                    + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
-                    - lambda_1 * (-k * lt);
+                tmpscore = gamma * (tmp - dLdy(x, y)) * (tmp - dLdy(x, y))
+                           + lambda_2 * (tmp - dIdy(x, y)) * (tmp - dIdy(x, y)) * smoothness_map(x, y)
+                           - lambda_1 * (-k * lt);
                 if (!fscore_valid || fscore > tmpscore) {
                     fscore = tmpscore; ans_y = tmp; fscore_valid = true;
                 }
                 // 6) -lt
                 tmp = -lt;
-                tmpscore = gamma * (tmp - dLdy(x, y)[0]) * (tmp - dLdy(x, y)[0])
-                    + lambda_2 * (tmp - dIdy(x, y)[0]) * (tmp - dIdy(x, y)[0]) * smoothness_map(x, y)[0]
-                    - lambda_1 * (k * lt);
+                tmpscore = gamma * (tmp - dLdy(x, y)) * (tmp - dLdy(x, y))
+                           + lambda_2 * (tmp - dIdy(x, y)) * (tmp - dIdy(x, y)) * smoothness_map(x, y)
+                           - lambda_1 * (k * lt);
                 if (!fscore_valid || fscore > tmpscore) {
                     fscore = tmpscore; ans_y = tmp; fscore_valid = true;
                 }
-                Psi_y(x, y)[0] = ans_y;
+                Psi_y(x, y) = ans_y;
             }
-        }    
+        }
 
         FPsi_x = Psi_x.copy(); FourierTransform(FPsi_x);
         FPsi_y = Psi_y.copy(); FourierTransform(FPsi_y);
@@ -332,14 +368,14 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
         // Append the variable terms.
         for (int y = 0; y < B_large.height; y++)
             for (int x = 0; x < B_large.width; x++) {
-                denominator(x, y)[0] += gamma * (FDeriv[1](x, y)[0] * FDeriv[1](x, y)[0]
-                                                 + FDeriv[1](x, y)[1] * FDeriv[1](x, y)[1]);
-                denominator(x, y)[0] += gamma * (FDeriv[3](x, y)[0] * FDeriv[3](x, y)[0]
-                                                 + FDeriv[3](x, y)[1] * FDeriv[3](x, y)[1]);
-                numerator(x, y)[0] += gamma * (FDeriv[1](x, y)[0] * FPsi_x(x, y)[0]
-                                               - FDeriv[1](x, y)[1] * FPsi_x(x, y)[1]);
-                numerator(x, y)[0] += gamma * (FDeriv[3](x, y)[0] * FPsi_y(x, y)[0]
-                                               - FDeriv[3](x, y)[1] * FPsi_y(x, y)[1]);
+                denominator(x, y) += gamma * (FDeriv[1](x, y, 0) * FDeriv[1](x, y, 0) +
+                                              FDeriv[1](x, y, 1) * FDeriv[1](x, y, 1));
+                denominator(x, y) += gamma * (FDeriv[3](x, y, 0) * FDeriv[3](x, y, 0) +
+                                              FDeriv[3](x, y, 1) * FDeriv[3](x, y, 1));
+                numerator(x, y) += gamma * (FDeriv[1](x, y, 0) * FPsi_x(x, y, 0) +
+                                            FDeriv[1](x, y, 1) * FPsi_x(x, y, 1));
+                numerator(x, y) += gamma * (FDeriv[3](x, y, 0) * FPsi_y(x, y, 0) +
+                                            FDeriv[3](x, y, 1) * FPsi_y(x, y, 1));
             }
         ComplexDivide::apply(numerator, denominator, false);
         InverseFourierTransform(numerator);
@@ -366,9 +402,9 @@ Image Deconvolve::applyShan2008(Window B, Window K) {
  * A poor man's version of "Reducing Boundary Artifacts in Image Deconvolution" (ICCP 2008)
  * by Liu and Jia.
  */
-Image Deconvolve::applyPadding(Window B) {
+Image Deconvolve::applyPadding(Image B) {
     // Calculate the margin size.
-    int alpha = 1; 
+    int alpha = 1;
     if (B.width / 3 < alpha) alpha = B.width / 3;
     if (B.height / 3 < alpha) alpha = B.height / 3;
     int x_padding = B.width / 2;
@@ -377,84 +413,93 @@ Image Deconvolve::applyPadding(Window B) {
     if (y_padding < alpha * 3) y_padding = alpha * 3;
 
     // Prepare the enlarged canvas.
-    float* prev = new float[B.channels];
+    vector<float> prev(B.channels);
     Image ret = Crop::apply(B, -x_padding, -y_padding, 0,
                             B.width+x_padding*2, B.height+y_padding*2, B.frames);
     for (int t = 0; t < B.frames; t++) {
         // Populate the top 'A' region.
         for (int y = 0; y < alpha; y++) {
-            int realy = y; // alpha - 1 - y;
-            memcpy(ret(x_padding, realy, t), ret(x_padding, y - alpha + B.height + y_padding, t),
-                   sizeof(float) * B.channels * B.width);
-            memcpy(ret(x_padding, y_padding - alpha + realy, t), ret(x_padding, y + y_padding, t),
-                   sizeof(float) * B.channels * B.width);
+            for (int c = 0; c < B.channels; c++) {
+                for (int x = 0; x < B.width; x++) {
+                    ret(x+x_padding, y, t, c) = ret(x+x_padding, y - alpha + B.height + y_padding, t, c);
+                    ret(x+x_padding, y_padding - alpha + y, t, c) = ret(x+x_padding, y + y_padding, t, c);
+                }
+            }
         }
         for (int y = alpha; y < y_padding - alpha; y++) {
             // interpolate towards the bottom boundary.
             float weight = 1.f / (y_padding - alpha - (y-1));
             for (int x = x_padding; x < x_padding + B.width; x++)
                 for (int c = 0; c < B.channels; c++)
-                    ret(x, y, t)[c] = ret(x, y-1, t)[c] * (1.f - weight) + ret(x, y_padding - alpha, t)[c] * weight;
+                    ret(x, y, t, c) = ret(x, y-1, t, c) * (1.f - weight) + ret(x, y_padding - alpha, t, c) * weight;
             // Blur with neighbors, more increasingly at the center.
             for (int c = 0; c < B.channels; c++)
-                prev[c] = ret(x_padding, y, t)[c];
+                prev[c] = ret(x_padding, y, t, c);
             float wing = 0.1f + 0.2f * (1.f - fabs(y_padding * 0.5f - y) / (y_padding * 0.5f));
             float center = 1.f - wing * 2.f;
             for (int x = x_padding; x < x_padding + B.width - 1; x++) {
                 for (int c = 0; c < B.channels; c++) {
-                    float tmp = ret(x, y, t)[c];
-                    ret(x, y, t)[c] = prev[c] * wing + ret(x+1, y, t)[c] * wing + tmp * center;
+                    float tmp = ret(x, y, t, c);
+                    ret(x, y, t, c) = prev[c] * wing + ret(x+1, y, t, c) * wing + tmp * center;
                     prev[c] = tmp;
                 }
             }
         }
         // Populate the bottom 'A' region
         for (int y = 0; y < y_padding; y++) {
-            memcpy(ret(x_padding, y + B.height + y_padding, t), ret(x_padding, y, t),
-                   sizeof(float) * B.channels * B.width);
-            // Populate the left 'C-B-C' region
+            for (int c = 0; c < B.channels; c++) {
+                for (int x = 0; x < B.width; x++) {
+                    ret(x+x_padding, y+B.height+y_padding, t, c) = ret(x+x_padding, y, t, c);
+                }
+            }
+        }
+
+        // Populate the left 'C-B-C' region
+        for (int y = 0; y < B.height + y_padding * 2; y++) {
+            for (int x = 0; x < alpha; x++) {
+                for (int c = 0; c < B.channels; c++) {
+                    ret(x, y, t, c) = ret(B.width + x_padding - alpha + x, y, t, c);
+                    ret(x_padding - alpha + x, y, t, c) = ret(x_padding + x, y, t, c);
+                }
+            }
+        }
+
+        for (int x = alpha; x < x_padding - alpha; x++) {
+            // interpolate towards the right boundary.
+            float weight = 1.f / (x_padding - alpha - (x-1));
             for (int y = 0; y < B.height + y_padding * 2; y++) {
-                for (int x = 0; x < alpha; x++) {
-                    int realx = x; // alpha - 1 - x;
-                    for (int c = 0; c < B.channels; c++) {
-                        ret(realx, y, t)[c] = ret(B.width + x_padding - alpha + x, y, t)[c];
-                        ret(x_padding - alpha + realx, y, t)[c] = ret(x_padding + x, y, t)[c];
-                    }
+                for (int c = 0; c < B.channels; c++) {
+                    ret(x, y, t, c) = ret(x-1, y, t, c) * (1.f - weight) + ret(x_padding - alpha, y, t, c) * weight;
                 }
             }
-            for (int x = alpha; x < x_padding - alpha; x++) {
-                // interpolate towards the right boundary.
-                float weight = 1.f / (x_padding - alpha - (x-1));
-                for (int y = 0; y < B.height + y_padding * 2; y++) {
-                    for (int c = 0; c < B.channels; c++) {
-                        ret(x, y, t)[c] = ret(x-1, y, t)[c] * (1.f - weight) + ret(x_padding - alpha, y, t)[c] * weight;
-                    }
-                }
-                // Blur with neighbors, more increasingly at the center.
-                for (int c = 0; c < B.channels; c++)
-                    prev[c] = ret(x, 0, t)[c];
-                float wing = 0.1f + 0.2f * (1.f - fabs(x_padding * 0.5f - x) / (x_padding * 0.5f));
-                float center = 1.f - wing * 2.f;
-                for (int y = 0; y < B.height + y_padding * 2 - 1; y++) {
-                    for (int c = 0; c < B.channels; c++) {
-                        float tmp = ret(x, y, t)[c];
-                        ret(x, y, t)[c] = prev[c] * wing + ret(x, y+1, t)[c] * wing + tmp * center;
-                        prev[c] = tmp;
-                    }
+            // Blur with neighbors, more increasingly at the center.
+            for (int c = 0; c < B.channels; c++) {
+                prev[c] = ret(x, 0, t, c);
+            }
+            float wing = 0.1f + 0.2f * (1.f - fabs(x_padding * 0.5f - x) / (x_padding * 0.5f));
+            float center = 1.f - wing * 2.f;
+            for (int y = 0; y < B.height + y_padding * 2 - 1; y++) {
+                for (int c = 0; c < B.channels; c++) {
+                    float tmp = ret(x, y, t, c);
+                    ret(x, y, t, c) = prev[c] * wing + ret(x, y+1, t, c) * wing + tmp * center;
+                    prev[c] = tmp;
                 }
             }
-            // Populate the right 'C-B-C' region
-            for (int y = 0; y < B.height + y_padding * 2; y++)
-                memcpy(ret(B.width + x_padding, y, t), ret(0, y, t), sizeof(float)
-                       * B.channels * x_padding);
+        }
+        // Populate the right 'C-B-C' region
+        for (int y = 0; y < B.height + y_padding * 2; y++) {
+            for (int c = 0; c < B.channels; c++) {
+                for (int x = 0; x < x_padding; x++) {
+                    ret(x + B.width + x_padding, y, t, c) = ret(x, y, t, c);
+                }
+            }
         }
     }
     ret = Crop::apply(ret, x_padding/2, y_padding/2, 0, B.width + x_padding, B.height + y_padding, B.frames);
-    delete[] prev;
     return ret;
 }
-  
-Image Deconvolve::applyCho2009(Window blurred, Window kernel) {
+
+Image Deconvolve::applyCho2009(Image blurred, Image kernel) {
     assert(kernel.width % 2 == 1 && kernel.height % 2 ==1,
            "The kernel dimensions must be odd.\n");
     assert(kernel.channels == 1 && kernel.frames == 1 && blurred.frames == 1,
@@ -476,7 +521,7 @@ Image Deconvolve::applyCho2009(Window blurred, Window kernel) {
     //FileTMP::save(B, std::string("padded.tmp"), "float");
 
     float alpha = 1.f; // TODO
-    Image FK = KernelEstimation::EnlargeKernel(kernel, B.width, B.height);
+    Image FK = KernelEstimation::enlargeKernel(kernel, B.width, B.height);
     Image FB = RealComplex::apply(Transpose::apply(B, 'c', 't'));
     FFT::apply(FK, true, true, false);
     FFT::apply(FB, true, true, false);
@@ -490,41 +535,42 @@ Image Deconvolve::applyCho2009(Window blurred, Window kernel) {
         switch (i) {
         case 0: // Original
             w_i = 50.f;
-            FDeriv(0, 0, 0)[0] = 1.f; break;
+            FDeriv(0, 0) = 1.f; break;
         case 1: // dx
             w_i = 25.f;
-            FDeriv(0, 0, 0)[0] = -1.f;
-            FDeriv(1, 0, 0)[0] = 1.f; break;
+            FDeriv(0, 0) = -1.f;
+            FDeriv(1, 0) = 1.f; break;
         case 2: // dxx
             w_i = 12.5f;
-            FDeriv(0, 0, 0)[0] = 1.f;
-            FDeriv(1, 0, 0)[0] = -2.f;
-            FDeriv(2, 0, 0)[0] = 1.f; break;
+            FDeriv(0, 0) = 1.f;
+            FDeriv(1, 0) = -2.f;
+            FDeriv(2, 0) = 1.f; break;
         case 3: // dy
             w_i = 25.f;
-            FDeriv(0, 0, 0)[0] = -1.f;
-            FDeriv(0, 1, 0)[0] = 1.f; break;
+            FDeriv(0, 0) = -1.f;
+            FDeriv(0, 1) = 1.f; break;
         case 4: // dyy
             w_i = 12.5f;
-            FDeriv(0, 0, 0)[0] = 1.f;
-            FDeriv(0, 1, 0)[0] = -2.f;
-            FDeriv(0, 2, 0)[0] = 1.f; break;
+            FDeriv(0, 0) = 1.f;
+            FDeriv(0, 1) = -2.f;
+            FDeriv(0, 2) = 1.f; break;
         case 5: // dxy
             w_i = 12.5f;
-            FDeriv(0, 0, 0)[0] = 1.f;
-            FDeriv(1, 0, 0)[0] = -1;
-            FDeriv(0, 1, 0)[0] = -1;
-            FDeriv(1, 1, 0)[0] = 1; break;
+            FDeriv(0, 0) = 1.f;
+            FDeriv(1, 0) = -1;
+            FDeriv(0, 1) = -1;
+            FDeriv(1, 1) = 1; break;
         }
         FFT::apply(FDeriv, true, true, false);
         Image FDeriv2 = FDeriv.copy();
         ComplexMultiply::apply(FDeriv2, FDeriv, true);
-        if (i == 1 || i == 3)
-            Add::apply(SumGrad, FDeriv2);
-        Scale::apply(FDeriv2, w_i);
-        Add::apply(SumDeriv, FDeriv2);
+        if (i == 1 || i == 3) {
+            SumGrad += FDeriv2;
+        }
+        FDeriv2 *= w_i;
+        SumDeriv += FDeriv2;
     }
-    Scale::apply(SumGrad, alpha);
+    SumGrad *= alpha;
     // Recall the following:
     // F(L) = F(K)^T F(B) sum_i w_i |F(deriv_i)|^2  divided by
     //          |F(K)|^2 sum_i w_i |F(deriv_i)|^2  + alpha (|F(dx)|^2+|F(dy)|^2)
@@ -533,14 +579,14 @@ Image Deconvolve::applyCho2009(Window blurred, Window kernel) {
     ComplexConjugate::apply(FK);
     ComplexMultiply::apply(FK, SumDeriv, false);
     ComplexMultiply::apply(FK2, SumDeriv, false);
-    Add::apply(FK2, SumGrad);
+    FK2 += SumGrad;
     ComplexDivide::apply(FK, FK2, false); // FK contains the running result.
     for (int t = 0; t < B.channels; t++) {
         for (int y = 0; y < B.height; y++) {
             for (int x = 0; x < B.width; x++) {
-                float tmp = FB(x, y, t)[0] * FK(x, y)[0] - FB(x, y, t)[1] * FK(x, y)[1];
-                FB(x, y, t)[1] = FB(x, y, t)[0] * FK(x, y)[1] + FB(x, y, t)[1] * FK(x, y)[0];
-                FB(x, y, t)[0] = tmp;
+                float tmp = FB(x, y, t, 0) * FK(x, y, 0) - FB(x, y, t, 1) * FK(x, y, 1);
+                FB(x, y, t, 1) = FB(x, y, t, 0) * FK(x, y, 1) + FB(x, y, t, 1) * FK(x, y, 0);
+                FB(x, y, t, 0) = tmp;
             }
         }
     }
@@ -548,29 +594,31 @@ Image Deconvolve::applyCho2009(Window blurred, Window kernel) {
     const int x_padding = (B.width - blurred.width) / 2;
     const int y_padding = (B.height - blurred.height) / 2;
     return Crop::apply(Transpose::apply(ComplexReal::apply(FB), 'c', 't'),
-                       x_padding, y_padding, 0, blurred.width, blurred.height, blurred.frames);  
+                       x_padding, y_padding, 0, blurred.width, blurred.height, blurred.frames);
 }
 
-Image Deconvolve::applyLevin2007(Window blurred, Window kernel, float weight) {
+Image Deconvolve::applyLevin2007(Image blurred, Image kernel, float weight) {
     assert(kernel.width % 2 == 1 && kernel.height % 2 ==1,
            "The kernel dimensions must be odd.\n");
     assert(kernel.channels == 1 && kernel.frames == 1 && blurred.frames == 1,
            "The kernel must be single-channel, and both the kernel and blurred\n"
            "image must be single-framed.\n");
 
+    Image padded = applyPadding(blurred);
+
     // sum of second derivatives filter
-    Image fft_g(blurred.width, blurred.height, 1, 2);
-    fft_g(0, 0)[0] = weight;
-    fft_g(blurred.width-1, 0)[0] = -weight*0.25;
-    fft_g(0, blurred.height-1,0)[0] = -weight*0.25;
-    fft_g(1, 0)[0] = -weight*0.25;
-    fft_g(0, 1)[0] = -weight*0.25;
+    Image fft_g(padded.width, padded.height, 1, 2);
+    fft_g(0, 0) = weight;
+    fft_g(padded.width-1, 0) = -weight*0.25;
+    fft_g(0, padded.height-1) = -weight*0.25;
+    fft_g(1, 0) = -weight*0.25;
+    fft_g(0, 1) = -weight*0.25;
     FFT::apply(fft_g);
 
-    Image fft_im = RealComplex::apply(blurred);
+    Image fft_im = RealComplex::apply(padded);
     FFT::apply(fft_im);
 
-    Image fft_kernel(blurred.width, blurred.height, 1, 2);
+    Image fft_kernel(padded.width, padded.height, 1, 2);
     for (int y = 0; y < kernel.height; y++) {
         int fy = y - kernel.height/2;
         if (fy < 0) { fy += fft_kernel.height; }
@@ -578,7 +626,7 @@ Image Deconvolve::applyLevin2007(Window blurred, Window kernel, float weight) {
             for (int c = 0; c < kernel.channels; c++) {
                 int fx = x - kernel.width/2;
                 if (fx < 0) { fx += fft_kernel.width; }
-                fft_kernel(fx, fy)[2*c] = kernel(x, y)[c];
+                fft_kernel(fx, fy, 2*c) = kernel(x, y, c);
             }
         }
     }
@@ -587,10 +635,17 @@ Image Deconvolve::applyLevin2007(Window blurred, Window kernel, float weight) {
     ComplexMultiply::apply(fft_im, fft_kernel, true);
     ComplexMultiply::apply(fft_kernel, fft_kernel, true);
 
-    Add::apply(fft_kernel, fft_g);
+    fft_kernel += fft_g;
     ComplexDivide::apply(fft_im, fft_kernel, false);
 
+
+    const int x_pad = (padded.width - blurred.width)/2;
+    const int y_pad = (padded.height - blurred.height)/2;
+
     IFFT::apply(fft_im);
+    fft_im = fft_im.region(x_pad, y_pad, 0, 0,
+                           blurred.width, blurred.height,
+                           blurred.frames, fft_im.channels);
     return ComplexReal::apply(fft_im);
 }
 

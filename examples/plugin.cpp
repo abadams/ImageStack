@@ -1,4 +1,4 @@
-// An example plugin to be used with the -plugin operator. 
+// An example plugin to be used with the -plugin operator.
 //
 // On OS X you compile it like this:
 // g++ -c plugin.cpp -I ../src
@@ -6,7 +6,7 @@
 //
 // On linux you compile it like this:
 // g++ -shared plugin.cpp -o plugin.so -I ../src -fPIC
-// 
+//
 // And use it like this:
 // ImageStack -load ../pics/dog1.jpg -plugin ./plugin.so -help foo -foo -display
 
@@ -27,7 +27,7 @@ public:
     // Foo doubles an image and then squares it
     static Image apply(Window im) {
         Image out(im);
-        
+
         // Call an existing imagestack operator
         Add::apply(out, out);
 
@@ -45,7 +45,7 @@ public:
         return out;
     }
 
-    void help() { 
+    void help() {
         pprintf("Foo help\n");
     }
 };

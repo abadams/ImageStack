@@ -2,37 +2,37 @@
 #define IMAGESTACK_LIGHTFIELD_H
 #include "header.h"
 
-// a LightField is a window which assumes u and v are rolled up into x
+// a LightField is an image which assumes u and v are rolled up into x
 // and y, like an image of the lenslets in a plenoptic camera
-class LightField : public Window {
+class LightField {
 public:
-    LightField(Window im, int uSize_, int vSize_) : Window(im), uSize(uSize_), vSize(vSize_) {
-        assert(width % uSize == 0, "width is not a multiple of lenslet width\n");
-        assert(height % vSize == 0, "height is not a multiple of lenslet height\n");
-        xSize = width / uSize;
-        ySize = height / vSize;
+    LightField(Image im, int uSize_, int vSize_) : image(im), uSize(uSize_), vSize(vSize_) {
+        assert(im.width % uSize == 0, "width is not a multiple of lenslet width\n");
+        assert(im.height % vSize == 0, "height is not a multiple of lenslet height\n");
+        xSize = im.width / uSize;
+        ySize = im.height / vSize;
     }
 
-    float *operator()(int t, int x, int y, int u, int v) {
-        return data + t * tstride + (x*uSize + u) * xstride + (y*vSize + v) * ystride;
+    float &operator()(int x, int y, int u, int v, int c) {
+        return image(x*uSize + u, y*vSize + v, c);
     }
 
-    float *operator()(int x, int y, int u, int v) {
-        return data + (x*uSize + u) * xstride + (y*vSize + v) * ystride;
+    float &operator()(int x, int y, int u, int v, int t, int c) {
+        return image(x*uSize + u, y*vSize + v, t, c);
     }
 
     // quadrilinear 4D sampling (quadriLanczos3 too expensive, 6^4=1296)
     // x,y,u,v follow the same coordinate conventions as
     // operator()
-    void sample4D(int t, float x, float y, float u, float v, float *result) {
+    void sample4D(float x, float y, float u, float v, int t, float *result) {
         int ix[2], iy[2], iu[2], iv[2]; // integer indices
         float wx[2], wy[2], wu[2], wv[2]; // weighting factors
 
-        if ((x < -0.5 || y < -0.5 || x > xSize-0.5 || y > ySize-0.5)
-            || (u < -0.5 || v < -0.5 || u > uSize-0.5 || v > vSize-0.5)) {
+        if ((x < 0 || y < 0 || x > xSize-1 || y > ySize-1)
+            || (u < 0 || v < 0 || u > uSize-1 || v > vSize-1)) {
             // out of bounds, so return zero
-            for (int c=0; c<channels; c++) {
-                result[c]=0;
+            for (int c = 0; c < image.channels; c++) {
+                result[c] = 0;
             }
             return;
         }
@@ -68,17 +68,17 @@ public:
         wv[0] = 1-wv[1];
 
         // do the computation
-        for (int c=0; c<channels; c++) {
-            result[c]=0;
+        for (int c = 0; c < image.channels; c++) {
+            result[c] = 0;
         }
 
-        for (int i=0; i<2; i++) { // go through iu
-            for (int j=0; j<2; j++) { // go through ix
-                for (int k=0; k<2; k++) { // go through iv
-                    for (int l=0; l<2; l++) { // go through iy
-                        for (int c=0; c<channels; c++) {
-                            result[c] += (*this)(t,ix[j],iy[l],iu[i],iv[k])[c] *
-                                         wx[j]*wy[l]*wu[i]*wv[k];
+        for (int i = 0; i < 2; i++) { // go through iu
+            for (int j = 0; j < 2; j++) { // go through ix
+                for (int k = 0; k < 2; k++) { // go through iv
+                    for (int l = 0; l < 2; l++) { // go through iy
+                        for (int c = 0; c < image.channels; c++) {
+                            result[c] += ((*this)(ix[j],iy[l],iu[i],iv[k],t,c) *
+                                          wx[j]*wy[l]*wu[i]*wv[k]);
                         }
                     }
                 }
@@ -87,9 +87,10 @@ public:
     }
 
     void sample4D(float x, float y, float u, float v, float *result) {
-        sample4D(0,x,y,u,v,result);
+        sample4D(x,y,u,v,0,result);
     }
 
+    Image image;
     int uSize, vSize;
     int xSize, ySize;
 };
@@ -97,20 +98,15 @@ public:
 class LFFocalStack : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
     static Image apply(LightField im, float minAlpha, float maxAlpha, float deltaAlpha);
-};
-
-class LFWarp : public Operation {
-public:
-    void help();
-    void parse(vector<string> args);
-    static Image apply(LightField lf, Window warper, bool quick);
 };
 
 class LFPoint : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
     static void apply(LightField lf, float x, float y, float z);
 };

@@ -82,7 +82,7 @@ void Dup::parse(vector<string> args) {
         assert(args.size() == 1, "-dup takes zero or one arguments\n");
         if ('0' <= args[0][0] && args[0][0] <= '9') {
             int depth = readInt(args[0]);
-            push(stack(depth));
+            push(stack(depth).copy());
         } else {
             map<string, Image>::iterator iter = Stash::stash.find(args[0]);
             assert(iter != Stash::stash.end(),

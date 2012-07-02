@@ -11,7 +11,7 @@ void help() {
             " interoperate with other programs that can load or save raw binary"
             " data. The format supports any number of frames and channels."
             " A .tmp file starts with a header that containining five 32-bit"
-            " integer values which represents frames, width, height, channels and"
+            " integer values which represents width, height, frames, channels and"
             " type. Image data follows.\n"
             "types:\n"
             " 0: 32 bit floats (the default format, which matches the internal format)\n"
@@ -33,42 +33,45 @@ void help() {
 }
 
 template<typename T>
-void saveData(FILE *f, Window im) {
+void saveData(FILE *f, Image im) {
 
-    vector<T> buf(im.width*im.channels);
+    vector<T> buf(im.width);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            float *srcPtr = im(0, y, t);
-            T *dstPtr = &buf[0];
-            for (int j = 0; j < im.width*im.channels; j++) {
-                *dstPtr++ = (T)(*srcPtr++);
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                float *srcPtr = &im(0, y, t, c);
+                for (int x = 0; x < im.width; x++) {
+                    buf[x] = (T)srcPtr[x];
+                }
+                fwrite(&buf[0], sizeof(T), im.width, f);
             }
-            fwrite(&buf[0], sizeof(T), im.width*im.channels, f);
         }
     }
 }
 
 template<>
-void saveData<float>(FILE *f, Window im) {
+void saveData<float>(FILE *f, Image im) {
 
     vector<float> buf(im.width*im.channels);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            fwrite(im(0, y, t), sizeof(float), im.width*im.channels, f);
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                fwrite(&im(0, y, t, c), sizeof(float), im.width, f);
+            }
         }
     }
 }
 
 
-void save(Window im, string filename, string type) {
+void save(Image im, string filename, string type) {
     FILE *f = fopen(filename.c_str(), "wb");
     assert(f, "Could not write output file %s\n", filename.c_str());
     // write the dimensions
-    fwrite(&im.frames, sizeof(int), 1, f);
     fwrite(&im.width, sizeof(int), 1, f);
     fwrite(&im.height, sizeof(int), 1, f);
+    fwrite(&im.frames, sizeof(int), 1, f);
     fwrite(&im.channels, sizeof(int), 1, f);
 
     int typeCode;
@@ -118,27 +121,19 @@ void save(Window im, string filename, string type) {
 }
 
 template<typename T>
-Image loadData(FILE *f, int frames, int width, int height, int channels) {
-    int size = width * height * channels * frames;
-
+Image loadData(FILE *f, int width, int height, int frames, int channels) {
     Image im(width, height, frames, channels);
 
-    const size_t chunkSize = 1<<12;
-
-    T buf[chunkSize];
-
-    float *dstPtr = im(0, 0, 0);
-    float *endPtr = im(0, 0, im.frames);
-
-    T *srcPtr = &buf[0];
-    for (int i = 0; i < size; i += chunkSize) {
-        srcPtr = &buf[0];
-        size_t sizeLeft = size - i - 1;
-        size_t expectedSize = (sizeLeft < chunkSize) ? sizeLeft : chunkSize;
-        assert(fread(srcPtr, sizeof(T), expectedSize, f) == expectedSize,
-               "Unexpected end of file\n");
-        for (size_t j = 0; j < chunkSize && dstPtr != endPtr; j++) {
-            *dstPtr++ = (float)(*srcPtr++);
+    vector<T> scanline(width);
+    for (int c = 0; c < channels; c++) {
+        for (int t = 0; t < frames; t++) {
+            for (int y = 0; y < height; y++) {
+                assert(fread(&scanline[0], sizeof(T), width, f) == (size_t)width,
+                       "Unexpected end of file\n");
+                for (int x = 0; x < width; x++) {
+                    im(x, y, t, c) = (float)scanline[x];
+                }
+            }
         }
     }
 
@@ -146,13 +141,17 @@ Image loadData(FILE *f, int frames, int width, int height, int channels) {
 }
 
 template<>
-Image loadData<float>(FILE *f, int frames, int width, int height, int channels) {
-    size_t size = width * height * channels * frames;
-
+Image loadData<float>(FILE *f, int width, int height, int frames, int channels) {
     Image im(width, height, frames, channels);
 
-    assert(fread(im(0, 0, 0), sizeof(float), size, f) == size,
-           "Unexpected end of file\n");
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                assert(fread(&im(0, y, t, c), sizeof(float), im.width, f) == (size_t)width,
+                       "Unexpected end of file\n");
+            }
+        }
+    }
 
     return im;
 }
@@ -163,7 +162,7 @@ Image load(string filename) {
 
     // get the dimensions
     struct header_t {
-        int frames, width, height, channels, typeCode;
+        int32_t width, height, frames, channels, typeCode;
     } h;
     assert(fread(&h, sizeof(int), 5, file) == 5,
            "File ended before end of header\n");
@@ -171,29 +170,29 @@ Image load(string filename) {
     Image im;
 
     if (h.typeCode == FLOAT32) {
-        im = loadData<float>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<float>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == FLOAT64) {
-        im = loadData<double>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<double>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == UINT8) {
-        im = loadData<uint8_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint8_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == INT8) {
-        im = loadData<int8_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int8_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == UINT16) {
-        im = loadData<uint16_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint16_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == INT16) {
-        im = loadData<int16_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int16_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == UINT32) {
-        im = loadData<uint32_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint32_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == INT32) {
-        im = loadData<int32_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int32_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == UINT64) {
-        im = loadData<uint64_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<uint64_t>(file, h.width, h.height, h.frames, h.channels);
     } else if (h.typeCode == INT64) {
-        im = loadData<int64_t>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<int64_t>(file, h.width, h.height, h.frames, h.channels);
     } else {
         printf("Unknown type code %d. Possibly trying to load an old-style tmp file.\n", h.typeCode);
         fseek(file, 16, SEEK_SET);
-        im = loadData<float>(file, h.frames, h.width, h.height, h.channels);
+        im = loadData<float>(file, h.width, h.height, h.frames, h.channels);
     }
 
     fclose(file);

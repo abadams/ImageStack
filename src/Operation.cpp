@@ -25,18 +25,15 @@
 #include "Calculus.h"
 #include "Display.h"
 #include "NetworkOps.h"
-#include "Panorama.h"
 #include "DFT.h"
 #include "Prediction.h"
 #include "Wavelet.h"
 #include "Filter.h"
-#include "Projection.h"
 #include "HDR.h"
 #include "PatchMatch.h"
 #include "GaussTransform.h"
 #include "LAHBPCG.h"
 #include "WLS.h"
-#include "OpticalFlow.h"
 #include "Plugin.h"
 #include "LocalLaplacian.h"
 #include "header.h"
@@ -45,6 +42,7 @@
 // add your operation to the operations table here
 void loadOperations() {
     operationMap["-help"] = new Help();
+    operationMap["-test"] = new Test();
 
     // program control
     operationMap["-loop"] = new Loop();
@@ -180,7 +178,6 @@ void loadOperations() {
 
     // lightfield stuff
     operationMap["-lffocalstack"] = new LFFocalStack();
-    operationMap["-lfwarp"] = new LFWarp();
     operationMap["-lfpoint"] = new LFPoint();
 
     // the display code
@@ -190,12 +187,9 @@ void loadOperations() {
     operationMap["-send"] = new Send();
     operationMap["-receive"] = new Receive();
 
-    // Panorama stuff
-    operationMap["-loadpanorama"] = new LoadPanorama();
-    operationMap["-panoramabackground"] = new PanoramaBackground();
-
     // prediction stuff
     operationMap["-inpaint"] = new Inpaint();
+    operationMap["-seamlessclone"] = new SeamlessClone();
 
     // wavelet stuff
     operationMap["-haar"] = new Haar();
@@ -224,7 +218,8 @@ void loadOperations() {
     operationMap["-bilateralsharpen"] = new BilateralSharpen();
     operationMap["-chromablur"] = new ChromaBlur();
     operationMap["-nlmeans"] = new NLMeans();
-    operationMap["-nlmeans3d"] = new NLMeans();
+    operationMap["-nlmeans3d"] = new NLMeans3D();
+    operationMap["-fastnlmeans"] = new FastNLMeans();
 
     // Locally Adaptive Hierachical Basis Preconditioned Conjugate Gradients
     operationMap["-lahbpcg"] = new LAHBPCG();
@@ -234,9 +229,6 @@ void loadOperations() {
 
     operationMap["-locallaplacian"] = new LocalLaplacian();
 
-    // projection stuff
-    operationMap["-sinugram"] = new Sinugram();
-
     // HDR stuff
     operationMap["-assemblehdr"] = new AssembleHDR();
 
@@ -244,11 +236,6 @@ void loadOperations() {
     operationMap["-patchmatch"] = new PatchMatch();
     operationMap["-bidirectionalsimilarity"] = new BidirectionalSimilarity();
     operationMap["-heal"] = new Heal();
-
-    // Optical Flow stuff
-    operationMap["-opticalflow"] = new OpticalFlow();
-    operationMap["-opticalflowwarp"] = new OpticalFlowWarp();
-    // operationMap["-densecorresp"] = new DenseCorrespondence();
 
     // Plugin loading
     operationMap["-plugin"] = new Plugin();
@@ -276,7 +263,6 @@ void Help::help() {
             "Operations available are:\n");
 
     OperationMapIterator i;
-
     for (i = operationMap.begin(); i != operationMap.end(); ++i) {
         printf("%s", i->first.c_str());
         printf(" ");
@@ -299,5 +285,40 @@ void Help::parse(vector<string> args) {
         }
     }
 }
+
+void Test::help() {
+    pprintf("-test runs the test suite for the operation given by the first"
+            " argument. If no argument is given, all operations are tested (which"
+            " may take some time).\n");
+}
+
+void Test::parse(vector<string> args) {
+    if (args.size() == 0) {
+        OperationMapIterator i;
+        for (i = operationMap.begin(); i != operationMap.end(); ++i) {
+            apply(i->first, i->second);
+        }
+    } else {
+        for (size_t i = 0; i < args.size(); i++) {
+            string opname = '-' + args[i];
+            OperationMapIterator op = operationMap.find(opname);
+            if (op == operationMap.end()) {
+                printf("No such operation \"%s\"\n", args[i].c_str());
+            } else {
+                apply(args[i], op->second);
+            }
+        }
+    }
+}
+
+void Test::apply(string name, Operation *op) {
+    printf("Testing %s ...\n", name.c_str());
+    fflush(stdout);
+    if (op->test()) {
+        printf("Passed\n");
+    } else {
+        printf("*** Failed: %s ***\n", name.c_str());
+    }
+};
 
 #include "footer.h"
