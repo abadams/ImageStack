@@ -23,7 +23,7 @@ void Add::parse(vector<string> args) {
         stack(0) += stack(1);
     } else {
         for (int c = 0; c < stack(0).channels; c++) {
-            stack(1).channel(c) += stack(1);
+            stack(0).channel(c) += stack(1);
         }
     }
     pull(1);
