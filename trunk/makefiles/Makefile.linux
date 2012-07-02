@@ -1,4 +1,4 @@
-BIN_CCFLAGS = -std=gnu++0x -O3 -Winvalid-pch -Wshadow -Wall -Werror -Wno-uninitialized -pipe -march=native -ffast-math -fopenmp 
+BIN_CCFLAGS = -std=gnu++0x -O3 -Winvalid-pch -Wshadow -Wall -Werror -Wno-uninitialized -pipe -march=native -ffast-math -fopenmp -rdynamic
 
 
 LIB_CCFLAGS = $(BIN_CCFLAGS) -fPIC
