@@ -43,6 +43,12 @@ inline T clamp(const T &a, const T &b, const T &c) {
     return a;
 }
 
+// Equal to within 1/100. Useful for testing
+static inline bool nearlyEqual(float a, float b) {
+    if (fabs(b) < 1) return fabs(a-b) < 0.01;
+    return fabs(a/b - 1.0) < 0.01;
+}
+
 #ifndef M_PI
 #define M_PI 3.14159265
 #endif
@@ -52,6 +58,10 @@ inline T clamp(const T &a, const T &b, const T &c) {
 #endif
 
 #define INF (std::numeric_limits<float>::infinity())
+
+static inline float sinc(float x) {
+    return x == 0 ? 1 : sinf(M_PI * x) / (M_PI * x);
+}
 
 // Map high dynamic range values to [0, 255], so that 0->0, and 1->255
 static inline unsigned char HDRtoLDR(float x) {
@@ -69,44 +79,7 @@ static inline float LDR16toHDR(unsigned short x) {
     return x * (1.0f/65535);
 }
 
-// stuff below here makes up for C99 not being supported (I'm looking at you msvc!)
-#ifndef isnan
-static inline bool isnan(float x) {
-    unsigned char *s = ((unsigned char *)(&x));
-
-    // exponent is 255
-    bool exp255 = ((s[3] >> 1) == 127) && (s[2] & 1);
-
-    // mantissa is non zero
-    bool mantissa = s[0] || s[1] || (s[2] >> 1);
-
-    return exp255 && mantissa;
-}
-#endif
-
-#ifndef isfinite
-static inline float isfinite(float x) {
-    unsigned char *s = ((unsigned char *)(&x));
-
-    // exponent is not 255
-    bool exp255 = ((s[3] >> 1) == 127) && (s[2] & 1);
-    return !exp255;
-}
-#endif
-
-#ifndef isinf
-static inline float isinf(float x) {
-    unsigned char *s = ((unsigned char *)(&x));
-
-    // exponent is 255
-    bool exp255 = ((s[3] >> 1) == 127) && (s[2] & 1);
-
-    // mantissa is zero
-    bool mantissa = s[0] || s[1] || (s[2] >> 1);
-
-    return exp255 && (!mantissa);
-}
-#endif
+#include <math.h>
 
 #include "footer.h"
 #endif

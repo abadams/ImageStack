@@ -28,13 +28,25 @@ using ::std::pair;
 using ::std::make_pair;
 using ::std::map;
 using ::std::list;
+using ::std::swap;
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #include <windows.h>
 #include <float.h>
-//#define isfinite _finite
 #define popen _popen
 #define pclose _pclose
+#define isnan _isnan
+#define isfinite _finite
+inline float isinf(float x) {
+    return (!_finite(x) && !_isnan(x));
+}
+#else
+using ::std::isfinite;
+#endif
+
+#ifdef __CYGWIN__
+using ::std::isinf;
+using ::std::isnan;
 #endif
 
 // Some core files that everyone should include
@@ -46,7 +58,6 @@ using ::std::list;
 
 // Below are the data structures and functions available to operations:
 class Image;
-
 
 // Deal with the stack of images that gives this program its name
 Image &stack(size_t index);
@@ -77,6 +88,9 @@ float currentTime();
 
 // pretty-print some help text, by word wrapping at 79 chars
 void pprintf(const char *str);
+
+// Check if two images are nearly equal for unit testing
+bool nearlyEqual(Image a, Image b);
 
 // The map of operations, which converts strings to operation
 // objects. Only meta-operations like help should need to access this.

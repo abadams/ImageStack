@@ -114,6 +114,7 @@
       <AdditionalIncludeDirectories>../include;../include/SDL</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -158,9 +159,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__AVX__;__SSE__;__WIN32__;WIN32;NO_MAIN;NO_SDL;NO_OPENEXR;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../include/SDL</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4800;4305;4244;4290;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -183,6 +186,7 @@
     <ClInclude Include="..\..\src\Complex.h" />
     <ClInclude Include="..\..\src\Control.h" />
     <ClInclude Include="..\..\src\Convolve.h" />
+    <ClInclude Include="..\..\src\Deconvolution.h" />
     <ClInclude Include="..\..\src\DenseGrid.h" />
     <ClInclude Include="..\..\src\DFT.h" />
     <ClInclude Include="..\..\src\Display.h" />
@@ -198,21 +202,23 @@
     <ClInclude Include="..\..\src\HDR.h" />
     <ClInclude Include="..\..\src\Image.h" />
     <ClInclude Include="..\..\src\ImageStack.h" />
+    <ClInclude Include="..\..\src\KernelEstimation.h" />
     <ClInclude Include="..\..\src\LAHBPCG.h" />
+    <ClInclude Include="..\..\src\Lazy.h" />
     <ClInclude Include="..\..\src\LightField.h" />
     <ClInclude Include="..\..\src\LinearAlgebra.h" />
+    <ClInclude Include="..\..\src\LocalLaplacian.h" />
     <ClInclude Include="..\..\src\macros.h" />
     <ClInclude Include="..\..\src\main.h" />
     <ClInclude Include="..\..\src\Network.h" />
     <ClInclude Include="..\..\src\NetworkOps.h" />
     <ClInclude Include="..\..\src\Operation.h" />
     <ClInclude Include="..\..\src\Paint.h" />
-    <ClInclude Include="..\..\src\Panorama.h" />
     <ClInclude Include="..\..\src\Parser.h" />
     <ClInclude Include="..\..\src\PatchMatch.h" />
     <ClInclude Include="..\..\src\Permutohedral.h" />
+    <ClInclude Include="..\..\src\Plugin.h" />
     <ClInclude Include="..\..\src\Prediction.h" />
-    <ClInclude Include="..\..\src\Projection.h" />
     <ClInclude Include="..\..\src\Stack.h" />
     <ClInclude Include="..\..\src\Statistics.h" />
     <ClInclude Include="..\..\src\tables.h" />
@@ -227,6 +233,7 @@
     <ClCompile Include="..\..\src\Complex.cpp" />
     <ClCompile Include="..\..\src\Control.cpp" />
     <ClCompile Include="..\..\src\Convolve.cpp" />
+    <ClCompile Include="..\..\src\Deconvolution.cpp" />
     <ClCompile Include="..\..\src\DFT.cpp" />
     <ClCompile Include="..\..\src\Display.cpp" />
     <ClCompile Include="..\..\src\DisplayWindow.cpp" />
@@ -237,6 +244,7 @@
     <ClCompile Include="..\..\src\FileFLO.cpp" />
     <ClCompile Include="..\..\src\FileHDR.cpp" />
     <ClCompile Include="..\..\src\FileJPG.cpp" />
+    <ClCompile Include="..\..\src\FilePBA.cpp" />
     <ClCompile Include="..\..\src\FilePNG.cpp" />
     <ClCompile Include="..\..\src\FilePPM.cpp" />
     <ClCompile Include="..\..\src\FileTGA.cpp" />
@@ -247,19 +255,19 @@
     <ClCompile Include="..\..\src\GaussTransform.cpp" />
     <ClCompile Include="..\..\src\Geometry.cpp" />
     <ClCompile Include="..\..\src\HDR.cpp" />
-    <ClCompile Include="..\..\src\Image.cpp" />
+    <ClCompile Include="..\..\src\KernelEstimation.cpp" />
     <ClCompile Include="..\..\src\LAHBPCG.cpp" />
     <ClCompile Include="..\..\src\LightField.cpp" />
+    <ClCompile Include="..\..\src\LocalLaplacian.cpp" />
     <ClCompile Include="..\..\src\main.cpp" />
     <ClCompile Include="..\..\src\Network.cpp" />
     <ClCompile Include="..\..\src\NetworkOps.cpp" />
     <ClCompile Include="..\..\src\Operation.cpp" />
     <ClCompile Include="..\..\src\Paint.cpp" />
-    <ClCompile Include="..\..\src\Panorama.cpp" />
     <ClCompile Include="..\..\src\Parser.cpp" />
     <ClCompile Include="..\..\src\PatchMatch.cpp" />
+    <ClCompile Include="..\..\src\Plugin.cpp" />
     <ClCompile Include="..\..\src\Prediction.cpp" />
-    <ClCompile Include="..\..\src\Projection.cpp" />
     <ClCompile Include="..\..\src\Stack.cpp" />
     <ClCompile Include="..\..\src\Statistics.cpp" />
     <ClCompile Include="..\..\src\Wavelet.cpp" />

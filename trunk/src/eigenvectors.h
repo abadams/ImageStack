@@ -10,10 +10,10 @@ public:
         d_in = in_dimensions;
         d_out = out_dimensions;
 
-        covariance = new double[d_in*d_in];
-        mean = new double[d_in];
-        eigenvectors = new double[d_in*d_out];
-        tmp = new double[d_in*d_out];
+        covariance.resize(d_in*d_in);
+        mean.resize(d_in);
+        eigenvectors.resize(d_in*d_out);
+        tmp.resize(d_in*d_out);
         computed = false;
         for (int i = 0; i < d_in; i++) {
             mean[i] = 0;
@@ -61,7 +61,7 @@ public:
     void save(const char *filename) {
         if (!computed) { compute(); }
         FILE *f = fopen(filename, "wb");
-        fwrite(eigenvectors, sizeof(double), d_out*d_in, f);
+        fwrite(&(eigenvectors[0]), sizeof(double), d_out*d_in, f);
         fclose(f);
     }
 
@@ -88,7 +88,7 @@ public:
         //        printf("%3.4f ", eigenvectors[i*d_out+j]);
         //    }
         //    printf("\n");
-        //}        
+        //}
 
 
         while (1) {
@@ -116,7 +116,7 @@ public:
                 }
 
                 // Add some noise if the column is too small to be normalized
-                while (dot < 1e-10) {
+                while (dot < 1e-20) {
                     dot = 0;
                     for (int k = 0; k < d_in; k++) {
                         eigenvectors[k*d_out+i] += randomFloat(-0.001, 0.001);
@@ -128,8 +128,14 @@ public:
 
                 dot = 1.0/dot;
 
-                // make sure the first element of each eigenvector is positive
-                if (eigenvectors[i]*dot < 0) { dot = -dot; }
+                /*
+                // make sure the largest element of each eigenvector is positive
+                int max_elt = 0;
+                for (int k = 1; k < d_in; k++) {
+                    if (fabs(eigenvectors[k*d_out+i]) > fabs(eigenvectors[k*d_out+max_elt])) max_elt = k;
+                }
+                if (max_elt < 0) { dot = -dot; }
+                */
 
                 for (int k = 0; k < d_in; k++) {
                     eigenvectors[k *d_out+i] *= dot;
@@ -137,7 +143,6 @@ public:
 
             }
 
-            
             /*
             printf("eigenvector matrix:\n");
             for (int i = 0; i < d_in; i++) {
@@ -159,7 +164,7 @@ public:
             if (dist < 0.00001) { break; }
 
             //printf("%f\n", dist);
-            
+
             // multiply by the covariance matrix
             for (int i = 0; i < d_in; i++) {
                 for (int j = 0; j < d_out; j++) {
@@ -169,10 +174,7 @@ public:
                     }
                 }
             }
-            double *t = tmp;
-            tmp = eigenvectors;
-            eigenvectors = t;
-
+            tmp.swap(eigenvectors);
 
         }
 
@@ -182,7 +184,7 @@ public:
 private:
 
     int d_in, d_out;
-    double *covariance, *mean, *eigenvectors, *tmp;
+    vector<double> covariance, mean, eigenvectors, tmp;
     bool computed;
     int count;
 };

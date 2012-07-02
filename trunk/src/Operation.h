@@ -7,6 +7,7 @@ public:
     virtual ~Operation() {};
     virtual void parse(vector<string>) = 0;
     virtual void help() = 0;
+    virtual bool test() = 0;
 };
 
 void loadOperations();
@@ -19,6 +20,14 @@ public:
     void help();
     bool test() {return true;}
     void parse(vector<string> args);
+};
+
+class Test : public Operation {
+public:
+    void help();
+    bool test() {return true;}
+    void parse(vector<string> args);
+    static void apply(string name, Operation *op);
 };
 
 #include "footer.h"

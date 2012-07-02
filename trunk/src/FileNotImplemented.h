@@ -7,14 +7,14 @@ Image load(string filename) {
     return im;
 }
 
-void save(Window im, string filename) {
+void save(Image im, string filename) {
     panic("This file type not implemented in this build\n");
 }
 
-void save(Window im, string filename, int opt) {
+void save(Image im, string filename, int opt) {
     panic("This file type not implemented in this build\n");
 }
 
-void save(Window im, string filename, string opt) {
+void save(Image im, string filename, string opt) {
     panic("This file type not implemented in this build\n");
 }

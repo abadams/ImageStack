@@ -7,6 +7,7 @@
 class Plugin : public Operation {
 public:
     void parse(vector<string> args);
+    bool test();
     void help();
 };
 

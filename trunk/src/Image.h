@@ -1,135 +1,177 @@
 #ifndef IMAGESTACK_IMAGE_H
 #define IMAGESTACK_IMAGE_H
 
+#include "Lazy.h"
+
 #include "tables.h"
 #include "header.h"
 
-class NewImage {
-  public:
-    NewImage(int w, int h) {
-        init(w, h, 1, 1);
+// The image data type.
+
+// It's a reference-counted pointer type.
+
+// Note that "const Image" means that the reference doesn't change, not
+// that the pixel data doesn't. It's equivalent to "float * const
+// foo", not "const float * foo". This means that methods tagged const
+// are those which do not change the metadata, not those which do not
+// change the pixel data.
+
+class Image {
+public:
+
+    int width, height, frames, channels;
+    int ystride, tstride, cstride;
+
+    Image() :
+        width(0), height(0), frames(0), channels(0),
+        ystride(0), tstride(0), cstride(0), data(), base(NULL) {
     }
 
-    NewImage(int w, int h, int c) {
-        init(w, h, 1, c);
+    Image(int w, int h, int f, int c) :
+        width(w), height(h), frames(f), channels(c),
+        ystride(w), tstride(w *h), cstride(w *h *f),
+        data(new Payload(w *h *f *c+7)), base(compute_base(data)) {
     }
 
-    NewImage(int w, int h, int f, int c) {
-        init(w, h, f, c);
+    inline float &operator()(int x, int y) const {
+        return (*this)(x, y, 0, 0);
     }
 
-    float &operator()(int x, int y) {
-        return base[x + y*ystride];
+    inline float &operator()(int x, int y, int c) const {
+        return (*this)(x, y, 0, c);
     }
 
-    float &operator()(int x, int y, int c) {
-        return base[x + y*ystride + c*cstride];
+    inline float &operator()(int x, int y, int t, int c) const {
+#ifdef BOUNDS_CHECKING
+        assert(x >= 0 && x < width &&
+               y >= 0 && y < height &&
+               t >= 0 && t < frames &&
+               c >= 0 && c < channels,
+               "Access out of bounds: %d %d %d %d\n",
+               x, y, t, c);
+#endif
+        return (((base + c*cstride) + t*tstride) + y*ystride)[x];
     }
 
-    float &operator()(int x, int y, int t, int c) {
-        return base[x + y*ystride + t*tstride + c*cstride];
-    }
-
-    const float &operator()(int x, int y) const {
-        return base[x + y*ystride];
-    }
-
-    const float &operator()(int x, int y, int c) const {
-        return base[x + y*ystride + c*cstride];
-    }
-
-    const float &operator()(int x, int y, int t, int c) const {
-        return base[x + y*ystride + t*tstride + c*cstride];
-    }
-
-    float *baseAddress() {
+    float *baseAddress() const {
         return base;
     }
 
-    NewImage copy() {
-        NewImage m(width, height, frames, channels);
-        memcpy(m.baseAddress(), baseAddress(), sizeof(float)*width*height*frames*channels);
+    Image copy() const {
+        Image m(width, height, frames, channels);
+        m.set(*this);
         return m;
     }
 
-  private:
-
-    void init(int w, int h, int f, int c) {
-        width = w;
-        height = h;
-        frames = f;
-        channels = c;
-
-        cstride = width*height*frames;
-        tstride = width*height;
-        ystride = width;
-
-        data.reset(new vector<float>(w*h*f*c+3));
-        base = &((*data)[0]);
-        while (((size_t)base) & 0xf) base++;
+    const Image region(int x, int y, int t, int c,
+                       int xs, int ys, int ts, int cs) const {
+        return Image(*this, x, y, t, c, xs, ys, ts, cs);
     }
 
-    std::shared_ptr<std::vector<float> > data;
-    float *base;
-    int frames, width, height, channels;
-    int ystride, tstride, cstride;
-};
-
-
-class Window {
-public:
-    Window() {
-        xstride = ystride = tstride = width = height = frames = channels = 0;
-        data = NULL;
+    const Image column(int x) const {
+        return region(x, 0, 0, 0, 1, height, frames, channels);
     }
 
-    operator bool() {
-        return (data != NULL);
+    const Image row(int y) const {
+        return region(0, y, 0, 0, width, 1, frames, channels);
     }
 
-    Window(Window im, int minx_, int miny_, int mint_, int width_, int height_, int frames_) {
-        int mint = max(0, mint_);
-        int maxt = min(im.frames, mint_ + frames_);
-        int minx = max(0, minx_);
-        int maxx = min(im.width, minx_ + width_);
-        int miny = max(0, miny_);
-        int maxy = min(im.height, miny_ + height_);
-
-        xstride = im.xstride;
-        ystride = im.ystride;
-        tstride = im.tstride;
-
-        width = maxx - minx;
-        height = maxy - miny;
-        frames = maxt - mint;
-        channels = im.channels;
-
-        data = im.data + mint * tstride + miny * ystride + minx * xstride;
+    const Image frame(int t) const {
+        return region(0, 0, t, 0, width, height, 1, channels);
     }
 
-    bool operator==(const Window &other) const {
-        return (data == other.data &&
+    const Image channel(int c) const {
+        return region(0, 0, 0, c, width, height, frames, 1);
+    }
+
+    const Image selectColumns(int x, int s) {
+        return region(x, 0, 0, 0, s, height, frames, channels);
+    }
+
+    const Image selectRows(int x, int s) {
+        return region(0, x, 0, 0, width, x, frames, channels);
+    }
+
+    const Image selectFrames(int x, int s) {
+        return region(0, 0, x, 0, width, height, s, channels);
+    }
+
+    const Image selectChannels(int x, int s) {
+        return region(0, 0, 0, x, width, height, frames, s);
+    }
+
+    bool dense() const {
+        return (cstride == width *height *frames && tstride == width *height && ystride == width);
+    }
+
+
+    bool defined() const {
+        return base != NULL;
+    }
+
+    bool operator==(const Image &other) const {
+        return (base == other.base &&
+                ystride == other.ystride &&
+                tstride == other.tstride &&
+                cstride == other.cstride &&
                 width == other.width &&
                 height == other.height &&
                 frames == other.frames &&
                 channels == other.channels);
     }
 
-    float *operator()(int x, int y, int t) {
-        return data + x * xstride + y * ystride + t * tstride;
+    bool operator!=(const Image &other) const {
+        return !(*this == other);
     }
 
-    float *operator()(int x, int y) {
-        return data + x * xstride + y * ystride;
+    void operator+=(const float f) const {
+        set((*this) + f);
     }
 
-    float *operator()(int x) {
-        return data + x * xstride;
+    void operator*=(const float f) const {
+        set((*this) * f);
+    }
+
+    void operator-=(const float f) const {
+        set((*this) - f);
+    }
+
+    void operator/=(const float f) const {
+        set((*this) / f);
+    }
+
+    template<typename A, typename B, typename Enable = typename A::Lazy>
+    struct LazyCheck {
+        typedef B result;
+    };
+
+    template<typename T>
+    typename LazyCheck<T, void>::result operator+=(const T &other) const {
+        set((*this) + other);
+    }
+
+    template<typename T>
+    typename LazyCheck<T, void>::result operator*=(const T &other) const {
+        set((*this) * other);
+    }
+
+    template<typename T>
+    typename LazyCheck<T, void>::result operator-=(const T &other) const {
+        set((*this) - other);
+    }
+
+    template<typename T>
+    typename LazyCheck<T, void>::result operator/=(const T &other) const {
+        set((*this) / other);
     }
 
     typedef enum {ZERO = 0, NEUMANN} BoundaryCondition;
 
-    void sample2D(float fx, float fy, int t, float *result, BoundaryCondition boundary = ZERO) {
+    void sample2D(float fx, float fy, int t, vector<float> &result, BoundaryCondition boundary = ZERO) const {
+        sample2D(fx, fy, t, &result[0], boundary);
+    }
+
+    void sample2D(float fx, float fy, int t, float *result, BoundaryCondition boundary = ZERO) const {
         int ix = (int)fx;
         int iy = (int)fy;
         const int LEFT = -2;
@@ -178,9 +220,8 @@ public:
                 for (int x = minX; x <= maxX; x++) {
                     int sampleX = clamp(0, x, width-1);
                     float yxWeight = (*yWeightPtr) * (*xWeightPtr);
-                    float *ptr = (*this)(sampleX, sampleY, t);
                     for (int c = 0; c < channels; c++) {
-                        result[c] += ptr[c] * yxWeight;
+                        result[c] += (*this)(sampleX, sampleY, t, c) * yxWeight;
                     }
                     xWeightPtr++;
                 }
@@ -202,11 +243,10 @@ public:
             float *yWeightPtr = weightYBase;
             for (int y = minY; y <= maxY; y++) {
                 float *xWeightPtr = weightXBase;
-                float *imPtr = (*this)(minX, y, t);
                 for (int x = minX; x <= maxX; x++) {
                     float yxWeight = (*yWeightPtr) * (*xWeightPtr);
                     for (int c = 0; c < channels; c++) {
-                        result[c] += (*imPtr++) * yxWeight;
+                        result[c] += (*this)(x, y, t, c) * yxWeight;
                     }
                     xWeightPtr++;
                 }
@@ -216,32 +256,45 @@ public:
         }
     }
 
-    void sample2D(float fx, float fy, float *result) {
+    void sample2D(float fx, float fy, vector<float> &result) const {
         sample2D(fx, fy, 0, result);
     }
 
+    void sample2D(float fx, float fy, float *result) const {
+        sample2D(fx, fy, 0, result);
+    }
 
-    void sample2DLinear(float fx, float fy, float *result) {
+    void sample2DLinear(float fx, float fy, vector<float> &result) const {
         sample2DLinear(fx, fy, 0, result);
     }
 
-    void sample2DLinear(float fx, float fy, int t, float *result) {
+    void sample2DLinear(float fx, float fy, float *result) const {
+        sample2DLinear(fx, fy, 0, result);
+    }
+
+    void sample2DLinear(float fx, float fy, int t, vector<float> &result) const {
+        sample2DLinear(fx, fy, t, &result[0]);
+    }
+
+    void sample2DLinear(float fx, float fy, int t, float *result) const {
         int ix = (int)fx;
         int iy = (int)fy;
         fx -= ix;
         fy -= iy;
 
-        float *ptr = data + t * tstride + iy * ystride + ix * xstride;
         for (int c = 0; c < channels; c++) {
-            float s1 = (1-fx) * ptr[c] + fx * ptr[c + xstride];
-            float s2 = (1-fx) * ptr[c + ystride] + fx * ptr[c + xstride + ystride];
+            float s1 = (1-fx) * (*this)(ix, iy, t, c) + fx * (*this)(ix+1, iy, t, c);
+            float s2 = (1-fx) * (*this)(ix, iy+1, t, c) + fx * (*this)(ix+1, iy+1, t, c);
             result[c] = (1-fy) * s1 + fy * s2;
-
         }
 
     }
 
-    void sample3DLinear(float fx, float fy, float ft, float *result) {
+    void sample3DLinear(float fx, float fy, float ft, vector<float> &result) const {
+        sample3DLinear(fx, fy, ft, &result[0]);
+    }
+
+    void sample3DLinear(float fx, float fy, float ft, float *result) const {
         int ix = (int)fx;
         int iy = (int)fy;
         int it = (int)ft;
@@ -249,14 +302,13 @@ public:
         fy -= iy;
         ft -= it;
 
-        float *ptr = data + it * tstride + iy * ystride + ix * xstride;
         for (int c = 0; c < channels; c++) {
-            float s11 = (1-fx) * ptr[c] + fx * ptr[c + xstride];
-            float s12 = (1-fx) * ptr[c + ystride] + fx * ptr[c + xstride + ystride];
+            float s11 = (1-fx) * (*this)(ix, iy, it, c) + fx * (*this)(ix+1, iy, it, c);
+            float s12 = (1-fx) * (*this)(ix, iy+1, it, c) + fx * (*this)(ix+1, iy+1, it, c);
             float s1 = (1-fy) * s11 + fy * s12;
 
-            float s21 = (1-fx) * ptr[c + tstride] + fx * ptr[c + xstride + tstride];
-            float s22 = (1-fx) * ptr[c + ystride + tstride] + fx * ptr[c + xstride + ystride + tstride];
+            float s21 = (1-fx) * (*this)(ix, iy, it+1, c) + fx * (*this)(ix+1, iy, it+1, c);
+            float s22 = (1-fx) * (*this)(ix, iy+1, it+1, c) + fx * (*this)(ix+1, iy+1, it+1, c);
             float s2 = (1-fy) * s21 + fy * s22;
 
             result[c] = (1-ft) * s1 + ft * s2;
@@ -264,7 +316,13 @@ public:
 
     }
 
-    void sample3D(float fx, float fy, float ft, float *result, BoundaryCondition boundary = ZERO) {
+    void sample3D(float fx, float fy, float ft,
+                  vector<float> &result, BoundaryCondition boundary = ZERO) const {
+        sample3D(fx, fy, ft, &result[0], boundary);
+    }
+
+    void sample3D(float fx, float fy, float ft,
+                  float *result, BoundaryCondition boundary = ZERO) const {
         int ix = (int)fx;
         int iy = (int)fy;
         int it = (int)ft;
@@ -331,9 +389,8 @@ public:
                     for (int x = minX; x <= maxX; x++) {
                         int sampleX = clamp(x, 0, width-1);
                         float tyxWeight = tyWeight * (*xWeightPtr);
-                        float *ptr = (*this)(sampleX, sampleY, sampleT);
                         for (int c = 0; c < channels; c++) {
-                            result[c] += ptr[c] * tyxWeight;
+                            result[c] += (*this)(sampleX, sampleY, sampleT, c) * tyxWeight;
                         }
                         xWeightPtr++;
                     }
@@ -369,11 +426,10 @@ public:
                 float *yWeightPtr = weightYBase;
                 for (int y = minY; y <= maxY; y++) {
                     float *xWeightPtr = weightXBase;
-                    float *imPtr = (*this)(minX, y, t);
                     for (int x = minX; x <= maxX; x++) {
                         float yxWeight = (*yWeightPtr) * (*xWeightPtr);
                         for (int c = 0; c < channels; c++) {
-                            result[c] += (*imPtr++) * yxWeight;
+                            result[c] += (*this)(x, y, t, c) * yxWeight;
                         }
                         xWeightPtr++;
                     }
@@ -385,155 +441,311 @@ public:
 
     }
 
-    int width, height, frames, channels;
-    int xstride, ystride, tstride;
-    float *data;
+    // A macro to check if a type is castable to a lazy expression type
+#define LazyType(T) typename ImageStack::Lazy::Lazyable<T>::t
 
-};
-
-class Image : public Window {
-protected:
-    float *memory;
-public:
-    Image() : refCount(NULL) {
-        width = frames = height = channels = 0;
-        xstride = ystride = tstride = 0;
-        memory = data = NULL;
-    }
-
-
-    void debug() {
-        printf("%llx(%d@%llx): %d %d %d %d\n", (unsigned long long)data, refCount[0], (unsigned long long)refCount, width, height, frames, channels);
-    }
-
-
-    Image(int width_, int height_, int frames_, int channels_, const float *data_ = NULL) {
-        width = width_;
-        height = height_;
-        frames = frames_;
-        channels = channels_;
-
-        long long size = ((long long)frames_ *
-                          (long long)height_ *
-                          (long long)width_ *
-                          (long long)channels_);
-
-
-        // guarantee 16-byte alignment in case people want to use SSE
-        memory = new float[size+3];
-        if ((long long)memory & 0xf) {
-            data = memory + 4 - (((long long)memory & 0xf) >> 2);
-        } else {
-            data = memory;
+    // Evaluate a expression object defined in Lazy.h
+    // The second template argument prevents instantiations from
+    // things that don't satisfy the trait "lazyable"
+    template<typename T>
+    void set(const T &expr_, const LazyType(T) *enable = NULL) const {
+        LazyType(T) expr(expr_);
+        {
+            assert(defined(), "Can't set undefined image\n");
+            int w = expr.getSize(0), h = expr.getSize(1),
+                f = expr.getSize(2), c = expr.getSize(3);
+            assert((w == 0 || width == w) &&
+                   (h == 0 || height == h) &&
+                   (f == 0 || frames == f) &&
+                   (c == 0 || channels == c),
+                   "Can only assign from source of matching size\n");
         }
-        if (!data_) { memset(data, 0, size * sizeof(float)); }
-        else { memcpy(data, data_, size * sizeof(float)); }
 
-        xstride = channels;
-        ystride = xstride * width;
-        tstride = ystride * height;
-        refCount = new int;
-        *refCount = 1;
+        // 4 or 8-wide vector code, distributed across cores
+        const int vec_width = ImageStack::Lazy::Vec::width;
+        for (int c = 0; c < channels; c++) {
+            for (int t = 0; t < frames; t++) {
 
-        //printf("Making new image ");
-        //debug();
-    }
+#ifdef _OPENMP
+                #pragma omp parallel for
+#endif
+                for (int y = 0; y < height; y++) {
+                    const int w = width;
+                    const LazyType(T)::Iter iter = expr.scanline(y, t, c);
+                    float *const dst = base + c*cstride + t*tstride + y*ystride;
 
-    // does not copy data
+                    int x = 0;
 
-    Image &operator=(const Image &im) {
-        if (refCount) {
-            refCount[0]--;
-            if (*refCount <= 0) {
-                delete refCount;
-                delete[] memory;
+                    if (vec_width > 1 && width > vec_width*2) {
+                        // warm up
+                        while ((size_t)(dst+x) & (vec_width*sizeof(float) - 1)) {
+                            dst[x] = iter[x];
+                            x++;
+                        }
+                        // vectorized steady-state
+                        while (x < (w-(vec_width-1))) {
+                            *((ImageStack::Lazy::Vec::type *)(dst + x)) = iter.vec(x);
+                            x += vec_width;
+                        }
+                    }
+                    // Scalar wind down
+                    while (x < w) {
+                        dst[x] = iter[x];
+                        x++;
+                    }
+                }
             }
         }
-
-        width = im.width;
-        height = im.height;
-        channels = im.channels;
-        frames = im.frames;
-
-        data = im.data;
-        memory = im.memory;
-
-        xstride = channels;
-        ystride = xstride * width;
-        tstride = ystride * height;
-
-        refCount = im.refCount;
-        if (refCount) { refCount[0]++; }
-
-        return *this;
     }
 
-    Image(const Image &im) {
-        width = im.width;
-        height = im.height;
-        channels = im.channels;
-        frames = im.frames;
+    /*
+    // Special-case setting an image to a float value, because it
+    // won't implicitly cast things like int literals to Lazy::Const
+    // via float, and I'd like to be able to say image.set(1);
+    void set(float x) const {
+        set(ImageStack::Lazy::Const(x));
+    }
+    */
 
-        memory = im.memory;
-        data = im.data;
-
-        xstride = channels;
-        ystride = xstride * width;
-        tstride = ystride * height;
-
-        refCount = im.refCount;
-        if (refCount) { refCount[0]++; }
+    // A version of set that takes a set of up to 4 expressions and
+    // sets the image's channels accordingly. This is more efficient
+    // than calling set repeatedly when the expressions share common
+    // subexpressions. At each pixel, each expression is evaluated,
+    // and then each value is stored, preventing nasty chicken-and-egg
+    // problems when, for example, permuting channels.
+    template<typename A, typename B, typename C, typename D>
+    void setChannels(const A &a, const B &b, const C &c, const D &d,
+                     LazyType(A) *pa = NULL,
+                     LazyType(B) *pb = NULL,
+                     LazyType(C) *pc = NULL,
+                     LazyType(D) *pd = NULL) const {
+        setChannelsGeneric<4, LazyType(A), LazyType(B), LazyType(C), LazyType(D)>(
+            LazyType(A)(a),
+            LazyType(B)(b),
+            LazyType(C)(c),
+            LazyType(D)(d));
     }
 
-    // copies data from the window
-    Image(Window im) {
-        width = im.width;
-        height = im.height;
-        channels = im.channels;
-        frames = im.frames;
+    template<typename A, typename B, typename C>
+    void setChannels(const A &a, const B &b, const C &c,
+                     LazyType(A) *pa = NULL,
+                     LazyType(B) *pb = NULL,
+                     LazyType(C) *pc = NULL) const {
+        setChannelsGeneric<3, LazyType(A), LazyType(B), LazyType(C), LazyType(float)>(
+            LazyType(A)(a),
+            LazyType(B)(b),
+            LazyType(C)(c),
+            LazyType(float)(0));
+    }
 
-        xstride = channels;
-        ystride = xstride * width;
-        tstride = ystride * height;
+    template<typename A, typename B>
+    void setChannels(const A &a, const B &b,
+                     LazyType(A) *pa = NULL,
+                     LazyType(B) *pb = NULL) const {
+        setChannelsGeneric<2, LazyType(A), LazyType(B), LazyType(float), LazyType(float)>(
+            LazyType(A)(a),
+            LazyType(B)(b),
+            LazyType(float)(0),
+            LazyType(float)(0));
+    }
 
-        refCount = new int;
-        *refCount = 1;
-        long long size = ((long long)width *
-                          (long long)height *
-                          (long long)channels *
-                          (long long)frames);
-
-        // guarantee 16-byte alignment in case people want to use SSE
-        memory = new float[size+3];
-        if ((long long)memory & 0xf) {
-            data = memory + 4 - (((long long)memory & 0xf) >> 2);
-        } else {
-            data = memory;
+    // An image itself is one such expression thing. Here's the
+    // interface it needs to implement for that to happen:
+    typedef Image Lazy;
+    int getSize(int i) const {
+        switch (i) {
+        case 0: return width;
+        case 1: return height;
+        case 2: return frames;
+        case 3: return channels;
         }
+        return 0;
+    }
+    struct Iter {
+        const float *const addr;
+        Iter(const float *a) : addr(a) {}
+        float operator[](int x) const {return addr[x];}
+        ImageStack::Lazy::Vec::type vec(int x) const {
+            return ImageStack::Lazy::Vec::load(addr+x);
+        }
+    };
+    Iter scanline(int y, int t, int c) const {
+        return Iter(base + y*ystride + t*tstride + c*cstride);
+    }
 
+    // Construct an image from a bounded expression object. No consts
+    // allowed, so we require a ::Lazy subtype instead of the more
+    // general LazyType(T) macro.
+    template<typename T>
+    Image(const T &func, const typename T::Lazy *ptr = NULL) :
+        width(0), height(0), frames(0), channels(0),
+        ystride(0), tstride(0), cstride(0), data(), base(NULL) {
+        assert(func.getSize(0) && func.getSize(1) && func.getSize(2) && func.getSize(3),
+               "Can only construct an image from a bounded expression\n");
+        (*this) = Image(func.getSize(0), func.getSize(1), func.getSize(2), func.getSize(3));
+        set(func);
+    }
+
+    Image(const Image &other) :
+        width(other.width), height(other.height), frames(other.frames), channels(other.channels),
+        ystride(other.ystride), tstride(other.tstride), cstride(other.cstride),
+        data(other.data), base(other.base) {
+    }
+
+private:
+
+
+    template<int outChannels, typename A, typename B, typename C, typename D>
+    void setChannelsGeneric(const A &funcA,
+                            const B &funcB,
+                            const C &funcC,
+                            const D &funcD) const {
+        int wA = funcA.getSize(0), hA = funcA.getSize(1), fA = funcA.getSize(2);
+        int wB = funcB.getSize(0), hB = funcB.getSize(1), fB = funcB.getSize(2);
+        int wC = funcC.getSize(0), hC = funcC.getSize(1), fC = funcC.getSize(2);
+        int wD = funcD.getSize(0), hD = funcD.getSize(1), fD = funcD.getSize(2);
+        assert(channels == outChannels,
+               "The number of channels must equal the number of arguments\n");
+        assert(funcA.getSize(3) <= 1 &&
+               funcB.getSize(3) <= 1 &&
+               funcC.getSize(3) <= 1 &&
+               funcD.getSize(3) <= 1,
+               "Each argument must be unbounded across channels or single-channel\n");
+        assert((width == wA || wA == 0) &&
+               (height == hA || hA == 0) &&
+               (frames == fA || fA == 0),
+               "Can only assign from sources of matching size\n");
+        assert((width == wB || wB == 0) &&
+               (height == hB || hB == 0) &&
+               (frames == fB || fB == 0),
+               "Can only assign from sources of matching size\n");
+        assert((width == wC || wC == 0) &&
+               (height == hC || hC == 0) &&
+               (frames == fC || fC == 0),
+               "Can only assign from sources of matching size\n");
+        assert((width == wD || wD == 0) &&
+               (height == hD || hD == 0) &&
+               (frames == fD || fD == 0),
+               "Can only assign from sources of matching size\n");
+
+        // 4 or 8-wide vector code, distributed across cores
+        const int vec_width = ImageStack::Lazy::Vec::width;
         for (int t = 0; t < frames; t++) {
+
+#ifdef _OPENMP
+            #pragma omp parallel for
+#endif
             for (int y = 0; y < height; y++) {
-                float *thisPtr = (*this)(0, y, t);
-                float *imPtr = im(0, y, t);
-                memcpy(thisPtr, imPtr, sizeof(float)*width*channels);
+                const int w = width;
+                const int cs = cstride;
+                float *const dst = base + t*tstride + y*ystride;
+                const typename A::Iter iterA = funcA.scanline(y, t, 0);
+                const typename B::Iter iterB = funcB.scanline(y, t, 0);
+                const typename C::Iter iterC = funcC.scanline(y, t, 0);
+                const typename D::Iter iterD = funcD.scanline(y, t, 0);
+
+
+                int x = 0;
+
+                if (vec_width > 1 && w > vec_width*2) {
+                    while (x < (w-(ImageStack::Lazy::Vec::width-1))) {
+                        ImageStack::Lazy::Vec::type va, vb, vc, vd;
+
+                        // Compute the value of each input at this pixel
+                        va = iterA.vec(x);
+                        if (outChannels > 1) vb = iterB.vec(x);
+                        if (outChannels > 2) vc = iterC.vec(x);
+                        if (outChannels > 3) vd = iterD.vec(x);
+
+                        // Store the results
+                        ImageStack::Lazy::Vec::store(va, dst + x);
+                        if (outChannels > 1)
+                            ImageStack::Lazy::Vec::store(vb, dst + cs + x);
+                        if (outChannels > 2)
+                            ImageStack::Lazy::Vec::store(vc, dst + cs*2 + x);
+                        if (outChannels > 3)
+                            ImageStack::Lazy::Vec::store(vd, dst + cs*3 + x);
+                        x += vec_width;
+                    }
+                }
+
+                // Scalar part at the end
+                while (x < w) {
+                    float va, vb, vc, vd;
+
+                    va = iterA[x];
+                    if (outChannels > 1) vb = iterB[x];
+                    if (outChannels > 2) vc = iterC[x];
+                    if (outChannels > 3) vd = iterD[x];
+
+                    dst[x] = va;
+                    if (outChannels > 1)
+                        dst[x + cs] = vb;
+                    if (outChannels > 2)
+                        dst[x + cs*2] = vc;
+                    if (outChannels > 3)
+                        dst[x + cs*3] = vd;
+                    x++;
+                }
             }
         }
     }
 
-    // makes a new copy of this image
-    Image copy() {
-        return Image(width, height, frames, channels, data);
+    struct Payload {
+        Payload(size_t size) : data(NULL) {
+            // In some cases we don't need to clear the memory, but
+            // typically this is optimized away by the system, so we
+            // don't care. On linux it just mmaps /dev/zero.
+            data = (float *)calloc(size, sizeof(float));
+            //printf("Allocating %d bytes\n", (int)(size * sizeof(float)));
+            if (!data) {
+                panic("Could not allocate %d bytes for image data\n",
+                      size * sizeof(float));
+            }
+        }
+        ~Payload() {
+            free(data);
+        }
+        float *data;
+    private:
+        // These are private to prevent copying a Payload
+        Payload(const Payload &other) : data(NULL) {}
+        void operator=(const Payload &other) {data = NULL;}
+    };
+
+    // Compute a 32-byte aligned address within data
+    static float *compute_base(const std::shared_ptr<const Payload> &payload) {
+        float *base = payload->data;
+        while (((size_t)base) & 0x1f) base++;
+        return base;
     }
 
-    ~Image();
-
-    int *refCount;
-
-protected:
-    Image &operator=(Window im) {
-        return *this;
+    // Region constructor
+    Image(const Image &im, int x, int y, int t, int c,
+          int xs, int ys, int ts, int cs) :
+        width(xs), height(ys), frames(ts), channels(cs),
+        ystride(im.ystride), tstride(im.tstride), cstride(im.cstride),
+        data(im.data), base(&im(x, y, t, c)) {
+        // Note that base is no longer aligned. You're only guaranteed
+        // alignment if you allocate an image from scratch.
+        assert(xs > 0 && ys > 0 && ts > 0 && cs > 0,
+               "Region must have strictly positive size: %d %d %d %d\n", xs, ys, ts, cs);
+        assert(x >= 0 && x+xs <= im.width &&
+               y >= 0 && y+ys <= im.height &&
+               t >= 0 && t+ts <= im.frames &&
+               c >= 0 && c+cs <= im.channels,
+               "Region must fit within original image\n");
     }
+
+    std::shared_ptr<const Payload> data;
+    float *base;
 };
+
+// Clean up after myself
+#undef LazyType
+
+
+
 
 #include "footer.h"
 #endif

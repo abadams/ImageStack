@@ -1,18 +1,29 @@
 #include "main.h"
 #include "Color.h"
 #include "Arithmetic.h"
+#include "Statistics.h"
+#include "File.h"
 #include "header.h"
 
 void ColorMatrix::help() {
-    printf("\n-colormatrix treats each pixel as a vector over its channels and multiplies\n"
-           "the vector by the given matrix. The matrix size and shape is deduced from the\n"
-           "number of arguments. The matrix is specified in column major order.\n\n"
-           "Converting rgb to grayscale:\n"
-           "  ImageStack -load color.tga -colormatrix 1 1 1 -scale 0.33333 -save gray.tga\n\n"
-           "Making orange noise:\n"
-           "  ImageStack -push 100 100 1 1 -noise -colormatrix 1 0.3 0 -save noise.tga\n\n"
-           "Making noise that varies between orange and blue:\n"
-           "  ImageStack -push 100 100 1 2 -noise -colormatrix 1 0.3 0 0 0 1 -save noise.tga\n\n");
+    pprintf("-colormatrix treats each pixel as a vector over its channels and multiplies "
+            "the vector by the given matrix. The matrix size and shape is deduced from the "
+            "number of arguments. The matrix is specified in row major order.\n"
+            "\n"
+            "Converting rgb to grayscale:\n"
+            "  ImageStack -load color.tga -colormatrix 1/3 1/3 1/3 -save gray.tga\n");
+}
+
+bool ColorMatrix::test() {
+    float matrix[] = {1, 4, 2, 0, -4, 2};
+    Image a(123, 234, 3, 2);
+    Noise::apply(a, -3, 3);
+    Image correct(123, 234, 3, 3);
+    correct.setChannels(a.channel(0) + 4*a.channel(1),
+                        2*a.channel(0),
+                        -4*a.channel(0) + 2*a.channel(1));
+    Image result = ColorMatrix::apply(a, matrix, 3);
+    return nearlyEqual(result, correct);
 }
 
 void ColorMatrix::parse(vector<string> args) {
@@ -28,24 +39,27 @@ void ColorMatrix::parse(vector<string> args) {
     push(im);
 }
 
-Image ColorMatrix::apply(Window im, vector<float> matrix) {
+Image ColorMatrix::apply(Image im, const vector<float> &matrix) {
     assert(matrix.size() % im.channels == 0,
            "-colormatrix requires a number of arguments that is a multiple of the number of\n"
            "channels of the current image\n");
+    return ColorMatrix::apply(im, &matrix[0], (int)matrix.size() / im.channels);
+}
 
-    int inChannels = im.channels;
-    int outChannels = (int)matrix.size() / inChannels;
+Image ColorMatrix::apply(Image im, const float *matrix, int outChannels) {
 
     Image out(im.width, im.height, im.frames, outChannels);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {
-                    for (int i = 0; i < out.channels; i++) {
-                        out(x, y, t)[i] += im(x, y, t)[c] * matrix[c * outChannels + i];
-                    }
-                }
+    for (int i = 0; i < out.channels; i++) {
+        for (int c = 0; c < im.channels; c++) {
+            float m = matrix[i*im.channels + c];
+            // This makes matrices with many zero elements faster
+            if (m == 0) continue;
+            if (m == 1) {
+                // Another common case
+                out.channel(i) += im.channel(c);
+            } else {
+                out.channel(i) += im.channel(c) * m;
             }
         }
     }
@@ -65,6 +79,33 @@ void ColorConvert::help() {
            "                  -colorconvert hsv rgb -save out.tga\n\n");
 }
 
+bool ColorConvert::test() {
+    Image a(123, 234, 3, 3);
+    Noise::apply(a, 0.3, 0.7); // Gotta be in-gamut for all our spaces tested
+    Image b = a;
+
+    if (!nearlyEqual(a, xyz2rgb(rgb2xyz(a)))) return false;
+
+    string spaces[] = {"xyz", "rgb", "argb", "yuv", "lab", "hsv"};
+    for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < i; j++) {
+            printf("%s -> %s -> %s\n", spaces[j].c_str(), spaces[i].c_str(), spaces[j].c_str());
+            Image to = apply(a, spaces[j], spaces[i]);
+            Image from = apply(to, spaces[i], spaces[j]);
+            if (!nearlyEqual(a, from)) return false;
+        }
+        {
+            // Check luminance is preserved
+            printf("y -> %s -> y\n", spaces[i].c_str());
+            Image y = a.channel(0);
+            Image to = apply(y, "y", spaces[i]);
+            Image from = apply(to, spaces[i], "y");
+            if (!nearlyEqual(y, from)) return false;
+        }
+    }
+    return true;
+}
+
 void ColorConvert::parse(vector<string> args) {
     assert(args.size() == 2, "-colorconvert requires two arguments\n");
     Image im = apply(stack(0), args[0], args[1]);
@@ -72,7 +113,7 @@ void ColorConvert::parse(vector<string> args) {
     push(im);
 }
 
-Image ColorConvert::apply(Window im, string from, string to) {
+Image ColorConvert::apply(Image im, string from, string to) {
     // check for the trivial case
     assert(from != to, "color conversion from %s to %s is pointless\n", from.c_str(), to.c_str());
 
@@ -145,9 +186,7 @@ Image ColorConvert::apply(Window im, string from, string to) {
 }
 
 //conversions to and from lab inspired by CImg (http://cimg.sourceforge.net/)
-Image ColorConvert::xyz2lab(Window im) {
-#define labf(x)  ((x)>=0.008856?(powf(x,1/3.0)):(7.787*(x)+16.0/116.0))
-
+Image ColorConvert::xyz2lab(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     Image out(im.width, im.height, im.frames, im.channels);
@@ -157,27 +196,23 @@ Image ColorConvert::xyz2lab(Window im) {
     float Yn = 1.0f/(0.212671 + 0.715160 + 0.072169);
     float Zn = 1.0f/(0.019334 + 0.119193 + 0.950227);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float L, a, b;
-                float X = im(x, y, t)[0];
-                float Y = im(x, y, t)[1];
-                float Z = im(x, y, t)[2];
-                L = 1.16f * labf(Y*Yn) - 0.16f;
-                a = 5.0f * (labf(X*Xn) - labf(Y*Yn));
-                b = 2.0f * (labf(Y*Yn) - labf(Z*Zn));
-                out(x, y, t)[0] = L;
-                out(x, y, t)[1] = a;
-                out(x, y, t)[2] = b;
-            }
-        }
-    }
-    return out;
+    Image X = im.channel(0), Y = im.channel(1), Z = im.channel(2);
+    Image L = out.channel(0), a = out.channel(1), b = out.channel(2);
 
+    // First apply a non-linear mapping to X, Y, Z. use the output as scratch space.
+    Image Xt = L, Yt = a, Zt = b;
+    Xt.set(Select(X > 0.00856f/Xn, pow(X*Xn, 1/3.0f), (7.787f*Xn)*X + 16.0f/116.0f));
+    Yt.set(Select(Y > 0.00856f/Yn, pow(Y*Yn, 1/3.0f), (7.787f*Yn)*Y + 16.0f/116.0f));
+    Zt.set(Select(Z > 0.00856f/Zn, pow(Z*Zn, 1/3.0f), (7.787f*Zn)*Z + 16.0f/116.0f));
+
+    // Then apply the affine transform
+    out.setChannels(1.16f * Yt - 0.16f,
+                    5.0f * (Xt - Yt),
+                    2.0f * (Yt - Zt));
+    return out;
 }
 
-Image ColorConvert::lab2xyz(Window im) {
+Image ColorConvert::lab2xyz(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
     Image out(im.width, im.height, im.frames, im.channels);
 
@@ -187,56 +222,34 @@ Image ColorConvert::lab2xyz(Window im) {
     float Yn = 0.212671 + 0.715160 + 0.072169;
     float Zn = 0.019334 + 0.119193 + 0.950227;
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float X, Y, Z, fy, fx, fz;
-                float L = im(x, y, t)[0];
-                float a = im(x, y, t)[1];
-                float b = im(x, y, t)[2];
-                fy = (L + 0.16f)/1.16f;
-                fx = fy + a/5.0f;
-                fz = fy - b/2.0f;
+    Image X = out.channel(0), Y = out.channel(1), Z = out.channel(2);
+    Image L = im.channel(0), a = im.channel(1), b = im.channel(2);
 
-                if (fy > s) {
-                    Y = Yn*(fy * fy * fy);
-                } else {
-                    Y = (fy - 16.0/116)*3*s*s*Yn;
-                }
-                if (fx > s) {
-                    X = Xn*(fx * fx * fx);
-                } else {
-                    X = (fx - 16.0/116)*3*s*s*Xn;
-                }
-                if (fz > s) {
-                    Z = Zn*(fz * fz * fz);
-                } else {
-                    Z = (fz - 16.0/116)*3*s*s*Zn;
-                }
+    // Apply the affine transform
+    Y.set((L + 0.16f)/1.16f);
+    X.set(Y + a/5.0f);
+    Z.set(Y - b/2.0f);
 
-                out(x, y, t)[0] = X;
-                out(x, y, t)[1] = Y;
-                out(x, y, t)[2] = Z;
-            }
-        }
-    }
+    // Then the nonlinear curve
+    X.set(Select(X > s, Xn*X*X*X, (X-16.0/116)*3*s*s*Xn));
+    Y.set(Select(Y > s, Yn*Y*Y*Y, (Y-16.0/116)*3*s*s*Yn));
+    Z.set(Select(Z > s, Zn*Z*Z*Z, (Z-16.0/116)*3*s*s*Zn));
 
     return out;
 }
 
-Image ColorConvert::rgb2lab(Window im) {
+Image ColorConvert::rgb2lab(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
-
     return xyz2lab(rgb2xyz(im));
 }
 
-Image ColorConvert::lab2rgb(Window im) {
+Image ColorConvert::lab2rgb(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
     return xyz2rgb(lab2xyz(im));
 }
 
 
-Image ColorConvert::rgb2hsv(Window im) {
+Image ColorConvert::rgb2hsv(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     float mult = 1.0f / 6;
@@ -248,9 +261,9 @@ Image ColorConvert::rgb2hsv(Window im) {
             for (int x = 0; x < im.width; x++) {
                 float minV, maxV, delta;
                 float h, s, v;
-                float r = im(x, y, t)[0];
-                float g = im(x, y, t)[1];
-                float b = im(x, y, t)[2];
+                float r = im(x, y, t, 0);
+                float g = im(x, y, t, 1);
+                float b = im(x, y, t, 2);
 
                 minV = min(r, g, b);
                 maxV = max(r, g, b);
@@ -271,9 +284,9 @@ Image ColorConvert::rgb2hsv(Window im) {
                     h = 0;
                 }
 
-                out(x, y, t)[0] = h;
-                out(x, y, t)[1] = s;
-                out(x, y, t)[2] = v;
+                out(x, y, t, 0) = h;
+                out(x, y, t, 1) = s;
+                out(x, y, t, 2) = v;
             }
         }
     }
@@ -281,7 +294,7 @@ Image ColorConvert::rgb2hsv(Window im) {
     return out;
 }
 
-Image ColorConvert::hsv2rgb(Window im) {
+Image ColorConvert::hsv2rgb(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     Image out(im.width, im.height, im.frames, im.channels);
@@ -289,13 +302,13 @@ Image ColorConvert::hsv2rgb(Window im) {
     for (int t = 0; t < im.frames; t++) {
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
-                float h = im(x, y, t)[0];
-                float s = im(x, y, t)[1];
-                float v = im(x, y, t)[2];
+                float h = im(x, y, t, 0);
+                float s = im(x, y, t, 1);
+                float v = im(x, y, t, 2);
 
                 if (s == 0) {
                     // achromatic (grey)
-                    out(x, y, t)[0] = out(x, y, t)[1] = out(x, y, t)[2] = v;
+                    out(x, y, t, 0) = out(x, y, t, 1) = out(x, y, t, 2) = v;
                 } else {
 
                     h *= 6;        // sector 0 to 5
@@ -308,34 +321,34 @@ Image ColorConvert::hsv2rgb(Window im) {
 
                     switch (i) {
                     case 0:
-                        out(x, y, t)[0] = v;
-                        out(x, y, t)[1] = u;
-                        out(x, y, t)[2] = p;
+                        out(x, y, t, 0) = v;
+                        out(x, y, t, 1) = u;
+                        out(x, y, t, 2) = p;
                         break;
                     case 1:
-                        out(x, y, t)[0] = q;
-                        out(x, y, t)[1] = v;
-                        out(x, y, t)[2] = p;
+                        out(x, y, t, 0) = q;
+                        out(x, y, t, 1) = v;
+                        out(x, y, t, 2) = p;
                         break;
                     case 2:
-                        out(x, y, t)[0] = p;
-                        out(x, y, t)[1] = v;
-                        out(x, y, t)[2] = u;
+                        out(x, y, t, 0) = p;
+                        out(x, y, t, 1) = v;
+                        out(x, y, t, 2) = u;
                         break;
                     case 3:
-                        out(x, y, t)[0] = p;
-                        out(x, y, t)[1] = q;
-                        out(x, y, t)[2] = v;
+                        out(x, y, t, 0) = p;
+                        out(x, y, t, 1) = q;
+                        out(x, y, t, 2) = v;
                         break;
                     case 4:
-                        out(x, y, t)[0] = u;
-                        out(x, y, t)[1] = p;
-                        out(x, y, t)[2] = v;
+                        out(x, y, t, 0) = u;
+                        out(x, y, t, 1) = p;
+                        out(x, y, t, 2) = v;
                         break;
                     default:  // case 5:
-                        out(x, y, t)[0] = v;
-                        out(x, y, t)[1] = p;
-                        out(x, y, t)[2] = q;
+                        out(x, y, t, 0) = v;
+                        out(x, y, t, 1) = p;
+                        out(x, y, t, 2) = q;
                         break;
                     }
                 }
@@ -346,147 +359,78 @@ Image ColorConvert::hsv2rgb(Window im) {
     return out;
 }
 
-Image ColorConvert::rgb2y(Window im) {
+Image ColorConvert::rgb2y(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
-
-    Image out(im.width, im.height, im.frames, 1);
-
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                out(x, y, t)[0] = (im(x, y, t)[0] * 0.299f +
-                                   im(x, y, t)[1] * 0.587f +
-                                   im(x, y, t)[2] * 0.114f);
-            }
-        }
-    }
-
-    return out;
-
+    return im.channel(0) * 0.299f + im.channel(1) * 0.587f + im.channel(2) * 0.114f;
 }
 
-Image ColorConvert::y2rgb(Window im) {
+Image ColorConvert::y2rgb(Image im) {
     assert(im.channels == 1, "Image does not have one channel\n");
 
     Image out(im.width, im.height, im.frames, 3);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                out(x, y, t)[2] = out(x, y, t)[1] = out(x, y, t)[0] = im(x, y, t)[0];
-            }
-        }
-    }
+    out.setChannels(im, im, im);
 
     return out;
 }
 
-Image ColorConvert::rgb2yuv(Window im) {
-    assert(im.channels == 3, "Image does not have 3 channels\n");
-    Image out(im.width, im.height, im.frames, 3);
-
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float r = im(x, y, t)[0];
-                float g = im(x, y, t)[1];
-                float b = im(x, y, t)[2];
-                out(x, y, t)[0] = r *  0.299f + g *  0.587f + b *  0.114f;
-                out(x, y, t)[1] = r * -0.169f + g * -0.332f + b *  0.500f + 0.5f;
-                out(x, y, t)[2] = r *  0.500f + g * -0.419f + b * -0.0813f + 0.5f;
-            }
-        }
-    }
-
-    return out;
-
-}
-
-Image ColorConvert::yuv2rgb(Window im) {
+Image ColorConvert::rgb2yuv(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     Image out(im.width, im.height, im.frames, 3);
-
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float Y = im(x, y, t)[0];
-                float U = im(x, y, t)[1] - 0.5f;
-                float V = im(x, y, t)[2] - 0.5f;
-                out(x, y, t)[0] = Y + 1.4075f * V;
-                out(x, y, t)[1] = Y - 0.3455f * U - 0.7169f * V;
-                out(x, y, t)[2] = Y + 1.7790f * U;
-            }
-        }
-    }
-
+    Image r = im.channel(0), g = im.channel(1), b = im.channel(2);
+    out.setChannels(0.299f * r + 0.587f * g + 0.114f * b,
+                    -0.169f * r - 0.332f * g + 0.500f * b + 0.5f,
+                    0.500f * r - 0.419f * g - 0.0813f * b + 0.5f);
     return out;
 }
 
-Image ColorConvert::rgb2xyz(Window im) {
+Image ColorConvert::yuv2rgb(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     Image out(im.width, im.height, im.frames, 3);
-
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float r = im(x, y, t)[0];
-                float g = im(x, y, t)[1];
-                float b = im(x, y, t)[2];
-                // Apply inverse of the srgb gamma curve
-                float c1 = 0.04045f;
-                float c2 = 1.0f/12.92f;
-                float c3 = 0.055f;
-                float c4 = 1.0f/(1.0f + c3);
-                float c5 = 2.4f; // gamma
-                r = (r <= c1 ? (r*c2) : powf((r + c3)*c4, c5));
-                g = (g <= c1 ? (g*c2) : powf((g + c3)*c4, c5));
-                b = (b <= c1 ? (b*c2) : powf((b + c3)*c4, c5));
-                // Apply linear transform
-                out(x, y, t)[0] = 0.4124f * r + 0.3576f * g + 0.1805f * b;
-                out(x, y, t)[1] = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-                out(x, y, t)[2] = 0.0193f * r + 0.1192f * g + 0.9505f * b;
-                
-            }
-        }
-    }
-
+    Image y = im.channel(0), u = im.channel(1), v = im.channel(2);
+    out.setChannels(y + 1.4075f * v - 0.70375f,
+                    y - 0.3455f * u - 0.7169f * v + 0.5312f,
+                    y + 1.7790f * u - 0.8895f);
     return out;
 }
 
-Image ColorConvert::xyz2rgb(Window im) {
+Image ColorConvert::rgb2xyz(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
-    Image out(im.width, im.height, im.frames, 3);
+    // convert to linear luminance srgb
+    Image out = Select(im <= 0.04045f,
+                       im/12.95f,
+                       pow(max((im + 0.055f)/1.055f, 0), 2.4f));
+    Image r = out.channel(0), g = out.channel(1), b = out.channel(2);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float X = im(x, y, t)[0];
-                float Y = im(x, y, t)[1];
-                float Z = im(x, y, t)[2];
-                // Apply linear transform
-                float r =  3.2406f * X - 1.5372f * Y - 0.4986f * Z;
-                float g = -0.9689f * X + 1.8758f * Y + 0.0415f * Z;
-                float b =  0.0557f * X - 0.2040f * Y + 1.0570f * Z;
-                // Apply srgb gamma curve
-                float c1 = 0.0031308f;
-                float c2 = 12.92f;
-                float c3 = 1.055f;
-                float c4 = 0.055f;
-                float c5 = 1.0f/2.4f;
-                out(x, y, t)[0] = (r <= c1 ? c2*r : c3 * powf(r, c5) - c4);
-                out(x, y, t)[1] = (g <= c1 ? c2*g : c3 * powf(g, c5) - c4);
-                out(x, y, t)[2] = (b <= c1 ? c2*b : c3 * powf(b, c5) - c4);
-            }
-        }
-    }
+    // Apply the linear transform to get to xyz
+    out.setChannels(0.4124f * r + 0.3576f * g + 0.1805f * b,
+                    0.2126f * r + 0.7152f * g + 0.0722f * b,
+                    0.0193f * r + 0.1192f * g + 0.9505f * b);
+    return out;
+}
+
+Image ColorConvert::xyz2rgb(Image im) {
+    assert(im.channels == 3, "Image does not have 3 channels\n");
+
+    // Apply linear transform to get to linear-luminance rgb
+    Image out(im.width, im.height, im.frames, 3);
+    Image x = im.channel(0), y = im.channel(1), z = im.channel(2);
+    out.setChannels(3.2406f * x - 1.5372f * y - 0.4986f * z,
+                    -0.9689f * x + 1.8758f * y + 0.0415f * z,
+                    0.0557f * x - 0.2040f * y + 1.0570f * z);
+
+    // Convert from linear luminance to gamma-encoded srgb
+    out.set(Select(out <= 0.0031308f,
+                   12.92f * out,
+                   1.055f * pow(Lazy::max(out, 0), 1.0f/2.4f) - 0.055f));
 
     return out;
 }
 
-Image ColorConvert::uyvy2yuv(Window im) {
+Image ColorConvert::uyvy2yuv(Image im) {
     assert(im.channels == 2,
            "uyvy images should be stored as a two channel image where the second"
            " channel represents luminance (y), and the first channel alternates"
@@ -495,18 +439,15 @@ Image ColorConvert::uyvy2yuv(Window im) {
            "uyvy images must have an even width\n");
 
     Image out(im.width, im.height, im.frames, 3);
-    float *outPtr = out(0, 0, 0);
     for (int t = 0; t < out.frames; t++) {
         for (int y = 0; y < out.height; y++) {
-            float *imPtr = im(0, y, t);
             for (int x = 0; x < out.width; x+=2) {
-                *outPtr++ = imPtr[1]; // Y
-                *outPtr++ = imPtr[0]; // U
-                *outPtr++ = imPtr[2]; // V
-                *outPtr++ = imPtr[3]; // Y
-                *outPtr++ = imPtr[0]; // U
-                *outPtr++ = imPtr[2]; // V
-                imPtr += 4;
+                out(x, y, t, 0) = im(x, y, t, 1);
+                out(x, y, t, 1) = im(x, y, t, 0);
+                out(x, y, t, 2) = im(x+1, y, t, 0);
+                out(x+1, y, t, 0) = im(x+1, y, t, 1);
+                out(x+1, y, t, 1) = im(x, y, t, 0);
+                out(x+1, y, t, 2) = im(x+1, y, t, 0);
             }
         }
     }
@@ -514,7 +455,7 @@ Image ColorConvert::uyvy2yuv(Window im) {
     return out;
 }
 
-Image ColorConvert::yuyv2yuv(Window im) {
+Image ColorConvert::yuyv2yuv(Image im) {
     assert(im.channels == 2,
            "yuyv images should be stored as a two channel image where the first"
            " channel represents luminance (y), and the second channel alternates"
@@ -523,18 +464,15 @@ Image ColorConvert::yuyv2yuv(Window im) {
            "uyvy images must have an even width\n");
 
     Image out(im.width, im.height, im.frames, 3);
-    float *outPtr = out(0, 0, 0);
     for (int t = 0; t < out.frames; t++) {
         for (int y = 0; y < out.height; y++) {
-            float *imPtr = im(0, y, t);
             for (int x = 0; x < out.width; x+=2) {
-                *outPtr++ = imPtr[0]; // Y
-                *outPtr++ = imPtr[1]; // U
-                *outPtr++ = imPtr[3]; // V
-                *outPtr++ = imPtr[2]; // Y
-                *outPtr++ = imPtr[1]; // U
-                *outPtr++ = imPtr[3]; // V
-                imPtr += 4;
+                out(x, y, t, 0) = im(x, y, t, 0);
+                out(x, y, t, 1) = im(x, y, t, 1);
+                out(x, y, t, 2) = im(x+1, y, t, 1);
+                out(x+1, y, t, 0) = im(x+1, y, t, 0);
+                out(x+1, y, t, 1) = im(x, y, t, 1);
+                out(x+1, y, t, 2) = im(x+1, y, t, 1);
             }
         }
     }
@@ -542,73 +480,50 @@ Image ColorConvert::yuyv2yuv(Window im) {
     return out;
 }
 
-Image ColorConvert::uyvy2rgb(Window im) {
+Image ColorConvert::uyvy2rgb(Image im) {
     return yuv2rgb(uyvy2yuv(im));
 }
 
-Image ColorConvert::yuyv2rgb(Window im) {
+Image ColorConvert::yuyv2rgb(Image im) {
     return yuv2rgb(yuyv2yuv(im));
 }
 
-Image ColorConvert::argb2xyz(Window im) {
+Image ColorConvert::argb2xyz(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
-    Image out(im.width, im.height, im.frames, 3);
+    // Apply inverse adobe rgb gamma curve to get to linear-luminance
+    Image out = pow(Lazy::max(im, 0), 563.0f/256);
+    Image r = out.channel(0), g = out.channel(1), b = out.channel(2);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float r = im(x, y, t)[0];
-                float g = im(x, y, t)[1];
-                float b = im(x, y, t)[2];                
-                // Apply inverse adobe rgb gamma curve
-                float gamma = 563.0f/256;
-                r = powf(r, gamma);
-                g = powf(g, gamma);
-                b = powf(b, gamma);
-                // Apply linear transform
-                out(x, y, t)[0] = 0.57667f * r + 0.18556f * g + 0.18823f * b;
-                out(x, y, t)[1] = 0.29734f * r + 0.62736f * g + 0.07529f * b;
-                out(x, y, t)[2] = 0.02703f * r + 0.07069f * g + 0.99134f * b;                
-            }
-        }
-    }
+    // Apply argb to xyz linear transform
+    out.setChannels(0.57667f * r + 0.18556f * g + 0.18823f * b,
+                    0.29734f * r + 0.62736f * g + 0.07529f * b,
+                    0.02703f * r + 0.07069f * g + 0.99134f * b);
 
     return out;
 }
 
-Image ColorConvert::xyz2argb(Window im) {
+Image ColorConvert::xyz2argb(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
+    // xyz to argb linear transform
+    Image x = im.channel(0), y = im.channel(1), z = im.channel(2);
     Image out(im.width, im.height, im.frames, 3);
+    out.setChannels(2.04159f * x - 0.56501f * y - 0.34473f * z,
+                    -0.96924f * x + 1.87597f * y + 0.04156f * z,
+                    0.01344f * x - 0.11836f * y + 1.01517f * z);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float X = im(x, y, t)[0];
-                float Y = im(x, y, t)[1];
-                float Z = im(x, y, t)[2];
-                // Apply linear transform
-                float r =  2.04159f * X - 0.56501f * Y - 0.34473f * Z;
-                float g = -0.96924f * X + 1.87597f * Y + 0.04156f * Z;
-                float b =  0.01344f * X - 0.11836f * Y + 1.01517f * Z;
-                // Apply adobe rgb gamma curve
-                float gamma = 256/563.0f;
-                out(x, y, t)[0] = powf(r, gamma);
-                out(x, y, t)[1] = powf(g, gamma);
-                out(x, y, t)[2] = powf(b, gamma);
-            }
-        }
-    }
+    // Apply adobe rgb gamma curve
+    out.set(pow(Lazy::max(out, 0), 256/563.0f));
 
     return out;
 }
 
-Image ColorConvert::argb2rgb(Window im) {
+Image ColorConvert::argb2rgb(Image im) {
     return xyz2rgb(argb2xyz(im));
 }
 
-Image ColorConvert::rgb2argb(Window im) {
+Image ColorConvert::rgb2argb(Image im) {
     return xyz2argb(rgb2xyz(im));
 }
 
@@ -620,6 +535,23 @@ void Demosaic::help() {
            "indicates that auto-white-balancing should be performed.\n\n"
            "Usage: ImageStack -load photo.dng -demosaic -save out.png\n"
            "       ImageStack -load raw.yuv -demosaic 0 1 awb -save out.png\n");
+}
+
+bool Demosaic::test() {
+    Image dog = Load::apply("pics/dog1.jpg");
+    Image raw(dog.width, dog.height, 1, 1);
+    for (int y = 0; y < dog.height; y+=2) {
+        for (int x = 0; x < dog.width; x+=2) {
+            raw(x, y)     = dog(x, y, 0);
+            raw(x+1, y)   = dog(x+1, y, 1);
+            raw(x, y+1)   = dog(x, y+1, 1);
+            raw(x+1, y+1) = dog(x+1, y+1, 2);
+        }
+    }
+
+    Image demo = Demosaic::apply(raw, 1, 0, false);
+    Save::apply(demo, "demo.tmp");
+    return nearlyEqual(dog, demo);
 }
 
 void Demosaic::parse(vector<string> args) {
@@ -642,19 +574,20 @@ void Demosaic::parse(vector<string> args) {
     push(im);
 }
 
-Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
+Image Demosaic::apply(Image im, int xoff, int yoff, bool awb) {
 
     assert(im.channels == 1, "Mosaiced images should have a single channel\n");
 
     Image out(im.width, im.height, im.frames, 3);
 
-    // This algorithm is adaptive color plane interpolation (ACPI)
+    // This algorithm is roughly adaptive color plane interpolation (ACPI)
     // by Runs Hamilton and Adams
-    // (The Adams is not me)
+    // (The Adams is not Andrew Adams)
 
     // make sure the image is of even width and height
     if (im.width & 1 || im.height & 1) {
-        im = Window(im, 0, 0, 0, (im.width >> 1) << 1, (im.width >> 1) << 1, im.frames);
+        im = im.region(0, 0, 0, 0,
+                       im.width & (~1), im.height & (~1), im.frames, im.channels);
     }
 
     if (awb) {
@@ -666,7 +599,7 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
-                    double val = im(x, y, t)[0];
+                    double val = im(x, y, t, 0);
                     maximum[x & 1][y & 1] = max(maximum[x & 1][y & 1], val);
                     sum[x & 1][y & 1] += val;
                 }
@@ -680,7 +613,7 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
         for (int t = 0; t < im.frames; t++) {
             for (int y = 0; y < im.height; y++) {
                 for (int x = 0; x < im.width; x++) {
-                    im(x, y, t)[0] = (float)(im(x, y, t)[0] * multiplier[x & 1][y & 1]);
+                    im(x, y, t, 0) = (float)(im(x, y, t, 0) * multiplier[x & 1][y & 1]);
                 }
             }
         }
@@ -699,16 +632,16 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                 if (((x + xoff) & 1) == ((y + yoff) & 1)) {
                     // GREEN IS KNOWN
                     // we already know green here, just use it
-                    out(x, y, t)[1] = im(x, y, t)[0];
+                    out(x, y, t, 1) = im(x, y, t, 0);
                 } else {
                     // RED OR BLUE IS KNOWN
                     // gather neighbouring greens
-                    float left1 = im(x-1, y, t)[0], right1 = im(x+1, y, t)[0];
-                    float up1 = im(x, y-1, t)[0], down1 = im(x, y+1, t)[0];
+                    float left1 = im(x-1, y, t, 0), right1 = im(x+1, y, t, 0);
+                    float up1 = im(x, y-1, t, 0), down1 = im(x, y+1, t, 0);
                     // gather neighbouring reds or blues
-                    float here = im(x, y, t)[0];
-                    float left2 = im(x-2, y, t)[0], right2 = im(x+1, y, t)[0];
-                    float up2 = im(x, y-2, t)[0], down2 = im(x, y+2, t)[0];
+                    float here = im(x, y, t, 0);
+                    float left2 = im(x-2, y, t, 0), right2 = im(x+1, y, t, 0);
+                    float up2 = im(x, y-2, t, 0), down2 = im(x, y+2, t, 0);
 
                     // decide which way to interpolate
                     // (divide laplacian by two because it's across twice the baseline)
@@ -719,15 +652,15 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                         //float colAverage = (left2 + right2)/2;
                         //float correction = here - colAverage;
                         // only apply half the correction, because it's across twice the baseline
-                        out(x, y, t)[1] = (left1 + right1)/2;// + correction/2;
+                        out(x, y, t, 1) = (left1 + right1)/2;// + correction/2;
                     } else if (interpVert < interpHoriz) { // vertically
                         //float colAverage = (up2 + down2)/2;
                         //float correction = here - colAverage;
-                        out(x, y, t)[1] = (up1 + down1)/2;// + correction/2;
+                        out(x, y, t, 1) = (up1 + down1)/2;// + correction/2;
                     } else { // both
                         float colAverage = (up2 + down2 + left2 + right2)/4;
                         float correction = here - colAverage;
-                        out(x, y, t)[1] = (left1 + up1 + right1 + down1)/4 + correction/2;
+                        out(x, y, t, 1) = (left1 + up1 + right1 + down1)/4 + correction/2;
                     }
                 }
             }
@@ -765,23 +698,26 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     // do the horizontal interpolation
 
                     // compute an average for the color
-                    float colLeft = im(x-1, y, t)[0], colRight = im(x+1, y, t)[0];
+                    float colLeft = im(x-1, y, t, 0), colRight = im(x+1, y, t, 0);
                     float colAverage = (colLeft + colRight)/2;
                     // compute the same average for green
-                    float greenLeft = out(x-1, y, t)[1], greenRight = out(x+1, y, t)[1], greenHere = out(x, y, t)[1];
+                    float greenLeft = out(x-1, y, t, 1);
+                    float greenRight = out(x+1, y, t, 1);
+                    float greenHere = out(x, y, t, 1);
                     float greenAverage = (greenLeft + greenRight)/2;
                     // see how wrong the green average was
                     float correction = greenHere - greenAverage;
-                    // set the output to the average color plus the correction factor needed for green
-                    out(x, y, t)[horizChannel] = colAverage + correction;
+                    // set the output to the average color plus the
+                    // correction factor needed for green
+                    out(x, y, t, horizChannel) = colAverage + correction;
 
                     // do the vertical interpolation
-                    float colUp = im(x, y-1, t)[0], colDown = im(x, y+1, t)[0];
-                    float greenUp = out(x, y-1, t)[1], greenDown = out(x, y+1, t)[1];
+                    float colUp = im(x, y-1, t, 0), colDown = im(x, y+1, t, 0);
+                    float greenUp = out(x, y-1, t, 1), greenDown = out(x, y+1, t, 1);
                     colAverage = (colUp + colDown)/2;
                     greenAverage = (greenUp + greenDown)/2;
                     correction = greenHere - greenAverage;
-                    out(x, y, t)[vertChannel] = colAverage + correction;
+                    out(x, y, t, vertChannel) = colAverage + correction;
 
                 } else {
                     // RED OR BLUE IS KNOWN (step 4)
@@ -797,16 +733,16 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     }
 
                     // set the known channel to the correct value
-                    out(x, y, t)[knownChannel] = im(x, y, t)[0];
+                    out(x, y, t, knownChannel) = im(x, y, t, 0);
 
                     // for the unknown channel, do diagonal interpolation
                     // u is up left, v is down right, s is up right, t is down left
                     // p is the channel to be predicted, g is green (already interpolated)
-                    float up = im(x-1, y-1, t)[0], ug = out(x-1, y-1, t)[1];
-                    float vp = im(x+1, y+1, t)[0], vg = out(x+1, y+1, t)[1];
-                    float sp = im(x+1, y-1, t)[0], sg = out(x+1, y-1, t)[1];
-                    float tp = im(x-1, y+1, t)[0], tg = out(x-1, t+1, t)[1];
-                    float greenHere = out(x, y, t)[1];
+                    float up = im(x-1, y-1, t, 0), ug = out(x-1, y-1, t, 1);
+                    float vp = im(x+1, y+1, t, 0), vg = out(x+1, y+1, t, 1);
+                    float sp = im(x+1, y-1, t, 0), sg = out(x+1, y-1, t, 1);
+                    float tp = im(x-1, y+1, t, 0), tg = out(x-1, t+1, t, 1);
+                    float greenHere = out(x, y, t, 1);
 
                     float interpUV = fabs(vp - up) + fabs(2*greenHere - vg - ug);
                     float interpST = fabs(sp - tp) + fabs(2*greenHere - sg - tg);
@@ -814,15 +750,15 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
                     if (interpUV < interpST) {
                         float greenAverage = (ug + vg)/2;
                         float correction = greenHere - greenAverage;
-                        out(x, y, t)[unknownChannel] = (up + vp)/2 + correction;
+                        out(x, y, t, unknownChannel) = (up + vp)/2 + correction;
                     } else if (interpST < interpUV) {
                         float greenAverage = (sg + tg)/2;
                         float correction = greenHere - greenAverage;
-                        out(x, y, t)[unknownChannel] = (sp + tp)/2 + correction;
+                        out(x, y, t, unknownChannel) = (sp + tp)/2 + correction;
                     } else {
                         float greenAverage = (ug + vg + sg + tg)/4;
                         float correction = greenHere - greenAverage;
-                        out(x, y, t)[unknownChannel] = (up + vp + sp + tp)/4 + correction;
+                        out(x, y, t, unknownChannel) = (up + vp + sp + tp)/4 + correction;
                     }
 
                 }
@@ -834,29 +770,22 @@ Image Demosaic::apply(Window im, int xoff, int yoff, bool awb) {
     // Step 5
     // zero the margins, which weren't interpolated, to avoid annoying checkerboard there
     // we could also do some more basic interpolation, but the margins don't really matter anyway
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            if (y == 0 || y == 1 || y == im.height - 2 || y == im.height - 1) {
-                for (int x = 0; x < im.width; x++) {
-                    out(x, y, t)[0] = out(x, y, t)[1] = out(x, y, t)[2] = 0;
-                }
-            } else {
-                for (int c = 0; c < 6; c++) {
-                    out(0, y, t)[0] = out(0, y, t)[1] = out(0, y, t)[2] = 0;
-                    out(1, y, t)[0] = out(1, y, t)[1] = out(1, y, t)[2] = 0;
-                    out(im.width-2, y, t)[0] = out(im.width-2, y, t)[1] = out(im.width-2, y, t)[2] = 0;
-                    out(im.width-1, y, t)[0] = out(im.width-1, y, t)[1] = out(im.width-1, y, t)[2] = 0;
-                }
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int x = 0; x < im.width; x++) {
+                out(x, 0, t, c) = 0;
+                out(x, 1, t, c) = 0;
+                out(x, im.height-1, t, c) = 0;
+                out(x, im.height-2, t, c) = 0;
+            }
+            for (int y = 0; y < im.height; y++) {
+                out(0, y, t, c) = 0;
+                out(1, y, t, c) = 0;
+                out(im.width-1, y, t, c) = 0;
+                out(im.width-2, y, t, c) = 0;
             }
         }
     }
-
-
-    // Step 6
-    // clamp the output between zero and one
-    // ET 2008-08-28: This works quite poorly when dealing with HDR-composited mosaiced images.  Commenting out
-    // Clamp::apply(out, 0, 1);
-
 
     return out;
 }

@@ -6,11 +6,11 @@ namespace FilePBA {
 
 void help() {
     pprintf(".pba files. This format is a human-readable space-separated 2D array of"
-            " numbers. It is used by petabricks. Width and channels become columns"
-            " of the file, and height and frames becomes rows.\n");
+            " numbers. It is used by petabricks. Width becomes columns"
+            " of the file, and height, frames, and channels become rows.\n");
 }
 
-void save(Window im, string filename) {
+void save(Image im, string filename) {
     FILE *f = fopen(filename.c_str(), "w");
     assert(f, "Could not write output file %s\n", filename.c_str());
     // write the dimensions
@@ -21,12 +21,13 @@ void save(Window im, string filename) {
     if (im.frames != 1) { fprintf(f, " %d", im.frames); }
     fprintf(f, "\n");
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {
-                    fprintf(f, "%f ", im(x, y, t)[c]);
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                for (int x = 0; x < im.width; x++) {
+                    fprintf(f, "%f ", im(x, y, t, c));
                 }
+                fprintf(f, "\n");
             }
             fprintf(f, "\n");
         }
@@ -46,7 +47,7 @@ Image load(string filename) {
            "Could not read header of %s\n", filename.c_str());
 
     int ch, wi, he, fr;
-    int ret = sscanf(header, "SIZE %d %d %d %d", &ch, &wi, &he, &fr);
+    int ret = sscanf(header, "SIZE %20d %20d %20d %20d", &ch, &wi, &he, &fr);
     if (ret == 0) { // 0D
         ch = wi = he = fr = 1;
     } else if (ret == 1) { // 1D
@@ -69,16 +70,18 @@ Image load(string filename) {
     Image im(wi, he, fr, ch);
 
     // read the data
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {
-                    assert(fscanf(f, "%f", im(x, y, t)+c) == 1,
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                for (int x = 0; x < im.width; x++) {
+                    assert(fscanf(f, "%20f", &im(x, y, t, c)) == 1,
                            "Unexpected end of file reading %s\n", filename.c_str());
                 }
             }
         }
     }
+
+    fclose(f);
 
     return im;
 }

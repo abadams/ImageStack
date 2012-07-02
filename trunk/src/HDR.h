@@ -5,12 +5,13 @@
 class AssembleHDR : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window frames);
-    static Image apply(Window frames, vector<float> &exposures, string gamma="1.0");
+    static Image apply(Image frames);
+    static Image apply(Image frames, const vector<float> &exposures, string gamma="1.0");
 private:
-    enum cutoffType { REGULAR, LONGEST_EXPOSURE, SHORTEST_EXPOSURE };
-    static float weightFunc(float *, int channels, cutoffType = REGULAR);
+    enum CutoffType { Regular, LongestExposure, ShortestExposure};
+    static float weightFunc(float maxVal, CutoffType c = Regular);
 
 };
 

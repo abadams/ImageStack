@@ -19,7 +19,7 @@ using ::std::string;
 
 class Address {
 public:
-    Address() {}
+    Address() : port(0) {}
     Address(string name_, unsigned short port_);
     Address(struct sockaddr_in addr_);
 
@@ -43,7 +43,7 @@ public:
     bool send(const char *buffer, int len);
 
     Image recvImage();
-    void sendImage(Window im);
+    void sendImage(Image im);
 
     friend class TCPServer;
 

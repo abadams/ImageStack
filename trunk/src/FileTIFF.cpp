@@ -34,7 +34,7 @@ void help() {
 
 
 template<typename T>
-void readTiff(Image &im, TIFF *tiff, unsigned int divisor) {
+void readTiff(Image im, TIFF *tiff, unsigned int divisor) {
     T *buffer = new T[im.channels * im.width];
 
     float multiplier = 1.0f / divisor;
@@ -44,7 +44,7 @@ void readTiff(Image &im, TIFF *tiff, unsigned int divisor) {
                "Failed reading scanline\n");
         for (int x = 0; x < im.width; x++) {
             for (int c = 0; c < im.channels; c++) {
-                im(x, y)[c] = ((float)buffer[x * im.channels + c]) * multiplier;
+                im(x, y, c) = ((float)buffer[x * im.channels + c]) * multiplier;
             }
         }
     }
@@ -85,21 +85,21 @@ Image load(string filename) {
            "Unsupported scanline format in TIFF file, might be stored in tiles or strips.\n");
 
     if (bytesPerSample == 1 && sampleFormat == SAMPLEFORMAT_UINT) {
-        readTiff<unsigned char>(im, tiff, 0x000000ff);
+        readTiff<uint8_t>(im, tiff, 0x000000ff);
     } else if (bytesPerSample == 1 && sampleFormat == SAMPLEFORMAT_INT) {
-        readTiff<char>(im, tiff, 0x000000ff);
+        readTiff<int8_t>(im, tiff, 0x000000ff);
     } else if (bytesPerSample == 2 && sampleFormat == SAMPLEFORMAT_UINT) {
-        readTiff<unsigned short>(im, tiff, 0x0000ffff);
+        readTiff<uint16_t>(im, tiff, 0x0000ffff);
     } else if (bytesPerSample == 2 && sampleFormat == SAMPLEFORMAT_INT) {
-        readTiff<short>(im, tiff, 0x0000ffff);
+        readTiff<int16_t>(im, tiff, 0x0000ffff);
 #ifndef NO_OPENEXR
     } else if (bytesPerSample == 2 && sampleFormat == SAMPLEFORMAT_IEEEFP) {
         readTiff<half>(im, tiff, 1);
 #endif
     } else if (bytesPerSample == 4 && sampleFormat == SAMPLEFORMAT_UINT) {
-        readTiff<unsigned int>(im, tiff, 0xffffffff);
+        readTiff<uint32_t>(im, tiff, 0xffffffff);
     } else if (bytesPerSample == 4 && sampleFormat == SAMPLEFORMAT_INT) {
-        readTiff<int>(im, tiff, 0xffffffff);
+        readTiff<int32_t>(im, tiff, 0xffffffff);
     } else if (bytesPerSample == 4 && sampleFormat == SAMPLEFORMAT_IEEEFP) {
         readTiff<float>(im, tiff, 1);
     } else if (bytesPerSample == 8 && sampleFormat == SAMPLEFORMAT_IEEEFP) {
@@ -119,40 +119,36 @@ Image load(string filename) {
 
 
 template<typename T>
-void writeTiff(Window im, TIFF *tiff, unsigned int multiplier) {
-
+void writeTiff(Image im, TIFF *tiff, unsigned int multiplier) {
 
     double minval = (double)std::numeric_limits<T>::min();
     double maxval = (double)std::numeric_limits<T>::max();
 
     bool clamped = false;
 
-    T *buffer = new T[im.width * im.channels];
+    vector<T> buffer(im.width * im.channels);
     for (int y = 0; y < im.height; y++) {
         for (int x = 0; x < im.width; x++) {
             for (int c = 0; c < im.channels; c++) {
-                double out = im(x, y)[c] * multiplier;
+                double out = im(x, y, c) * multiplier;
                 if (out < minval) {clamped = true; out = minval;}
                 if (out > maxval) {clamped = true; out = maxval;}
-                buffer[x *im.channels + c] = (T)(out);
+                buffer[x*im.channels + c] = (T)(out);
             }
         }
-        TIFFWriteScanline(tiff, buffer, y, 1);
+        TIFFWriteScanline(tiff, &buffer[0], y, 1);
     }
-
-    delete[] buffer;
 
     if (clamped) { printf("WARNING: Data exceeded the range [0, 1], so was clamped on writing.\n"); }
 }
 
-void save(Window im, string filename, string type) {
+void save(Image im, string filename, string type) {
     // Open 16-bit TIFF file for writing
     TIFF *tiff = TIFFOpen(filename.c_str(), "w");
     assert(tiff, "Could not open file %s\n", filename.c_str());
 
     if (type == "") {
         type = "uint16";
-        printf("WARNING: type not specified, assuming 16 bit unsigned int\n");
     }
 
     assert(im.frames == 1, "Can only save single frame tiffs\n");
@@ -177,19 +173,19 @@ void save(Window im, string filename, string type) {
     if (type == "int8" || type == "char") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 8);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_INT);
-        writeTiff<char>(im, tiff, 0x000000ff);
+        writeTiff<int8_t>(im, tiff, 0x000000ff);
     } else if (type == "uint8" || type == "unsigned char") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 8);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
-        writeTiff<unsigned char>(im, tiff, 0x000000ff);
+        writeTiff<uint8_t>(im, tiff, 0x000000ff);
     } else if (type == "int16" || type == "short") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 16);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_INT);
-        writeTiff<short>(im, tiff, 0x0000ffff);
+        writeTiff<int16_t>(im, tiff, 0x0000ffff);
     } else if (type == "uint16" || type == "unsigned short") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 16);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
-        writeTiff<unsigned short>(im, tiff, 0x0000ffff);
+        writeTiff<uint16_t>(im, tiff, 0x0000ffff);
 #ifndef NO_OPENEXR
     } else if (type == "float16" || type == "half") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 16);
@@ -199,11 +195,11 @@ void save(Window im, string filename, string type) {
     } else if (type == "int32" || type == "int") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 32);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_INT);
-        writeTiff<int>(im, tiff, 0xffffffff);
+        writeTiff<int32_t>(im, tiff, 0xffffffff);
     } else if (type == "uint32" || type == "unsigned int") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 32);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
-        writeTiff<unsigned int>(im, tiff, 0xffffffff);
+        writeTiff<uint32_t>(im, tiff, 0xffffffff);
     } else if (type == "float32" || type == "float") {
         TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 32);
         TIFFSetField(tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP);

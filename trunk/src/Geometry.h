@@ -5,122 +5,138 @@
 class Upsample : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int boxWidth, int boxHeight, int boxFrames = 1);
+    static Image apply(Image im, int boxWidth, int boxHeight, int boxFrames = 1);
 };
 
 class Downsample : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int boxWidth, int boxHeight, int boxFrames = 1);
+    static Image apply(Image im, int boxWidth, int boxHeight, int boxFrames = 1);
 };
 
 class Subsample : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int boxWidth, int boxHeight, int boxFrames,
+    static Image apply(Image im, int boxWidth, int boxHeight, int boxFrames,
                        int offsetX, int offsetY, int offsetT);
-    static Image apply(Window im, int boxWidth, int boxHeight,
+    static Image apply(Image im, int boxWidth, int boxHeight,
                        int offsetX, int offsetY);
-    static Image apply(Window im, int boxFrames, int offsetT);
+    static Image apply(Image im, int boxFrames, int offsetT);
 };
 
 class Interleave : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, int rx, int ry, int rt = 1);
+    static void apply(Image im, int rx, int ry, int rt = 1);
 };
 
 class Deinterleave : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, int ix, int iy, int it = 1);
+    static void apply(Image im, int ix, int iy, int it = 1);
 };
 
 class Resample : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int width, int height);
-    static Image apply(Window im, int width, int height, int frames);
+    static Image apply(Image im, int width, int height);
+    static Image apply(Image im, int width, int height, int frames);
 private:
-    static Image resampleT(Window im, int frames);
-    static Image resampleX(Window im, int width);
-    static Image resampleY(Window im, int height);
+    static void computeWeights(int oldSize, int newSize, vector<vector<pair<int, float> > > &matrix);
+    static Image resampleT(Image im, int frames);
+    static Image resampleX(Image im, int width);
+    static Image resampleY(Image im, int height);
 };
 
 class Rotate : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, float degrees);
+    static Image apply(Image im, float degrees);
 };
 
 class AffineWarp : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, vector<double> warp);
+    static Image apply(Image im, vector<float> warp);
+    static Image apply(Image im, float *warp);
 };
 
 class Crop : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int minX, int minY, int width, int height);
-    static Image apply(Window im, int minX, int minY, int minT, int width, int height, int frames);
-    static Image apply(Window im);
+    static Image apply(Image im, int minX, int minY, int width, int height);
+    static Image apply(Image im, int minX, int minY, int minT, int width, int height, int frames);
+    static Image apply(Image im);
 };
 
 class Flip : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, char dimension);
+    static void apply(Image im, char dimension);
 };
 
 class Adjoin : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window a, Window b, char dimension);
+    static Image apply(Image a, Image b, char dimension);
 };
 
 class Transpose : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, char arg1, char arg2);
+    static Image apply(Image im, char arg1, char arg2);
 };
 
 class Translate : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, float xoff, float yoff, float toff = 0);
+    static Image apply(Image im, float xoff, float yoff, float toff = 0);
 private:
-    static Image applyX(Window im, float xoff);
-    static Image applyY(Window im, float yoff);
-    static Image applyT(Window im, float toff);
+    static Image applyX(Image im, float xoff);
+    static Image applyY(Image im, float yoff);
+    static Image applyT(Image im, float toff);
 };
 
 class Paste : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window into, Window from,
+    static void apply(Image into, Image from,
                       int xdst, int ydst,
                       int xsrc, int ysrc,
                       int width, int height);
 
-    static void apply(Window into, Window from,
+    static void apply(Image into, Image from,
                       int xdst, int ydst, int tdst = 0);
 
-    static void apply(Window into, Window from,
+    static void apply(Image into, Image from,
                       int xdst, int ydst, int tdst,
                       int xsrc, int ysrc, int tsrc,
                       int width, int height, int frames);
@@ -129,36 +145,40 @@ public:
 class Tile : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int xTiles, int yTiles, int tTiles = 1);
+    static Image apply(Image im, int xTiles, int yTiles, int tTiles = 1);
 };
 
 class TileFrames : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int xTiles, int yTiles);
+    static Image apply(Image im, int xTiles, int yTiles);
 };
 
 class FrameTiles : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int xTiles, int yTiles);
+    static Image apply(Image im, int xTiles, int yTiles);
 };
 
 class Warp : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window coords, Window source);
+    static Image apply(Image coords, Image source);
 };
 
 class Reshape : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int newWidth, int newHeight, int newFrames, int newChannels);
     static Image apply(Image im, int newWidth, int newHeight, int newFrames, int newChannels);
 };
 

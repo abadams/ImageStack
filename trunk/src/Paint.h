@@ -5,30 +5,34 @@
 class Eval : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, string expression);
+    static Image apply(Image im, string expression);
 };
 
 class EvalChannels : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, vector<string> expressions);
+    static Image apply(Image im, vector<string> expressions);
 };
 
 class Plot : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int width, int height, float lineThickness);
+    static Image apply(Image im, int width, int height, float lineThickness);
 };
 
 class Composite : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window dst, Window src);
-    static void apply(Window dst, Window src, Window mask);
+    static void apply(Image dst, Image src);
+    static void apply(Image dst, Image src, Image mask);
 };
 
 #include "footer.h"

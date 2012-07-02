@@ -5,12 +5,13 @@
 class Dimensions : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
 };
 
 class Stats {
 public:
-    Stats(Window im);
+    Stats(Image im);
 
 #define BASIC if (!basicStatsComputed) computeBasicStats();
 #define MOMENT if (!momentsComputed) computeMoments();
@@ -35,8 +36,8 @@ public:
     inline double kurtosis()      {MOMENT; return kurtosis_;}
     inline double barycenterX(int c) { MOMENT; return barycenters[c*2]; }
     inline double barycenterY(int c) { MOMENT; return barycenters[c*2+1]; }
-    inline double spatialvarianceX(int c) { MOMENT; return spatialvariances[c*2]; }
-    inline double spatialvarianceY(int c) { MOMENT; return spatialvariances[c*2+1]; }
+    inline double spatialVarianceX(int c) { MOMENT; return spatialVariances[c*2]; }
+    inline double spatialVarianceY(int c) { MOMENT; return spatialVariances[c*2+1]; }
 
 #undef BASIC
 #undef MOMENT
@@ -46,11 +47,11 @@ private:
     bool basicStatsComputed;
     void computeMoments();
     bool momentsComputed;
-    Window im_;
+    Image im_;
 
     int channels;
     vector<double> sums, means, variances, kurtoses, skews, mins, maxs;
-    vector<double> barycenters, spatialvariances;
+    vector<double> barycenters, spatialVariances;
     vector<double> covarianceMatrix;
     double sum_, mean_, variance_, min_, max_, kurtosis_, skew_;
     int nans_, neginfs_, posinfs_;
@@ -59,77 +60,90 @@ private:
 class Statistics : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im);
+    static void apply(Image im);
 };
 
 class Noise : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, float minVal, float maxVal);
+    static void apply(Image im, float minVal, float maxVal);
 };
 
 class Histogram : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int buckets = 256, float minVal = 0, float maxVal = 1);
+    static Image apply(Image im, int buckets = 256, float minVal = 0, float maxVal = 1);
 };
 
 
 class Equalize : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, float lower, float upper);
+    static void apply(Image im, float lower, float upper);
 };
 
 
 class HistogramMatch : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, Window model);
+    static void apply(Image im, Image model);
 };
 
 
 class Shuffle : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im);
+    static void apply(Image im);
 };
 
 class KMeans : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, int clusters);
+    static void apply(Image im, int clusters);
 };
 
 class Sort : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, char dimension);
+    static void apply(Image im, char dimension);
 };
 
 class DimensionReduction : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, int newChannels);
+    static void apply(Image im, int newChannels);
 };
 
 class LocalMaxima : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
 
     struct Maximum {
-        float value;
-        float t, x, y;
+        float x, y, t, value;
+
+        Maximum() : x(0), y(0), t(0), value(0) {}
+        Maximum(float x_, float y_, float t_, float value_) :
+            x(x_), y(y_), t(t_), value(value_) {}
 
         bool operator<(const Maximum &other) const {
             return (value < other.value);
@@ -148,42 +162,47 @@ public:
         }
 
     };
-    static vector<Maximum> apply(Window im, bool xCheck, bool yCheck, bool tCheck, float threshold, float minDistance);
+    static vector<Maximum> apply(Image im, bool xCheck, bool yCheck, bool tCheck, float threshold, float minDistance);
 };
 
 class Printf : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, string fmt, vector<float> args);
+    static void apply(Image im, string fmt, vector<float> args);
 };
 
 class FPrintf : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, string filename, string fmt, vector<float> args);
+    static void apply(Image im, string filename, string fmt, vector<float> args);
 };
 
 class PCA : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, int newChannels);
+    static Image apply(Image im, int newChannels);
 };
 
 class PatchPCA : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, float sigma, int newChannels);
+    static Image apply(Image im, float sigma, int newChannels);
 };
 
 class PatchPCA3D : public Operation {
 public:
     void help();
+    bool test();
     void parse(vector<string> args);
-    static Image apply(Window im, float sigma, int newChannels);
+    static Image apply(Image im, float sigma, int newChannels);
 };
 
 #include "footer.h"

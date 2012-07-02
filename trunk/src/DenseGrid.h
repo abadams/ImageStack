@@ -16,86 +16,88 @@
 class DenseGrid {
 public:
 
-    static Image filter(Image im, Image ref, float accuracy, size_t *memory) {
-        int taps;
-        if (accuracy < 0.25) {
-            taps = 1;
-            // variance = 0
-        } else if (accuracy < 0.5) {
-            taps = 3;
-            // tent
-            // [1 2 1]/4
-            // variance = 0.5
-        } else if (accuracy < 0.75) {
-            taps = 5;
-            // quadratic
-            // [1 4 6 4 1]/16
-            // variance = 1
-        } else {
-            taps = 7;
-            // cubic
-            // [1 6 15 20 15 6 1]/64
-            // variance = 1.5
-        }
+    /*
+      static Image filter(Image im, Image ref, float accuracy, size_t *memory) {
+          int taps;
+          if (accuracy < 0.25) {
+              taps = 1;
+              // variance = 0
+          } else if (accuracy < 0.5) {
+              taps = 3;
+              // tent
+              // [1 2 1]/4
+              // variance = 0.5
+          } else if (accuracy < 0.75) {
+              taps = 5;
+              // quadratic
+              // [1 4 6 4 1]/16
+              // variance = 1
+          } else {
+              taps = 7;
+              // cubic
+              // [1 6 15 20 15 6 1]/64
+              // variance = 1.5
+          }
 
-        DenseGrid grid(ref.channels, im.channels+1, taps);
+          DenseGrid grid(ref.channels, im.channels+1, taps);
 
-        //printf("Allocating...\n");
-        float *refPtr = ref(0, 0, 0);
-        for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {
-                for (int x = 0; x < im.width; x++) {
-                    grid.preview(refPtr);
-                    refPtr += ref.channels;
-                }
-            }
-        }
+          //printf("Allocating...\n");
+          float *refPtr = ref(0, 0, 0);
+          for (int t = 0; t < im.frames; t++) {
+              for (int y = 0; y < im.height; y++) {
+                  for (int x = 0; x < im.width; x++) {
+                      grid.preview(refPtr);
+                      refPtr += ref.channels;
+                  }
+              }
+          }
 
-        //printf("Splatting...\n");
+          //printf("Splatting...\n");
 
-        float *col = new float[im.channels+1];
-        col[im.channels] = 1;
+          float *col = new float[im.channels+1];
+          col[im.channels] = 1;
 
-        float *imPtr = im(0, 0, 0);
-        refPtr = ref(0, 0, 0);
-        for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {
-                for (int x = 0; x < im.width; x++) {
-                    for (int c = 0; c < im.channels; c++) {
-                        col[c] = *imPtr++;
-                    }
-                    grid.splat(refPtr, col);
-                    refPtr += ref.channels;
-                }
-            }
-        }
+          float *imPtr = im(0, 0, 0);
+          refPtr = ref(0, 0, 0);
+          for (int t = 0; t < im.frames; t++) {
+              for (int y = 0; y < im.height; y++) {
+                  for (int x = 0; x < im.width; x++) {
+                      for (int c = 0; c < im.channels; c++) {
+                          col[c] = *imPtr++;
+                      }
+                      grid.splat(refPtr, col);
+                      refPtr += ref.channels;
+                  }
+              }
+          }
 
-        //printf("Blurring...\n");
+          //printf("Blurring...\n");
 
-        grid.blur();
+          grid.blur();
 
-        //printf("Slicing...\n");
-        Image out = im.copy();
+          //printf("Slicing...\n");
+          Image out = im.copy();
 
-        float *outPtr = out(0, 0, 0);
-        refPtr = ref(0, 0, 0);
-        for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {
-                for (int x = 0; x < im.width; x++) {
-                    grid.slice(refPtr, col);
-                    float scale = 1.0f/col[im.channels];
-                    for (int c = 0; c < im.channels; c++) {
-                        *outPtr++ = col[c]*scale;
-                    }
-                    refPtr += ref.channels;
-                }
-            }
-        }
+          float *outPtr = out(0, 0, 0);
+          refPtr = ref(0, 0, 0);
+          for (int t = 0; t < im.frames; t++) {
+              for (int y = 0; y < im.height; y++) {
+                  for (int x = 0; x < im.width; x++) {
+                      grid.slice(refPtr, col);
+                      float scale = 1.0f/col[im.channels];
+                      for (int c = 0; c < im.channels; c++) {
+                          *outPtr++ = col[c]*scale;
+                      }
+                      refPtr += ref.channels;
+                  }
+              }
+          }
 
-        *memory = grid.memoryUsed();
+          *memory = grid.memoryUsed();
 
-        return out;
-    }
+          return out;
+      }
+    */
 
     DenseGrid(int d_, int vd_, int taps_ = 3) : d(d_), vd(vd_), taps(taps_) {
         scaleFactor = new float[d];
@@ -105,6 +107,7 @@ public:
         minPosition = NULL;
         maxPosition = NULL;
         stride = NULL;
+        sizes = NULL;
         grid = NULL;
 
         for (int i = 0; i < d; i++) {
@@ -134,6 +137,7 @@ public:
         delete[] minPosition;
         delete[] maxPosition;
         delete[] stride;
+        delete[] sizes;
         delete[] grid;
     }
 
@@ -272,9 +276,9 @@ private:
 
             }
         }
-        delete rowLocation;
-        delete tmp1;
-        delete tmp2;
+        delete[] rowLocation;
+        delete[] tmp1;
+        delete[] tmp2;
     }
 
     template<bool splatting>

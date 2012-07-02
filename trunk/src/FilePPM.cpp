@@ -38,34 +38,43 @@ Note that another popular color space is the newer sRGB. A common variation on P
 namespace FilePPM {
 
 void help() {
-    printf(".ppm files, of either 8 or 16 bit depth. When saving, an optional second\n"
-           "argument, which defaults to 8, specifies the bit depth. ppm files always\n"
-           "have three channels and one frame.\n");
+    pprintf(".ppm and .pgm files, of either 8 or 16 bit depth. When saving, an"
+            " optional second argument, which defaults to 16, specifies the bit"
+            " depth. ppm files always have three channels and one frame, while pgm"
+            " files have one channel.\n");
 }
 
 Image load(string filename) {
     FILE *f = fopen(filename.c_str(), "rb");
     assert(f, "Could not open file %s", filename.c_str());
 
+    // Check the suffix to distinguish between ppm and pgm
+    bool gray = tolower(filename[filename.size()-2]) == 'g';
+
     // get the magic number
-    assert(fgetc(f) == 'P' && fgetc(f) == '6',
-           "File does not start with ppm magic number: 'P6'");
+    if (gray) {
+        assert(fgetc(f) == 'P' && fgetc(f) == '5',
+               "File does not start with pgm magic number: 'P5'");
+    } else {
+        assert(fgetc(f) == 'P' && fgetc(f) == '6',
+               "File does not start with ppm magic number: 'P6'");
+    }
 
     int width, height, maxval;
-    assert(fscanf(f, " %d %d %d", &width, &height, &maxval) == 3, "Could not read image dimensions from ppm");
+    assert(fscanf(f, " %20d %20d %20d", &width, &height, &maxval) == 3, "Could not read image dimensions from ppm");
 
     // remove the next whitespace char
     fgetc(f);
 
-    Image im(width, height, 1, 3);
+    Image im(width, height, 1, gray ? 1 : 3);
 
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            for (int c = 0; c < 3; c++) {
+    for (int y = 0; y < im.height; y++) {
+        for (int x = 0; x < im.width; x++) {
+            for (int c = 0; c < im.channels; c++) {
                 if (maxval > 255) {
-                    im(x, y)[c] = (float)(((fgetc(f) & 255) << 8) + (fgetc(f) & 255)) / maxval;
+                    im(x, y, c) = (float)(((fgetc(f) & 255) << 8) + (fgetc(f) & 255)) / maxval;
                 } else {
-                    im(x, y)[c] = (float)(fgetc(f)) / maxval;
+                    im(x, y, c) = (float)(fgetc(f)) / maxval;
                 }
             }
         }
@@ -76,22 +85,27 @@ Image load(string filename) {
     return im;
 }
 
-void save(Window im, string filename, int depth) {
+void save(Image im, string filename, int depth) {
     FILE *f = fopen(filename.c_str(), "wb");
     assert(f, "Could not open file %s\n", filename.c_str());
     assert(depth == 16 || depth == 8, "bit depth must be 8 or 16\n");
-    assert(im.frames == 1, "can only save single frame ppms\n");
-    assert(im.channels == 3, "can only save three channel ppms\n");
+    assert(im.frames == 1, "can only save single frame ppms/pgms\n");
+    assert(im.channels == 3 || im.channels == 1, "can only save one or three channel ppms/pgms\n");
 
     int maxval = (1 << depth) - 1;
 
-    fprintf(f, "P6\n");
+    bool gray = im.channels == 1;
+    if (gray) {
+        fprintf(f, "P5\n");
+    } else {
+        fprintf(f, "P6\n");
+    }
     fprintf(f, "%d %d\n%d\n", im.width, im.height, maxval);
 
     for (int y = 0; y < im.height; y++) {
         for (int x = 0; x < im.width; x++) {
-            for (int c = 0; c < 3; c++) {
-                float val = im(x, y)[c];
+            for (int c = 0; c < im.channels; c++) {
+                float val = im(x, y, c);
                 val = clamp(val, 0.0f, 1.0f);
                 val *= maxval;
                 if (maxval < 256) {

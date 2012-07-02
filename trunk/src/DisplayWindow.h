@@ -17,7 +17,7 @@
 // a singleton SDL window
 class DisplayWindow {
 public:
-    static DisplayWindow *instance();
+    static DisplayWindow &instance();
     void setMode(int width, int height, bool fullscreen = false, bool cursorVisible = true,
                  float bgRed = 0, float bgGreen = 0, float bgBlue = 0);
 
@@ -25,7 +25,7 @@ public:
     int  height() {return height_;}
     bool fullscreen() {return fullscreen_;}
 
-    void setImage(Window im);
+    void setImage(Image im);
 
     void setOffset(int tOffset, int xOffset, int yOffset);
     int  xOffset() {return xOffset_;}

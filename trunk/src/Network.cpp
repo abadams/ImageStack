@@ -162,17 +162,13 @@ Image TCPConnection::recvImage() {
     unsigned int header[4];
     recv((char *)header, 4*sizeof(unsigned int));
 
-    Image im(ntohl(header[0]), ntohl(header[1]), ntohl(header[2]), ntohl(header[3]));
+    Image im(header[0], header[1], header[2], header[3]);
 
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            // receive a scanline
-            unsigned int *scanline = (unsigned int *)im(0, y, t);
-            recv((char *)scanline, im.width * im.channels * sizeof(float));
-
-            // ntohl the scanline
-            for (int i = 0; i < im.width * im.channels; i++) {
-                scanline[i] = ntohl(scanline[i]);
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                // receive a scanline
+                recv((char *)&im(0, y, t, c), im.width * sizeof(float));
             }
         }
     }
@@ -180,32 +176,22 @@ Image TCPConnection::recvImage() {
     return im;
 }
 
-void TCPConnection::sendImage(Window im) {
+void TCPConnection::sendImage(Image im) {
     // Send the header first (4 32-bit unsigned integers)
     unsigned header[4];
-    header[0] = htonl(im.width);
-    header[1] = htonl(im.height);
-    header[2] = htonl(im.frames);
-    header[3] = htonl(im.channels);
-
+    header[0] = im.width;
+    header[1] = im.height;
+    header[2] = im.frames;
+    header[3] = im.channels;
     send((char *)header, sizeof(header));
 
-    unsigned int *scanline = new unsigned int[im.width * im.channels];
-
-    for (int t = 0; t < im.frames; t++) {
-        for (int y = 0; y < im.height; y++) {
-            // byte swap a scanline and send it
-            memcpy(scanline, im(0, y, t), im.width * im.channels * sizeof(float));
-
-            for (int i = 0; i < im.width * im.channels; i++) {
-                scanline[i] = htonl(scanline[i]);
+    for (int c = 0; c < im.channels; c++) {
+        for (int t = 0; t < im.frames; t++) {
+            for (int y = 0; y < im.height; y++) {
+                send((char *)&im(0, y, t, c), im.width * sizeof(float));
             }
-
-            send((char *)scanline, im.width * im.channels * sizeof(float));
         }
     }
-
-    delete[] scanline;
 }
 
 

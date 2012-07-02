@@ -12,9 +12,10 @@ void help() {
             " 2-band float image for horizontal and vertical flow components.\n");
 }
 
-void save(Window im, string filename) {
+void save(Image im, string filename) {
 
     assert(im.channels == 2, "image must have 2 channels", filename.c_str());
+    assert(im.frames == 1, "Can only save single-frame .flo files\n");
 
     FILE *stream = fopen(filename.c_str(), "wb");
     assert(stream, "Could not open %s", filename.c_str());
@@ -26,9 +27,16 @@ void save(Window im, string filename) {
         panic("problem writing header: %s", filename.c_str());
     }
 
-    fwrite(im(0, 0, 0), sizeof(float), im.width * im.height * im.channels, stream);
-    fclose(stream);
+    vector<float> scanline(im.width*2);
+    for (int y = 0; y < im.height; y++) {
+        for (int x = 0; x < im.width; x++) {
+            scanline[x*2] = im(x, y, 0);
+            scanline[x*2+1] = im(x, y, 1);
+        }
+        fwrite(&scanline[0], sizeof(float), im.width*2, stream);
+    }
 
+    fclose(stream);
 }
 
 Image load(string filename) {
@@ -52,9 +60,16 @@ Image load(string filename) {
 
     Image out(width, height, 1, 2);
 
-    size_t n = width*height*out.channels;
-    assert(fread(out(0, 0, 0), sizeof(float), n, stream) == n,
-           "Unexpected end of file\n");
+    vector<float> scanline(width*2);
+
+    for (int y = 0; y < height; y++) {
+        assert(fread(&scanline[0], sizeof(float), width*2, stream) == (size_t)width*2,
+               "Unexpected end of file\n");
+        for (int x = 0; x < width; x++) {
+            out(x, y, 0) = scanline[2*x];
+            out(x, y, 1) = scanline[2*x+1];
+        }
+    }
 
     fclose(stream);
 

@@ -6,8 +6,9 @@ class Display : public Operation {
 public:
     ~Display();
     void help();
+    bool test();
     void parse(vector<string> args);
-    static void apply(Window im, bool fullscreen = false);
+    static void apply(Image im, bool fullscreen = false);
 };
 
 

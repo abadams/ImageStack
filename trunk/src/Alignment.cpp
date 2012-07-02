@@ -348,11 +348,11 @@ public:
                 float gridX = m.x + i - 7.5;
                 float gridY = m.y + j - 7.5;
                 float weight = fastexp(-((i-7.5)*(i-7.5)+(j-7.5)*(j-7.5)) / (2*(1.5*(*sigma)[it+1])*(1.5*(*sigma)[it+1])));
-                float value;
-                ornPyramid[it-1].sample2DLinear(gridX, gridY, &value);
-                int index = floor((value + M_PI) * 36 / (2 * M_PI));
-                magPyramid[it-1].sample2DLinear(gridX, gridY, &value);
-                hist[index] += value * weight;
+                vector<float> value(1);
+                ornPyramid[it-1].sample2DLinear(gridX, gridY, 0, value);
+                int index = floor((value[0] + M_PI) * 36 / (2 * M_PI));
+                magPyramid[it-1].sample2DLinear(gridX, gridY, 0, value);
+                hist[index] += value[0] * weight;
             }
         }
 
@@ -397,8 +397,6 @@ public:
     // 128-bit SIFT-like descriptor.
     struct Descriptor {
     public:
-        Descriptor() {}
-
         Descriptor(LocalMaxima::Maximum m,
                    Image *magPyramid, Image *ornPyramid,
                    vector<float> *sigma, float orientation) {
@@ -428,15 +426,15 @@ public:
                             float rotY = sin(orientation)*gridX  + cos(orientation)*gridY;
 
                             float weight = fastexp(-(gridX*gridX+gridY*gridY) / (2*(1.5*(*sigma)[it+1])*(1.5*(*sigma)[it+1])));
-                            float value;
-                            ornPyramid[it-1].sample2DLinear(m.x+rotX, m.y+rotY, &value);
-                            value -= orientation;
-                            value = value<-M_PI ? value+2*M_PI : value>M_PI ? value-2*M_PI : value;
+                            vector<float> value(1);
+                            ornPyramid[it-1].sample2DLinear(m.x+rotX, m.y+rotY, 0, value);
+                            value[0] -= orientation;
+                            value[0] = value[0] < -M_PI ? value[0]+2*M_PI : value[0] > M_PI ? value[0]-2*M_PI : value[0];
 
-                            int ivalue = floor((value+M_PI) * 8 / (2 * M_PI));
-                            magPyramid[it-1].sample2DLinear(m.x+rotX, m.y+rotY, &value);
+                            int ivalue = floor((value[0]+M_PI) * 8 / (2 * M_PI));
+                            magPyramid[it-1].sample2DLinear(m.x+rotX, m.y+rotY, 0, value);
 
-                            hist[ivalue] += value * weight;
+                            hist[ivalue] += value[0] * weight;
 
                         }
                     }
@@ -477,15 +475,13 @@ public:
 
     struct Feature : public LocalMaxima::Maximum {
     public:
-        Feature(LocalMaxima::Maximum m, Image *magPyramid, Image *ornPyramid, vector<float> *sigma, float orientation) {
-            x = m.x;
-            y = m.y;
-            t = floor(m.t + 0.5);
-
-            value = m.value;
-            descriptor = Descriptor(m, magPyramid, ornPyramid, sigma, orientation);
-            usage = 0;
-        }
+        Feature(LocalMaxima::Maximum m,
+                Image *magPyramid, Image *ornPyramid,
+                vector<float> *sigma, float orientation) :
+            LocalMaxima::Maximum(m.x, m.y, floor(m.t+0.5), m.value),
+            usage(0),
+            descriptor(m, magPyramid, ornPyramid, sigma, orientation)
+        {}
 
         // Distance between two features is the sum of squared differences between the two descriptors
         float distance(Feature *other) {
@@ -504,9 +500,6 @@ public:
         // features is used, so we don't depend too heavily on a
         // single feature.
         int usage;
-
-        bool usePatch;
-        Window patch;
         Descriptor descriptor;
     };
 
@@ -527,7 +520,7 @@ public:
         }
     };
 
-    Digest(Window im) {
+    Digest(Image im) {
 
         // Convert to grayscale
         vector<float> grayMatrix;
@@ -537,10 +530,6 @@ public:
         Image gray = ColorMatrix::apply(im, grayMatrix);
 
         // Gaussian Pyramid
-        // k1: first sigma, k: scale factor between each level
-        // GAUSSIAN_LEVELS: number of pyramid levels
-        float k1 = 1.6f, k = sqrtf(2.0f);
-
         const int gaussianLevels = 5;
 
         vector<float> sigma;
@@ -548,12 +537,11 @@ public:
         Image ornPyramid[gaussianLevels-3];
         Image gPyramid = Upsample::apply(gray, 1, 1, gaussianLevels);
 
-        float sig = k1;
+        float sig = 1.6f, sigScale = sqrtf(2.0f);
         for (int i = 0; i < gaussianLevels; i++) {
             sigma.push_back(sig);
-            Window level(gPyramid, 0, 0, i, gPyramid.width, gPyramid.height, 1);
-            FastBlur::apply(level, sig, sig, 0);
-            sig *= k;
+            FastBlur::apply(gPyramid.frame(i), sig, sig, 0);
+            sig *= sigScale;
         }
 
         // Magnitude and phase of gradient images
@@ -563,30 +551,22 @@ public:
 
             for (int y=1; y<gray.height-1; y++) {
 
-                Window level(gPyramid, 0, 0, i+2, gPyramid.width, gPyramid.height, 1);
-                float *mPtr = magPyramid[i](1,y);
-                float *oPtr = ornPyramid[i](1,y);
-                float *dx1Ptr = level(0,y);
-                float *dx2Ptr = level(2,y);
-                float *dy1Ptr = level(1,y-1);
-                float *dy2Ptr = level(1,y+1);
-
+                Image level = gPyramid.frame(i+2);
                 for (int x=1; x<gray.width-1; x++) {
-                    float dx = *dx1Ptr++ - *dx2Ptr++;
-                    float dy = *dy1Ptr++ - *dy2Ptr++;
-                    *mPtr++ = sqrt(dx*dx + dy*dy);
-                    *oPtr++ = atan2f(dy, dx);
+                    float dx = level(x-1, y) - level(x+1, y);
+                    float dy = level(x, y-1) - level(x, y+1);
+                    magPyramid[i](x, y) = sqrt(dx*dx + dy*dy);
+                    ornPyramid[i](x, y) = atan2f(dy, dx);
                 }
             }
         }
 
         // DoG Pyramid
         for (int i = 0; i < gaussianLevels-1; i++) {
-            Window thisLevel(gPyramid, 0, 0, i, gPyramid.width, gPyramid.height, 1);
-            Window nextLevel(gPyramid, 0, 0, i+1, gPyramid.width, gPyramid.height, 1);
-            Subtract::apply(thisLevel, nextLevel);
+            gPyramid.frame(i) -= gPyramid.frame(i+1);
         }
-        Window dogPyramid(gPyramid, 0, 0, 0, gPyramid.width, gPyramid.height, gaussianLevels-1);
+        Image dogPyramid = gPyramid.region(0, 0, 0, 0,
+                                           gPyramid.width, gPyramid.height, gaussianLevels-1, gPyramid.channels);
 
 
         // Find local maxima
@@ -609,21 +589,22 @@ public:
             float mx = maxima[i].x;
             float my = maxima[i].y;
             Image patch(3,3,1,1);
-            float *ptr = patch(0,0,0);
             if (mt < 0 || mt >= gaussianLevels) {
                 j--;
                 continue;
             }
 
-            for (int y=-1; y<=1; y++) {
-                for (int x=-1; x<=1; x++) {
-                    dogPyramid.sample2DLinear(mx+x, my+y, mt, ptr++);
+            vector<float> sample(1);
+            for (int y = -1; y <= 1; y++) {
+                for (int x = -1; x <= 1; x++) {
+                    dogPyramid.sample2DLinear(mx+x, my+y, mt, sample);
+                    patch(x+1, y+1) = sample[0];
                 }
             }
 
-            float Dxx = patch(0,1)[0] - 2 * patch(1,1)[0] + patch(2,1)[0];
-            float Dyy = patch(1,0)[0] - 2 * patch(1,1)[0] + patch(1,2)[0];
-            float Dxy = (patch(0,0)[0] - patch(0,2)[0] + patch(2,2)[0] - patch(2,0)[0])/4;
+            float Dxx = patch(0,1) - 2 * patch(1,1) + patch(2,1);
+            float Dyy = patch(1,0) - 2 * patch(1,1) + patch(1,2);
+            float Dxy = (patch(0,0) - patch(0,2) + patch(2,2) - patch(2,0))/4;
             float ratio = (Dxx+Dyy)*(Dxx+Dyy)/(Dxx*Dyy-Dxy*Dxy);
             if (ratio > 10 || ratio < 0) {
                 j--;
@@ -636,7 +617,7 @@ public:
             // Assign multiple descriptors if has multiple major orientations
             vector<float> orientations;
             findOrientations(maxima[i], magPyramid, ornPyramid, &sigma, &orientations);
-            for (int k=0; k<(int)orientations.size(); k++) {
+            for (int k = 0; k < (int)orientations.size(); k++) {
                 corners.push_back(Feature(maxima[i], magPyramid, ornPyramid, &sigma, orientations[k]));
             }
 
@@ -651,19 +632,19 @@ public:
     // least squares
     Transform *align(Digest &other, Align::Mode m, int *inliers) {
         Transform *transform = NULL, *refined = NULL;
-        if (m == Align::TRANSLATE) {
+        if (m == Align::Translate) {
             transform = new Translation();
             refined   = new Translation();
-        } else if (m == Align::SIMILARITY) {
+        } else if (m == Align::Similarity) {
             transform = new Similarity();
             refined   = new Similarity();
-        } else if (m == Align::RIGID) {
+        } else if (m == Align::Rigid) {
             transform = new Rigid();
             refined   = new Rigid();
-        } else if (m == Align::AFFINE) {
+        } else if (m == Align::Affine) {
             transform = new Affine();
             refined   = new Affine();
-        } else if (m == Align::PERSPECTIVE) {
+        } else if (m == Align::Perspective) {
             transform = new Perspective();
             refined   = new Perspective();
         } else {
@@ -832,7 +813,7 @@ public:
     }
 
     // Visualize feature locations
-    void displayFeatures(Window out) {
+    void displayFeatures(Image out) {
 
         for (int i=0; i<(int)corners.size(); i++) {
 
@@ -843,14 +824,14 @@ public:
 
             for (int j=-4; j<=4; j++) {
                 if (x+j >= 0 && x+j < out.width) {
-                    out(x+j, y, t)[0] = 1;
-                    out(x+j, y, t)[1] = 0;
-                    out(x+j, y, t)[2] = 0;
+                    out(x+j, y, t, 0) = 1;
+                    out(x+j, y, t, 1) = 0;
+                    out(x+j, y, t, 2) = 0;
                 }
                 if (y+j >= 0 && y+j < out.height) {
-                    out(x, y+j, t)[0] = 1;
-                    out(x, y+j, t)[1] = 0;
-                    out(x, y+j, t)[2] = 0;
+                    out(x, y+j, t, 0) = 1;
+                    out(x, y+j, t, 1) = 0;
+                    out(x, y+j, t, 2) = 0;
                 }
             }
         }
@@ -872,21 +853,30 @@ void Align::help() {
            "                  -add -save ab.jpg\n\n");
 }
 
+bool Align::test() {
+    Image a = Load::apply("pics/dog1.jpg");
+    Image b = Rotate::apply(a, 37);
+    b *= 0.9;
+    Image result = Align::apply(a, b, Perspective);
+    Image correct = Rotate::apply(b, -37);
+    return nearlyEqual(result, correct);
+}
+
 void Align::parse(vector<string> args) {
     assert(args.size() == 1, "-align takes one argument\n");
 
     Image result;
 
     if (args[0] == "translate") {
-        result = apply(stack(1), stack(0), TRANSLATE);
+        result = apply(stack(1), stack(0), Translate);
     } else if (args[0] == "similarity") {
-        result = apply(stack(1), stack(0), SIMILARITY);
+        result = apply(stack(1), stack(0), Similarity);
     } else if (args[0] == "affine") {
-        result = apply(stack(1), stack(0), AFFINE);
+        result = apply(stack(1), stack(0), Affine);
     } else if (args[0] == "rigid") {
-        result = apply(stack(1), stack(0), RIGID);
+        result = apply(stack(1), stack(0), Rigid);
     } else if (args[0] == "perspective") {
-        result = apply(stack(1), stack(0), PERSPECTIVE);
+        result = apply(stack(1), stack(0), Perspective);
     } else {
         panic("Unknown alignment type: %s. Must be translate, rigid, similarity, affine, or perspective.\n", args[0].c_str());
     }
@@ -896,7 +886,7 @@ void Align::parse(vector<string> args) {
 
 
 // Warp window b to match window a
-Image Align::apply(Window a, Window b, Mode m) {
+Image Align::apply(Image a, Image b, Mode m) {
 
     // Iterative scale pyramid alignment
 #define SCALE_LEVELS 3
@@ -942,13 +932,17 @@ Image Align::apply(Window a, Window b, Mode m) {
         }
     }
 
-    Image out(a);
+    Image out = a.copy();
+    vector<float> sample(a.channels);
     for (int t = 0; t < out.frames; t++) {
         for (int y = 0; y < out.height; y++) {
             for (int x = 0; x < out.width; x++) {
                 float fx, fy;
                 bestTransform->apply(x, y, &fx, &fy);
-                b.sample2D(fx, fy, t, out(x, y, t));
+                b.sample2D(fx, fy, t, sample);
+                for (int c = 0; c < out.channels; c++) {
+                    out(x, y, t, c) = sample[c];
+                }
             }
         }
     }
@@ -962,28 +956,35 @@ Image Align::apply(Window a, Window b, Mode m) {
 
 
 void AlignFrames::help() {
+    pprintf("-alignframes uses -align to align all frames in a volume to match.\n"
+            "\n"
+            "Usage: ImageStack -loadframes *.jpg -alignframes -downsample 1 1 frames -save average.jpg\n");
+}
 
+bool AlignFrames::test() {
+    // This just calls -align repeatedly
+    return true;
 }
 
 void AlignFrames::parse(vector<string> args) {
     assert(args.size() == 1, "-alignframes takes one argument\n");
 
     if (args[0] == "translate") {
-        apply(stack(0), Align::TRANSLATE);
+        apply(stack(0), Align::Translate);
     } else if (args[0] == "similarity") {
-        apply(stack(0), Align::SIMILARITY);
+        apply(stack(0), Align::Similarity);
     } else if (args[0] == "affine") {
-        apply(stack(0), Align::AFFINE);
+        apply(stack(0), Align::Affine);
     } else if (args[0] == "rigid") {
-        apply(stack(0), Align::RIGID);
+        apply(stack(0), Align::Rigid);
     } else if (args[0] == "perspective") {
-        apply(stack(0), Align::PERSPECTIVE);
+        apply(stack(0), Align::Perspective);
     } else {
         panic("Unknown alignment type: %s. Must be translate, rigid, similarity, affine, or perspective.\n", args[0].c_str());
     }
 }
 
-void AlignFrames::apply(Window im, Align::Mode m) {
+void AlignFrames::apply(Image im, Align::Mode m) {
 
     assert(im.frames > 1, "Input must have at least two frames\n");
 
@@ -994,9 +995,7 @@ void AlignFrames::apply(Window im, Align::Mode m) {
 
     printf("Extracting features...\n");
     for (int t = 0; t < im.frames; t++) {
-        digests.push_back(new Digest(Window(im, 0, 0, t,
-                                            im.width, im.height, 1)));
-
+        digests.push_back(new Digest(im.frame(t)));
     }
 
     printf("Matching features...\n");
@@ -1034,14 +1033,18 @@ void AlignFrames::apply(Window im, Align::Mode m) {
     for (int t = 0; t < im.frames; t++) {
         printf("."); fflush(stdout);
         if (t == bestT) { continue; }
-        Image tmp = Image(Window(im, 0, 0, t, im.width, im.height, 1));
+        Image tmp = im.frame(t).copy();
 
+        vector<float> sample(im.channels);
         for (int y = 0; y < im.height; y++) {
             for (int x = 0; x < im.width; x++) {
                 float fx, fy;
                 Transform *trans = transforms[make_pair(bestT, t)];
                 trans->apply(x, y, &fx, &fy);
-                tmp.sample2D(fx, fy, 0, im(x, y, t));
+                tmp.sample2D(fx, fy, 0, sample);
+                for (int c = 0; c < im.channels; c++) {
+                    im(x, y, t, c) = sample[c];
+                }
             }
         }
     }

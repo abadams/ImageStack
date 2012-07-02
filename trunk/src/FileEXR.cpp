@@ -53,7 +53,6 @@ Image load(string filename) {
 
     Image im(width, height, 1, numChannels);
 
-    float *ptr = im.data;
     switch (numChannels) {
     case 1:
         for (int y = 0; y < height; y++) {
@@ -61,7 +60,7 @@ Image load(string filename) {
                 Imf::Rgba &p = pixels[y][x];
                 // Y-only EXR image is converted to R=Y,G=Y,B=Y when read as
                 // an RGBA image
-                *ptr++ = (float)(p.r);
+                im(x, y) = (float)p.r;
             }
         }
         break;
@@ -71,8 +70,8 @@ Image load(string filename) {
                 Imf::Rgba &p = pixels[y][x];
                 // YA-only EXR image is converted to R=Y,G=Y,B=Y when read as
                 // an RGBA image
-                *ptr++ = (float)(p.r);
-                *ptr++ = (float)(p.a);
+                im(x, y, 0) = (float)(p.r);
+                im(x, y, 1) = (float)(p.a);
             }
         }
         break;
@@ -80,9 +79,9 @@ Image load(string filename) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Imf::Rgba &p = pixels[y][x];
-                *ptr++ = (float)(p.r);
-                *ptr++ = (float)(p.g);
-                *ptr++ = (float)(p.b);
+                im(x, y, 0) = (float)(p.r);
+                im(x, y, 1) = (float)(p.g);
+                im(x, y, 2) = (float)(p.b);
             }
         }
         break;
@@ -90,10 +89,10 @@ Image load(string filename) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Imf::Rgba &p = pixels[y][x];
-                *ptr++ = (float)(p.r);
-                *ptr++ = (float)(p.g);
-                *ptr++ = (float)(p.b);
-                *ptr++ = (float)(p.a);
+                im(x, y, 0) = (float)(p.r);
+                im(x, y, 1) = (float)(p.g);
+                im(x, y, 2) = (float)(p.b);
+                im(x, y, 3) = (float)(p.a);
             }
         }
         break;
@@ -101,7 +100,7 @@ Image load(string filename) {
     return im;
 }
 
-void save(Window im, string filename, string compression = "piz") {
+void save(Image im, string filename, string compression = "piz") {
     Imf::RgbaChannels flags=Imf::WRITE_C; // not going to be used
     int width = im.width;
     int height = im.height;
@@ -135,43 +134,39 @@ void save(Window im, string filename, string compression = "piz") {
     pixels.resizeErase(height, width);
 
     if (im.channels == 1) {
-        float *ptr = im(0, 0);
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Imf::Rgba &p = pixels[y][x];
-                p.r = p.g = p.b = *ptr++;
+                p.r = p.g = p.b = im(x, y);
                 p.a = 1;
             }
         }
     } else if (im.channels == 2) {
-        float *ptr = im(0, 0);
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Imf::Rgba &p = pixels[y][x];
-                p.r = p.g = p.b = *ptr++;
-                p.a = *ptr++;
+                p.r = p.g = p.b = im(x, y, 0);
+                p.a = im(x, y, 1);
             }
         }
     } else if (im.channels == 3) {
-        float *ptr = im(0, 0);
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Imf::Rgba &p = pixels[y][x];
-                p.r = *ptr++;
-                p.g = *ptr++;
-                p.b = *ptr++;
+                p.r = im(x, y, 0);
+                p.g = im(x, y, 1);
+                p.b = im(x, y, 2);
                 p.a = 1;
             }
         }
     } else if (im.channels == 4) {
-        float *ptr = im(0,0);
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Imf::Rgba &p = pixels[y][x];
-                p.r = *ptr++;
-                p.g = *ptr++;
-                p.b = *ptr++;
-                p.a = *ptr++;
+                p.r = im(x, y, 0);
+                p.g = im(x, y, 1);
+                p.b = im(x, y, 2);
+                p.a = im(x, y, 3);
             }
         }
     } else {
