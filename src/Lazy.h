@@ -950,29 +950,6 @@ IfThenElse(const A &a, const float b, const float c) {
     return _IfThenElse<typename A::LazyBool, Const, Const>(a, Const(b), Const(c));
 }
 
-/*
-// A struct to detect if something can be represented as an expression type
-template<typename T>
-struct ConstCheck;
-
-template<>
-struct ConstCheck<int> {
-typedef Const t;
-};
-template<>
-struct ConstCheck<float> {
-typedef Const t;
-};
-template<>
-struct ConstCheck<double> {
-typedef Const t;
-};
-
-template<>
-struct ConstCheck<Image> {
-};
-*/
-
 // A trait to check if something is ok to be cast to a lazy expression type, and if so, how.
 template<typename T>
 struct Lazyable {
