@@ -574,7 +574,7 @@ public:
                c >= 0 && c < channels &&
                x >= 0 && x+w <= width, "Scanline out of bounds\n");
         #endif
-        return Iter(base + y*ystride + t*tstride + c*cstride + x);
+        return Iter(base + y*ystride + t*tstride + c*cstride);
     }
     void prepare(int x, int y, int t, int c,
                  int xs, int ys, int ts, int cs) const {
