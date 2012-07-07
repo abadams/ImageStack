@@ -1159,7 +1159,7 @@ namespace Lazy {
                         Vec::type v;
                     } v;
                     for (int i = 0; i < Vec::width; i++) {
-                        v.f[i] = (x+i < 0 || x+i >= width) ? 0 : a[x];
+                        v.f[i] = (x+i < 0 || x+i >= width) ? 0 : a[x+i];
                     }
                     return v.v;
                 }
@@ -1168,9 +1168,9 @@ namespace Lazy {
         };
         Iter scanline(int x, int y, int t, int c, int width) const {
             bool oob = false;
-            if (a.getSize(1)) oob = oob || y < 0 || y >= a.getSize(1);
-            if (a.getSize(2)) oob = oob || t < 0 || t >= a.getSize(2);
-            if (a.getSize(3)) oob = oob || c < 0 || c >= a.getSize(3);
+            if (a.getSize(1)) oob = (oob || y < 0 || y >= a.getSize(1));
+            if (a.getSize(2)) oob = (oob || t < 0 || t >= a.getSize(2));
+            if (a.getSize(3)) oob = (oob || c < 0 || c >= a.getSize(3));
             if (oob) return Iter();
             else {
                 int xEnd = x+width;
