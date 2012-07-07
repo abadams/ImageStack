@@ -560,6 +560,7 @@ public:
     }
     struct Iter {
         const float *const addr;
+        Iter() : addr(NULL) {}
         Iter(const float *a) : addr(a) {}
         float operator[](int x) const {return addr[x];}
         ImageStack::Lazy::Vec::type vec(int x) const {

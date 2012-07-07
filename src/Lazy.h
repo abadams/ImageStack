@@ -26,6 +26,10 @@ namespace Lazy {
             return _mm256_set1_ps(v);
         }
 
+        static type zero() {
+            return _mm256_setzero_ps();
+        }
+
         // Arithmetic binary operators
         struct Add {
             static float scalar(float a, float b) {return a + b;}
@@ -83,6 +87,12 @@ namespace Lazy {
             return _mm256_blendv_ps(a, b, mask);
         }
 
+        static type interleave(type a, type b) {
+            __m256 r_lo = _mm256_unpacklo_ps(a, b);
+            __m256 r_hi = _mm256_unpackhi_ps(a, b);
+            return _mm256_permute2f128_ps(r_lo, r_hi, 1<<5);
+        }
+
         // Unary ops
         struct Floor {
             static float scalar(float a) {return floorf(a);}
@@ -102,6 +112,12 @@ namespace Lazy {
             return _mm256_loadu_ps(f);
         }
 
+        /*
+        static type maskedLoad(const float *f, type mask) {
+            return _mm256_maskload_ps(f, mask);
+        }
+        */
+
         static void store(type a, float *f) {
             _mm256_storeu_ps(f, a);
         }
@@ -113,6 +129,10 @@ namespace Lazy {
 
         static type broadcast(float v) {
             return _mm_set1_ps(v);
+        }
+
+        static type zero() {
+            return _mm_setzero_ps();
         }
 
         // Arithmetic binary operators
@@ -166,6 +186,10 @@ namespace Lazy {
             static bool scalar(float a, float b) {return a != b;}
             static type vec(type a, type b) {return _mm_cmpneq_ps(a, b);}
         };
+
+        static type interleave(type a, type b) {
+            return _mm_unpacklo_ps(a, b);
+        }
 
 #ifdef __SSE4_1__
         // Logical ops
@@ -259,6 +283,10 @@ namespace Lazy {
             return v;
         }
 
+        static type zero() {
+            return 0;
+        }
+
         // Arithmetic binary operators
         struct Add {
             static float scalar(float a, float b) {return a + b;}
@@ -316,6 +344,10 @@ namespace Lazy {
             return (mask ? b : a);
         }
 
+        static type interleave(type a, type b) {
+            return a;
+        }
+
         // Unary ops
         struct Floor {
             static float scalar(float a) {return floorf(a);}
@@ -338,6 +370,7 @@ namespace Lazy {
         static void store(type a, float *f) {
             *f = a;
         }
+
 
 #endif
 #endif
@@ -368,6 +401,7 @@ namespace Lazy {
         struct Iter {
             const float val;
             const Vec::type vec_val;
+            Iter() : val(0), vec_val(Vec::zero()) {}
             Iter(float v) : val(v), vec_val(Vec::broadcast(val)) {
             }
             float operator[](int x) const {return val;}
@@ -478,6 +512,7 @@ namespace Lazy {
         struct Iter {
             const typename A::Iter a;
             const typename B::Iter b;
+            Iter() {}
             Iter(const typename A::Iter &a_, const typename B::Iter &b_) : a(a_), b(b_) {}
             float operator[](int x) const {
                 return Op::scalar(a[x], b[x]);
@@ -525,6 +560,7 @@ namespace Lazy {
         struct Iter {
             const typename A::Iter a;
             const typename B::Iter b;
+            Iter() {}
             Iter(const typename A::Iter &a_, const typename B::Iter &b_) : a(a_), b(b_) {}
             float operator[](int x) const {
                 return Op::scalar(a[x], b[x]) ? 1 : 0;
@@ -617,6 +653,7 @@ namespace Lazy {
 
         struct Iter {
             const typename A::Iter a;
+            Iter() {}
             Iter(const typename A::Iter &a_) : a(a_) {}
             float operator[](int x) const {return (*fn)(a[x]);}
             Vec::type vec(int x) const {
@@ -655,6 +692,7 @@ namespace Lazy {
 
         struct Iter {
             const typename A::Iter a;
+            Iter() {}
             Iter(const typename A::Iter &a_) : a(a_) {}
             float operator[](int x) const {return Op::scalar(a[x]);}
             Vec::type vec(int x) const {
@@ -699,6 +737,7 @@ namespace Lazy {
         struct Iter {
             const typename A::Iter a;
             const typename B::Iter b;
+            Iter() {}
             Iter(const typename A::Iter &a_, const typename B::Iter &b_) : a(a_), b(b_) {}
             float operator[](int x) const {
                 return (*fn)(a[x], b[x]);
@@ -864,6 +903,7 @@ namespace Lazy {
             const typename A::Iter a;
             const typename B::Iter b;
             const typename C::Iter c;
+            Iter() {}
             Iter(const typename A::Iter &a_,
                  const typename B::Iter &b_,
                  const typename C::Iter &c_) : a(a_), b(b_), c(c_) {}
@@ -951,6 +991,7 @@ namespace Lazy {
             const typename A::Iter a;
             const typename B::Iter b;
             const typename C::Iter c;
+            Iter() {}
             Iter(const typename A::Iter &a_,
                  const typename B::Iter &b_,
                  const typename C::Iter &c_) : a(a_), b(b_), c(c_) {}
@@ -1034,6 +1075,7 @@ namespace Lazy {
         struct Iter {
             const typename A::Iter a;
             const int xo;
+            Iter() : xo(0) {}
             Iter(const typename A::Iter &a_, int xo_) : a(a_), xo(xo_) {}
             float operator[](int x) const {
                 return a[x-xo];
@@ -1091,27 +1133,17 @@ namespace Lazy {
         int getSize(int) const {return 0;}
 
         struct Iter {
-        private:
-            typename A::Iter *a_addr() const {
-                return ((typename A::Iter *)a_buf);
-            }
-        public:
-            uint8_t a_buf[sizeof(typename A::Iter)];            
-            typename A::Iter *a;
+            const typename A::Iter a;
             const bool outOfBounds;
             const int width;
+            Iter() : outOfBounds(false), width(0) {}
             Iter(const typename A::Iter &a_, int w) : 
-                outOfBounds(false), width(w) {  
-                // Use placement new to put a copy of a_ in the buffer we have set aside for it
-                new (a_addr()) typename A::Iter(a_);
-                a = a_addr();
-            }
-            Iter() : outOfBounds(true), width(0) {
+                a(a_), outOfBounds(false), width(w) {  
             }
 
             float operator[](int x) const {
                 if (outOfBounds || x < 0 || x >= width) return 0;
-                return (*a)[x];
+                return a[x];
             }
             Vec::type vec(int x) const {
                 // Completely out-of-bounds
@@ -1119,15 +1151,15 @@ namespace Lazy {
                     return Vec::broadcast(0);
                 } else if (x >= 0 && x + Vec::width <= width) {
                     // Completely in-bounds
-                    return a->vec(x);
+                    return a.vec(x);
                 } else {
-                    // Overlapping the start and/or end
+                    // Overlapping the start and/or end                    
                     union {
                         float f[Vec::width];
                         Vec::type v;
                     } v;
                     for (int i = 0; i < Vec::width; i++) {
-                        v.f[i] = (*this)[x+i];
+                        v.f[i] = (x+i < 0 || x+i >= width) ? 0 : a[x];
                     }
                     return v.v;
                 }
@@ -1174,7 +1206,7 @@ namespace Lazy {
         return _ZeroBoundary<A>(a);
     }
 
-    /*
+    
     // interleavings
     template<typename A, typename B>
     struct _InterleaveX {
@@ -1193,9 +1225,9 @@ namespace Lazy {
 
         int getSize(int i) const {
             if (i == 0) {
-                return max(a.getSize(0), b.getSize(0))*2;
+                return std::max(a.getSize(0), b.getSize(0))*2;
             } else {
-                return max(a.getSize(i), b.getSize(i));
+                return std::max(a.getSize(i), b.getSize(i));
             }
         }
 
@@ -1203,19 +1235,276 @@ namespace Lazy {
             if (x & 1) return b(x/2, y, t, c);
             else return a(x/2, y, t, c);
         }
-        
-        struct Iter {
-        };
 
+        struct Iter {
+            const typename A::Iter a;
+            const typename B::Iter b;
+            Iter() {}
+            Iter(const typename A::Iter &a_, const typename B::Iter &b_) : a(a_), b(b_) {}
+            float operator[](int x) const {
+                if (x & 1) return b[x/2];
+                else return a[x/2];
+            }
+            Vec::type vec(int x) const {                
+                const int y = x/2;
+                Vec::type v1, v2;
+                if (x & 1) {
+                    v1 = b.vec(y);
+                    v2 = a.vec(y+1);
+                } else {
+                    v1 = a.vec(y);
+                    v2 = b.vec(y);
+                }
+                return Vec::interleave(v1, v2);
+            }
+        };
+ 
         Iter scanline(int x, int y, int t, int c, int width) const {
+            return Iter(a.scanline((x+1)/2, y, t, c, width/2), 
+                        b.scanline(x/2, y, t, c, width/2));
+        }
 
         void prepare(int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x/2, y, t, c, width/2, height, frames, channels);
-            b.prepare(x/2
+            a.prepare((x+1)/2, y, t, c, width/2, height, frames, channels);
+            b.prepare(x/2, y, t, c, width/2, height, frames, channels);
         }
     };
-    */
+
+        
+    template<typename A, typename B>
+    _InterleaveX<typename A::Lazy, typename B::Lazy>
+    interleaveX(const A &a, const B &b) {
+        return _InterleaveX<A, B>(a, b);
+    }
+
+    template<typename B>
+    _InterleaveX<Const, typename B::Lazy>
+    interleaveX(float a, const B &b) {
+        return _InterleaveX<Const, B>(Const(a), b);
+    }
+
+    template<typename A>
+    _InterleaveX<typename A::Lazy, Const>
+    interleaveX(const A &a, float b) {
+        return _InterleaveX<A, Const>(a, Const(b));
+    }
+
+    inline _InterleaveX<Const, Const>
+    interleaveX(float a, float b) {
+        return _InterleaveX<Const, Const>(Const(a), Const(b));
+    }
+
+    template<typename A, typename B>
+    struct _InterleaveY {
+        typedef _InterleaveY<typename A::Lazy, typename B::Lazy> Lazy;
+        typename Handle<A>::type a;
+        typename Handle<B>::type b;
+        
+        _InterleaveY(const A &a_, const B &b_) : a(a_), b(b_) {
+            for (int i = 0; i < 4; i++) {
+                if (a.getSize(i) && b.getSize(i)) {
+                    assert(a.getSize(i) == b.getSize(i),
+                           "Can only combine images with matching size\n");
+                }
+            }
+        }
+
+        int getSize(int i) const {
+            if (i == 1) {
+                return std::max(a.getSize(1), b.getSize(1))*2;
+            } else {
+                return std::max(a.getSize(i), b.getSize(i));
+            }
+        }
+
+        float operator()(int x, int y, int t, int c) const {
+            if (y & 1) return b(x, y/2, t, c);
+            else return a(x, y/2, t, c);
+        }
+
+        struct Iter {
+            const typename A::Iter a;
+            const typename B::Iter b;
+            const bool useA;
+            Iter() : useA(false) {}
+            // Second argument exists to distinguish between the two
+            // constructors when A and B have the same type
+            Iter(const typename A::Iter &a_, bool) : a(a_), useA(true) {}
+            Iter(const typename B::Iter &b_) : b(b_), useA(false) {}
+            float operator[](int x) const {
+                if (useA) return a[x];
+                else return b[x];
+            }
+            Vec::type vec(int x) const {                
+                if (useA) return a.vec(x);
+                else return b.vec(x);
+            }
+        };
+ 
+        Iter scanline(int x, int y, int t, int c, int width) const {
+            if (y & 1) return Iter(b.scanline(x, y/2, t, c, width));
+            else return Iter(a.scanline(x, y/2, t, c, width), false);
+        }
+
+        void prepare(int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(x, (y+1)/2, t, c, width, height/2, frames, channels);
+            b.prepare(x, y/2, t, c, width, height/2, frames, channels);
+        }
+    };
+
+    template<typename A, typename B>
+    _InterleaveY<typename A::Lazy, typename B::Lazy>
+    interleaveY(const A &a, const B &b) {
+        return _InterleaveY<A, B>(a, b);
+    }
+
+    template<typename B>
+    _InterleaveY<Const, typename B::Lazy>
+    interleaveY(float a, const B &b) {
+        return _InterleaveY<Const, B>(Const(a), b);
+    }
+
+    template<typename A>
+    _InterleaveY<typename A::Lazy, Const>
+    interleaveY(const A &a, float b) {
+        return _InterleaveY<A, Const>(a, Const(b));
+    }
+
+    inline _InterleaveY<Const, Const>
+    interleaveY(float a, float b) {
+        return _InterleaveY<Const, Const>(Const(a), Const(b));
+    }
+
+    template<typename A, typename B>
+    struct _InterleaveT {
+        typedef _InterleaveT<typename A::Lazy, typename B::Lazy> Lazy;
+        typename Handle<A>::type a;
+        typename Handle<B>::type b;
+        
+        _InterleaveT(const A &a_, const B &b_) : a(a_), b(b_) {
+            for (int i = 0; i < 4; i++) {
+                if (a.getSize(i) && b.getSize(i)) {
+                    assert(a.getSize(i) == b.getSize(i),
+                           "Can only combine images with matching size\n");
+                }
+            }
+        }
+
+        int getSize(int i) const {
+            if (i == 2) {
+                return std::max(a.getSize(2), b.getSize(2))*2;
+            } else {
+                return std::max(a.getSize(i), b.getSize(i));
+            }
+        }
+
+        float operator()(int x, int y, int t, int c) const {
+            if (t & 1) return b(x, y, t/2, c);
+            else return a(x, y, t/2, c);
+        }
+
+        typedef typename _InterleaveY<A, B>::Iter Iter;
+
+        Iter scanline(int x, int y, int t, int c, int width) const {
+            if (t & 1) return Iter(b.scanline(x, y, t/2, c, width));
+            else return Iter(a.scanline(x, y, t/2, c, width), false);
+        }
+
+        void prepare(int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(x, y, (t+1)/2, c, width, height, frames/2, channels);
+            b.prepare(x, y, t/2, c, width, height, frames/2, channels);
+        }
+    };
+
+    template<typename A, typename B>
+    _InterleaveT<typename A::Lazy, typename B::Lazy>
+    interleaveT(const A &a, const B &b) {
+        return _InterleaveT<A, B>(a, b);
+    }
+    template<typename B>
+    _InterleaveT<Const, typename B::Lazy>
+    interleaveT(float a, const B &b) {
+        return _InterleaveT<Const, B>(Const(a), b);
+    }
+
+    template<typename A>
+    _InterleaveT<typename A::Lazy, Const>
+    interleaveT(const A &a, float b) {
+        return _InterleaveT<A, Const>(a, Const(b));
+    }
+
+    inline _InterleaveT<Const, Const>
+    interleaveT(float a, float b) {
+        return _InterleaveT<Const, Const>(Const(a), Const(b));
+    }
+
+    template<typename A, typename B>
+    struct _InterleaveC {
+        typedef _InterleaveC<typename A::Lazy, typename B::Lazy> Lazy;
+        typename Handle<A>::type a;
+        typename Handle<B>::type b;
+        
+        _InterleaveC(const A &a_, const B &b_) : a(a_), b(b_) {
+            for (int i = 0; i < 4; i++) {
+                if (a.getSize(i) && b.getSize(i)) {
+                    assert(a.getSize(i) == b.getSize(i),
+                           "Can only combine images with matching size\n");
+                }
+            }
+        }
+
+        int getSize(int i) const {
+            if (i == 3) {
+                return std::max(a.getSize(3), b.getSize(3))*2;
+            } else {
+                return std::max(a.getSize(i), b.getSize(i));
+            }
+        }
+
+        float operator()(int x, int y, int t, int c) const {
+            if (c & 1) return b(x, y, t, c/2);
+            else return a(x, y, t, c/2);
+        }
+
+        typedef typename _InterleaveY<A, B>::Iter Iter;
+
+        Iter scanline(int x, int y, int t, int c, int width) const {
+            if (c & 1) return Iter(b.scanline(x, y, t, c/2, width));
+            else return Iter(a.scanline(x, y, t, c/2, width), false);
+        }
+
+        void prepare(int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(x, y, t, (c+1)/2, width, height, frames, channels/2);
+            b.prepare(x, y, t, c/2, width, height, frames, channels/2);
+        }
+    };
+
+    template<typename A, typename B>
+    _InterleaveC<typename A::Lazy, typename B::Lazy>
+    interleaveC(const A &a, const B &b) {
+        return _InterleaveC<A, B>(a, b);
+    }
+
+    template<typename B>
+    _InterleaveC<Const, typename B::Lazy>
+    interleaveC(float a, const B &b) {
+        return _InterleaveC<Const, B>(Const(a), b);
+    }
+
+    template<typename A>
+    _InterleaveC<typename A::Lazy, Const>
+    interleaveC(const A &a, float b) {
+        return _InterleaveC<A, Const>(a, Const(b));
+    }
+
+    inline _InterleaveC<Const, Const>
+    interleaveC(float a, float b) {
+        return _InterleaveC<Const, Const>(Const(a), Const(b));
+    }
 
     // A trait to check if something is ok to be cast to a lazy expression type, and if so, how.
     template<typename T>
