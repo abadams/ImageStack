@@ -7,6 +7,22 @@
 #include "File.h"
 #include "header.h"
 
+/*
+Func LocalLaplacian::pyramidDown(Func im) {
+    Func dx = subsampleX(im, 2, -1) + 3*subsampleX(im, 2, 0) + 3*subsampleX(im, 2, 1) + subsampleX(im, 2, 2);
+    Func dy = subsampleY(dy, 2, -1) + 3*subsampleY(dy, 2, 0) + 3*subsampleY(dy, 2, 1) + subsampleY(dy, 2, 2);
+    return dy;
+}
+
+Func LocalLaplacian::pyramidUp(Func im) {
+    Func upX = interleaveX(im, im);
+    upX = shiftX(upX, -1) + 2*upX + shiftX(upX, 1);
+    Func upY = interleaveY(upX, upX);
+    upX = shiftY(upY, -1) + 2*upY + shiftY(upY, 1);    
+    return upY;
+}
+*/
+
 Image LocalLaplacian::pyramidDown(Image im) {
     Image blurry = im.copy();
     FastBlur::apply(blurry, 2, 2, 2);

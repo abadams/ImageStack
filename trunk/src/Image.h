@@ -442,7 +442,7 @@ public:
     }
 
     // A macro to check if a type is castable to a lazy expression type
-#define LazyType(T) typename ImageStack::Lazy::Lazyable<T>::t
+    #define LazyType(T) typename ImageStack::Lazy::Lazyable<T>::t
 
     // Evaluate a expression object defined in Lazy.h
     // The second template argument prevents instantiations from
@@ -461,51 +461,48 @@ public:
                    "Can only assign from source of matching size\n");
         }
 
-        // 4 or 8-wide vector code, distributed across cores
-        const int vec_width = ImageStack::Lazy::Vec::width;
         for (int c = 0; c < channels; c++) {
             for (int t = 0; t < frames; t++) {
-
-#ifdef _OPENMP
+                expr.prepare(0, 0, t, c, width, height, 1, 1);
+                #ifdef _OPENMP
                 #pragma omp parallel for
-#endif
+                #endif
                 for (int y = 0; y < height; y++) {
-                    const int w = width;
-                    const LazyType(T)::Iter iter = expr.scanline(y, t, c);
-                    float *const dst = base + c*cstride + t*tstride + y*ystride;
-
-                    int x = 0;
-
-                    if (vec_width > 1 && width > vec_width*2) {
-                        // warm up
-                        while ((size_t)(dst+x) & (vec_width*sizeof(float) - 1)) {
-                            dst[x] = iter[x];
-                            x++;
-                        }
-                        // vectorized steady-state
-                        while (x < (w-(vec_width-1))) {
-                            *((ImageStack::Lazy::Vec::type *)(dst + x)) = iter.vec(x);
-                            x += vec_width;
-                        }
-                    }
-                    // Scalar wind down
-                    while (x < w) {
-                        dst[x] = iter[x];
-                        x++;
-                    }
+                    LazyType(T)::Iter iter = expr.scanline(0, y, t, c, width);
+                    setScanline(iter, 0, y, t, c, width);
                 }
             }
         }
     }
 
-    /*
-    // Special-case setting an image to a float value, because it
-    // won't implicitly cast things like int literals to Lazy::Const
-    // via float, and I'd like to be able to say image.set(1);
-    void set(float x) const {
-        set(ImageStack::Lazy::Const(x));
+
+    template<typename T>
+    void setScanline(const T &iter, 
+                     int x, const int y, const int t, const int c, const int w) const {
+        float *const dst = base + c*cstride + t*tstride + y*ystride + x;
+
+        const int vec_width = ImageStack::Lazy::Vec::width;
+
+        //printf("set scanline %d %d %d %d %d\n", x, y, t, c, w);
+
+        if (vec_width > 1 && width > vec_width*2) {
+            // warm up
+            while ((size_t)(dst+x) & (vec_width*sizeof(float) - 1)) {
+                dst[x] = iter[x];
+                x++;
+            }
+            // vectorized steady-state
+            while (x < (w-(vec_width-1))) {
+                *((ImageStack::Lazy::Vec::type *)(dst + x)) = iter.vec(x);
+                x += vec_width;
+            }
+        }
+        // Scalar wind down
+        while (x < w) {
+            dst[x] = iter[x];
+            x++;
+        }        
     }
-    */
 
     // A version of set that takes a set of up to 4 expressions and
     // sets the image's channels accordingly. This is more efficient
@@ -569,8 +566,22 @@ public:
             return ImageStack::Lazy::Vec::load(addr+x);
         }
     };
-    Iter scanline(int y, int t, int c) const {
-        return Iter(base + y*ystride + t*tstride + c*cstride);
+    Iter scanline(int x, int y, int t, int c, int w) const {
+        #ifdef BOUNDS_CHECKING
+        assert(y >= 0 && y < height &&
+               t >= 0 && t < frames &&
+               c >= 0 && c < channels &&
+               x >= 0 && x+w <= width, "Scanline out of bounds\n");
+        #endif
+        return Iter(base + y*ystride + t*tstride + c*cstride + x);
+    }
+    void prepare(int x, int y, int t, int c,
+                 int xs, int ys, int ts, int cs) const {
+        assert(x >= 0 && x+xs <= width &&
+               y >= 0 && y+ys <= height &&
+               t >= 0 && t+ts <= frames &&
+               c >= 0 && c+cs <= channels, 
+               "Expression would access image out of bounds\n");        
     }
 
     // Construct an image from a bounded expression object. No consts
@@ -632,17 +643,21 @@ private:
         const int vec_width = ImageStack::Lazy::Vec::width;
         for (int t = 0; t < frames; t++) {
 
-#ifdef _OPENMP
+            funcA.prepare(0, 0, t, 0, width, height, 1, 1);
+            funcB.prepare(0, 0, t, 0, width, height, 1, 1);
+            funcC.prepare(0, 0, t, 0, width, height, 1, 1);
+            funcD.prepare(0, 0, t, 0, width, height, 1, 1);
+            #ifdef _OPENMP
             #pragma omp parallel for
-#endif
+            #endif
             for (int y = 0; y < height; y++) {
                 const int w = width;
                 const int cs = cstride;
                 float *const dst = base + t*tstride + y*ystride;
-                const typename A::Iter iterA = funcA.scanline(y, t, 0);
-                const typename B::Iter iterB = funcB.scanline(y, t, 0);
-                const typename C::Iter iterC = funcC.scanline(y, t, 0);
-                const typename D::Iter iterD = funcD.scanline(y, t, 0);
+                const typename A::Iter iterA = funcA.scanline(0, y, t, 0, w);
+                const typename B::Iter iterB = funcB.scanline(0, y, t, 0, w);
+                const typename C::Iter iterC = funcC.scanline(0, y, t, 0, w);
+                const typename D::Iter iterD = funcD.scanline(0, y, t, 0, w);
 
 
                 int x = 0;
@@ -730,11 +745,13 @@ private:
         // alignment if you allocate an image from scratch.
         assert(xs > 0 && ys > 0 && ts > 0 && cs > 0,
                "Region must have strictly positive size: %d %d %d %d\n", xs, ys, ts, cs);
+        /* Some regions may venture into invalid areas to help with indexing math
         assert(x >= 0 && x+xs <= im.width &&
                y >= 0 && y+ys <= im.height &&
                t >= 0 && t+ts <= im.frames &&
                c >= 0 && c+cs <= im.channels,
                "Region must fit within original image\n");
+        */
     }
 
     std::shared_ptr<const Payload> data;
