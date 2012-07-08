@@ -7,17 +7,18 @@
 namespace Lazy {
 
     struct BaseFunc {
-        Image m;
-        int xo, yo, to, co;
+        Image im;
+        int minX, minY, minT, minC;
+        int maxX, maxY, maxT, maxC;
 
-        vector<pair<int, int> > evaluated;
+        vector<bool> evaluated;
 
-        // Evaluate myself into buffer at the given offset. 
-        virtual void evalScanline(int x, int y, int t, int c, int width) = 0;
+        // Evaluate myself into buffer at the given scanline. 
+        virtual void evalScanline(int y, int t, int c) = 0;
 
         // Prepare to be evaluated over a given region
-        virtual void prepareFunc(int x, int y, int t, int c, 
-                                        int width, int height, int frames, int channels) = 0;
+        virtual void prepareFunc(int phase, int x, int y, int t, int c, 
+                                 int width, int height, int frames, int channels) = 0;
 
         virtual int getSize(int i) = 0;
     };
@@ -25,37 +26,86 @@ namespace Lazy {
     template<typename T>
     struct DerivedFunc : public BaseFunc {
         const T expr;
-    
-        DerivedFunc(const T e) : expr(e) {}
+        int lastPhase;
+        int minVecX;
+        int maxVecX;
+        bool boundedVecX;
 
-        void evalScanline(int x, int y, int t, int c, int width) {
-            // TODO: reuse?
-            printf("Evaluating at scanline %d %d %d %d %d\n", 
-                   x, y, t, c, width);        
-            m.setScanline(expr.scanline(x, y, t, c, width), x-xo, y-yo, t-to, c-co, width);
+        DerivedFunc(const T &e) : 
+            expr(e), lastPhase(-1), 
+            minVecX(e.minVecX()), maxVecX(e.maxVecX()), boundedVecX(e.boundedVecX()) {}
+
+        void evalScanline(int y, int t, int c) {
+            //printf("Evaluating at scanline %d %d %d\n", y, t, c);        
+
+            setScanline(expr.scanline(minX, y, t, c, maxX - minX), 
+                        &im(0, y-minY, t-minT, c-minC),
+                        minX, maxX, 
+                        boundedVecX, minVecX, maxVecX);
         }   
 
-        void prepareFunc(int x, int y, int t, int c,
-                                int width, int height, int frames, int channels) {
-            printf("Preparing over region %d %d %d %d  %d %d %d %d\n",
-                   x, y, t, c, width, height, frames, channels);               
+        void prepareFunc(int phase, int x, int y, int t, int c,
+                         int width, int height, int frames, int channels) {
+            printf("Preparing %p at phase %d over region %d %d %d %d  %d %d %d %d\n", this,
+                   phase, x, y, t, c, width, height, frames, channels);               
 
-            xo = x; yo = y; to = t; co = c;
+            // Each phase we get called multiple times according to
+            // how many times we occur in the expression
 
-            // TODO: doesn't work for multiple shifted usages. Only
-            // allocates enough for the last usage. Four-phases? (clear, accumulate, finalize, free)
-            if (m.defined() &&
-                m.width == width &&
-                m.height == height &&
-                m.frames == frames &&
-                m.channels == channels) {
-                // We're good - already allocated
-            } else {
-                m = Image(width, height, frames, channels);
-                evaluated.resize(height*frames*channels);
-                memset(&evaluated[0], 0, evaluated.size() * sizeof(evaluated[0]));
-            }
-            expr.prepare(x, y, t, c, width, height, frames, channels);
+            // The start of a new page
+            // In phase zero we take unions of the regions requested
+            if (phase == 0) {
+                if (lastPhase != 0) {
+                    minX = x;
+                    minY = y;
+                    minT = t;
+                    minC = c;
+                    maxX = x + width;
+                    maxY = y + height;
+                    maxT = t + frames;
+                    maxC = c + channels;
+                } else {
+                    minX = std::min(minX, x);
+                    minY = std::min(minY, y);
+                    minT = std::min(minT, t);
+                    minC = std::min(minC, c);
+                    maxX = std::max(maxX, x);
+                    maxY = std::max(maxY, y);
+                    maxT = std::max(maxT, t);
+                    maxC = std::max(maxC, c);
+                }
+            } else if (phase == 1) {
+                // Still at the start of a new page
+                // In phase one (the first time we are called), we prepare storage
+                if (lastPhase != 1) {
+                    if (!im.defined() ||                            
+                        im.width < maxX - minX ||
+                        im.height < maxY - minY ||
+                        im.frames < maxT - minT ||
+                        im.channels < maxC - minC) {
+                        printf("Allocating backing for %p %d %d %d %d\n", this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
+                        im = Image(maxX - minX, maxY - minY, maxT - minT, maxC - minC);
+                        printf("Done\n");
+                    } else {
+                        // no need to allocate
+                    }
+                    
+                    // No scanlines have been evaluated
+                    evaluated.assign(maxY - minY, false);
+                }
+            } else if (phase == 2) {
+                if (lastPhase != 2) {
+                    // Clean-up
+                    // We're done iterating over everything. Clean up.
+                    //im = Image();
+                    printf("Freeing backing for %p\n", this);
+                }
+            }       
+
+            lastPhase = phase;
+
+            // recurse
+            expr.prepare(phase, x, y, t, c, width, height, frames, channels);
         }
 
         int getSize(int i) {
@@ -72,9 +122,6 @@ namespace Lazy {
 
         // Implement the lazy interface
         typedef Func Lazy;
-        float operator()(int x, int y, int t, int c) const {
-            return ptr->m(x - ptr->xo, y - ptr->yo, t - ptr->to , c - ptr->co);
-        }
 
         int getSize(int i) const {
             return ptr->getSize(i);
@@ -82,35 +129,21 @@ namespace Lazy {
 
         typedef Image::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
-            pair<int, int> &run = ptr->evaluated[(c*ptr->m.frames + t)*ptr->m.height + y];
-
-            if (run.second == 0) {
-                // There is nothing already evaluated
-                ptr->evalScanline(x, y, t, c, width);
-                run.first = x;
-                run.second = x+width;
-            } else {
-                bool startsAfter = x >= run.first;
-                bool endsBefore = x + width <= run.second;
-
-                // Compute more stuff at the start
-                if (x < run.first) {
-                    ptr->evalScanline(x, y, t, c, run.first - x);
-                    run.first = x;
-                }
-
-                // Compute more stuff at the end
-                if (x + width > run.second) {
-                    ptr->evalScanline(run.second, y, t, c, x + width - run.second);
-                    run.second = x + width;
-                }
+            if (!ptr->evaluated[y])  {
+                // TODO: consider locking the scanline during evaluation
+                ptr->evalScanline(y, t, c);
+                ptr->evaluated[y] = true;
             }
-            return ptr->m.scanline(x-ptr->xo, y-ptr->yo, t-ptr->yo, c-ptr->co, width);
+            return ptr->im.scanline(x-ptr->minX, y-ptr->minY, t-ptr->minT, c-ptr->minC, width);
         }
     
-        void prepare(int x, int y, int t, int c,
+        bool boundedVecX() const {return false;}
+        int minVecX() const {return 0x80000000;}
+        int maxVecX() const {return 0x7fffffff;}
+
+        void prepare(int phase, int x, int y, int t, int c,
                      int width, int height, int frames, int channels) const {
-            ptr->prepareFunc(x, y, t, c,
+            ptr->prepareFunc(phase, x, y, t, c,
                              width, height, frames, channels);
         }
     };

@@ -22,11 +22,11 @@ namespace Lazy {
         typedef __m256 type;
         const int width = 8;
 
-        static type broadcast(float v) {
+        inline type broadcast(float v) {
             return _mm256_set1_ps(v);
         }
 
-        static type zero() {
+        inline type zero() {
             return _mm256_setzero_ps();
         }
 
@@ -83,11 +83,11 @@ namespace Lazy {
         };
 
         // Logical ops
-        static type blend(type a, type b, type mask) {
+        inline type blend(type a, type b, type mask) {
             return _mm256_blendv_ps(a, b, mask);
         }
 
-        static type interleave(type a, type b) {
+        inline type interleave(type a, type b) {
             __m256 r_lo = _mm256_unpacklo_ps(a, b);
             __m256 r_hi = _mm256_unpackhi_ps(a, b);
             return _mm256_permute2f128_ps(r_lo, r_hi, 1<<5);
@@ -108,17 +108,17 @@ namespace Lazy {
         };
 
         // Loads and stores
-        static type load(const float *f) {
+        inline type load(const float *f) {
             return _mm256_loadu_ps(f);
         }
 
         /*
-        static type maskedLoad(const float *f, type mask) {
+        inline type maskedLoad(const float *f, type mask) {
             return _mm256_maskload_ps(f, mask);
         }
         */
 
-        static void store(type a, float *f) {
+        inline void store(type a, float *f) {
             _mm256_storeu_ps(f, a);
         }
 
@@ -127,11 +127,11 @@ namespace Lazy {
         typedef __m128 type;
         const int width = 4;
 
-        static type broadcast(float v) {
+        inline type broadcast(float v) {
             return _mm_set1_ps(v);
         }
 
-        static type zero() {
+        inline type zero() {
             return _mm_setzero_ps();
         }
 
@@ -187,13 +187,13 @@ namespace Lazy {
             static type vec(type a, type b) {return _mm_cmpneq_ps(a, b);}
         };
 
-        static type interleave(type a, type b) {
+        inline type interleave(type a, type b) {
             return _mm_unpacklo_ps(a, b);
         }
 
 #ifdef __SSE4_1__
         // Logical ops
-        static type blend(type a, type b, type mask) {
+        inline type blend(type a, type b, type mask) {
             return _mm_blendv_ps(a, b, mask);
         }
 
@@ -212,7 +212,7 @@ namespace Lazy {
         };
 #else
 
-        static type blend(type a, type b, type mask) {
+        inline type blend(type a, type b, type mask) {
             return _mm_or_ps(_mm_and_ps(mask, b),
                              _mm_andnot_ps(mask, a));
         }
@@ -266,11 +266,11 @@ namespace Lazy {
 #endif
 
         // Loads and stores
-        static type load(const float *f) {
+        inline type load(const float *f) {
             return _mm_loadu_ps(f);
         }
 
-        static void store(type a, float *f) {
+        inline void store(type a, float *f) {
             _mm_storeu_ps(f, a);
         }
 
@@ -279,11 +279,11 @@ namespace Lazy {
         typedef float type;
         const int width = 1;
 
-        static type broadcast(float v) {
+        inline type broadcast(float v) {
             return v;
         }
 
-        static type zero() {
+        inline type zero() {
             return 0;
         }
 
@@ -340,11 +340,11 @@ namespace Lazy {
         };
 
         // Logical ops
-        static type blend(bool mask, type a, type b) {
+        inline type blend(bool mask, type a, type b) {
             return (mask ? b : a);
         }
 
-        static type interleave(type a, type b) {
+        inline type interleave(type a, type b) {
             return a;
         }
 
@@ -363,11 +363,11 @@ namespace Lazy {
         };
 
         // Loads and stores
-        static type load(const float *f) {
+        inline type load(const float *f) {
             return *f;
         }
 
-        static void store(type a, float *f) {
+        inline void store(type a, float *f) {
             *f = a;
         }
 
@@ -388,6 +388,9 @@ namespace Lazy {
     // A base class for things which do not depend on image data
     struct Unbounded {
         int getSize(int) const {return 0;}
+        bool boundedVecX() const {return false;}
+        int minVecX() const {return 0x80000000;}
+        int maxVecX() const {return 0x7fffffff;}
     };
 
     // Constants
@@ -409,8 +412,8 @@ namespace Lazy {
         };
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(val);
-        }
-        void prepare(int x, int y, int t, int c, 
+        }        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {}
     };
 
@@ -438,10 +441,12 @@ namespace Lazy {
                 return v.v;
             }
         };
+
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter();
-        }
-        void prepare(int x, int y, int t, int c, 
+        }        
+
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {}
     };
 
@@ -453,8 +458,9 @@ namespace Lazy {
 
         Const::Iter scanline(int x, int y, int t, int c, int width) const {
             return Const::Iter(y);
-        }
-        void prepare(int x, int y, int t, int c, 
+        }        
+
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {}
     };
 
@@ -467,7 +473,8 @@ namespace Lazy {
         Const::Iter scanline(int x, int y, int t, int c, int width) const {
             return Const::Iter(t);
         }
-        void prepare(int x, int y, int t, int c, 
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {}
     };
 
@@ -480,7 +487,8 @@ namespace Lazy {
         Const::Iter scanline(int x, int y, int t, int c, int width) const {
             return Const::Iter(c);
         }
-        void prepare(int x, int y, int t, int c, 
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {}
     };
 
@@ -524,12 +532,17 @@ namespace Lazy {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width), b.scanline(x, y, t, c, width));
         }
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
+        int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
+
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c, 
-                      width, height, frames, channels);
-            b.prepare(x, y, t, c, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
+            b.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
         }
     };
     
@@ -573,12 +586,16 @@ namespace Lazy {
             return Iter(a.scanline(x, y, t, c, width),
                         b.scanline(x, y, t, c, width));
         }
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
+        int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c, 
-                      width, height, frames, channels);
-            b.prepare(x, y, t, c, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
+            b.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
         }
     };
     
@@ -671,10 +688,14 @@ namespace Lazy {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width));
         }
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX();}
+        int maxVecX() const {return a.maxVecX();}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
         }
     };
 
@@ -702,10 +723,14 @@ namespace Lazy {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width));
         }
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX();}
+        int maxVecX() const {return a.maxVecX();}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
         }
     };
 
@@ -758,12 +783,16 @@ namespace Lazy {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width), b.scanline(x, y, t, c, width));
         }
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
+        int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c, 
-                      width, height, frames, channels);
-            b.prepare(x, y, t, c, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
+            b.prepare(phase, x, y, t, c, 
+                                  width, height, frames, channels);
         }
     };
 
@@ -922,14 +951,18 @@ namespace Lazy {
                         b.scanline(x, y, t, c_, width),
                         c.scanline(x, y, t, c_, width));
         }
-        void prepare(int x, int y, int t, int c_, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX() || c.boundedVecX();}
+        int minVecX() const {return std::max(std::max(a.minVecX(), b.minVecX()), c.minVecX());}
+        int maxVecX() const {return std::min(std::min(a.maxVecX(), b.maxVecX()), c.maxVecX());}
+        
+        void prepare(int phase, int x, int y, int t, int c_, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c_, 
-                      width, height, frames, channels);
-            b.prepare(x, y, t, c_, 
-                      width, height, frames, channels);
-            c.prepare(x, y, t, c_, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c_, 
+                                  width, height, frames, channels);
+            b.prepare(phase, x, y, t, c_, 
+                                  width, height, frames, channels);
+            c.prepare(phase, x, y, t, c_, 
+                                  width, height, frames, channels);
         }
     };
 
@@ -1015,14 +1048,18 @@ namespace Lazy {
                         b.scanline(x, y, t, c_, width),
                         c.scanline(x, y, t, c_, width));
         }
-        void prepare(int x, int y, int t, int c_, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX() || c.boundedVecX();}
+        int minVecX() const {return std::max(std::max(a.minVecX(), b.minVecX()), c.minVecX());}
+        int maxVecX() const {return std::min(std::min(a.maxVecX(), b.maxVecX()), c.maxVecX());}
+        
+        void prepare(int phase, int x, int y, int t, int c_, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, c_, 
-                      width, height, frames, channels);
-            b.prepare(x, y, t, c_, 
-                      width, height, frames, channels);
-            c.prepare(x, y, t, c_, 
-                      width, height, frames, channels);
+            a.prepare(phase, x, y, t, c_, 
+                                  width, height, frames, channels);
+            b.prepare(phase, x, y, t, c_, 
+                                  width, height, frames, channels);
+            c.prepare(phase, x, y, t, c_, 
+                                  width, height, frames, channels);
         }
     };
 
@@ -1054,8 +1091,9 @@ namespace Lazy {
     template<typename A>
     struct _Shift {
         typedef _Shift<typename A::Lazy> Lazy;
-        const int xo, yo, to, co;
         typename Handle<A>::type a;
+        const int xo, yo, to, co;
+
         _Shift(const A &a_, int xo_, int yo_, int to_ = 0, int co_ = 0) : 
             a(a_), xo(xo_), yo(yo_), to(to_), co(co_) {
             assert((xo == 0 || a.getSize(0) == 0) &&
@@ -1087,10 +1125,14 @@ namespace Lazy {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x-xo, y-yo, t-to, c-co, width), xo);
         }
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX() + xo;}
+        int maxVecX() const {return a.maxVecX() + xo;}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x-xo, y-yo, t-to, c-co, 
-                      width, height, frames, channels);
+            a.prepare(phase, x-xo, y-yo, t-to, c-co, 
+                                  width, height, frames, channels);
         }
     };
     
@@ -1146,6 +1188,10 @@ namespace Lazy {
                 return a[x];
             }
             Vec::type vec(int x) const {
+                // This only gets called if we're in-bounds in the x dimension
+                if (outOfBounds) return Vec::broadcast(0);
+                else return a.vec(x);
+                /*
                 // Completely out-of-bounds
                 if (outOfBounds || (x < 1-Vec::width) || (x >= width)) {
                     return Vec::broadcast(0);
@@ -1163,7 +1209,7 @@ namespace Lazy {
                     }
                     return v.v;
                 }
-                
+                */
             }
         };
         Iter scanline(int x, int y, int t, int c, int width) const {
@@ -1180,7 +1226,12 @@ namespace Lazy {
             }
         }
 
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.getSize(0) != 0;}
+        int minVecX() const {return 0;}
+        int maxVecX() const {return a.getSize(0) - Vec::width;}
+
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
             int xEnd = x+width;
             int yEnd = y+height;
@@ -1194,8 +1245,8 @@ namespace Lazy {
             int yStart = std::max(y, 0);
             int tStart = std::max(t, 0);
             int cStart = std::max(c, 0);            
-            a.prepare(xStart, yStart, tStart, cStart,
-                      xEnd-xStart, yEnd-yStart, tEnd-tStart, cEnd-cStart);
+            a.prepare(phase, xStart, yStart, tStart, cStart,
+                                  xEnd-xStart, yEnd-yStart, tEnd-tStart, cEnd-cStart);
         }
         
     };
@@ -1264,10 +1315,15 @@ namespace Lazy {
                         b.scanline(x/2, y, t, c, width/2));
         }
 
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(2*a.minVecX(), 2*b.minVecX());}
+        int maxVecX() const {return std::min(2*a.maxVecX(), 2*b.maxVecX()) - Vec::width*2;}
+
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare((x+1)/2, y, t, c, width/2, height, frames, channels);
-            b.prepare(x/2, y, t, c, width/2, height, frames, channels);
+            a.prepare(phase, (x+1)/2, y, t, c, width/2, height, frames, channels);
+            b.prepare(phase, x/2, y, t, c, width/2, height, frames, channels);
         }
     };
 
@@ -1347,10 +1403,15 @@ namespace Lazy {
             else return Iter(a.scanline(x, y/2, t, c, width), false);
         }
 
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
+        int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
+
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, (y+1)/2, t, c, width, height/2, frames, channels);
-            b.prepare(x, y/2, t, c, width, height/2, frames, channels);
+            a.prepare(phase, x, (y+1)/2, t, c, width, height/2, frames, channels);
+            b.prepare(phase, x, y/2, t, c, width, height/2, frames, channels);
         }
     };
 
@@ -1412,10 +1473,15 @@ namespace Lazy {
             else return Iter(a.scanline(x, y, t/2, c, width), false);
         }
 
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
+        int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
+
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, (t+1)/2, c, width, height, frames/2, channels);
-            b.prepare(x, y, t/2, c, width, height, frames/2, channels);
+            a.prepare(phase, x, y, (t+1)/2, c, width, height, frames/2, channels);
+            b.prepare(phase, x, y, t/2, c, width, height, frames/2, channels);
         }
     };
 
@@ -1476,10 +1542,15 @@ namespace Lazy {
             else return Iter(a.scanline(x, y, t, c/2, width), false);
         }
 
-        void prepare(int x, int y, int t, int c, 
+        bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
+        int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
+        int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
+
+        
+        void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(x, y, t, (c+1)/2, width, height, frames, channels/2);
-            b.prepare(x, y, t, c/2, width, height, frames, channels/2);
+            a.prepare(phase, x, y, t, (c+1)/2, width, height, frames, channels/2);
+            b.prepare(phase, x, y, t, c/2, width, height, frames, channels/2);
         }
     };
 
@@ -1529,6 +1600,41 @@ namespace Lazy {
     };
 
 
+    // Evaluated an expression into an array
+    template<typename T>
+    void setScanline(const T &src, float *const dst, 
+                     int x, const int maxX, 
+                     const bool boundedVX, const int minVX, const int maxVX) {
+
+        //printf("set scanline %d %d %d %d %d\n", x, y, t, c, w);
+
+        if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
+            // Walk up to where we're allowed to start vectorizing
+            while (boundedVX && x < minVX) {
+                dst[x] = src[x];
+                x++;
+            }
+            // Walk a little further for better store alignment            
+            while ((size_t)(dst+x) & (Vec::width*sizeof(float) - 1)) {
+                dst[x] = src[x];
+                x++;
+            }
+            
+            // Vectorized steady-state until we reach the end or until
+            // we're no longer allowed to vectorize
+            int lastX = maxX - Vec::width;
+            if (boundedVX) lastX = std::min(lastX, maxVX);
+            while (x <= lastX) {
+                Vec::store(src.vec(x), dst+x);
+                x += Vec::width;
+            }
+        }
+        // Scalar wind down
+        while (x < maxX) {
+            dst[x] = src[x];
+            x++;
+        }        
+    }
 
 }
 
