@@ -37,7 +37,7 @@ namespace Lazy {
 
         void evalScanline(int y, int t, int c) {
             //printf("Evaluating %p at scanline %d-%d %d %d %d (placing in image at %d-%d %d %d %d)\n", 
-            //       this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
+            //this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
             //printf("Computing destination address...\n");
             float *const dst = &im(0-minX, y-minY, t-minT, c-minC);
 
@@ -140,7 +140,12 @@ namespace Lazy {
         typedef Image::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
             if (!ptr->evaluated[y-ptr->minY])  {
-                // TODO: consider locking the scanline during evaluation
+                // TODO: consider locking the scanline during
+                // evaluation. As it stands, if multiple threads
+                // hammer on the same scanline, there will be wasted
+                // work (and probably lots of fighting over cache
+                // lines).  Fortunately, that's not how openmp
+                // schedules its threads.
                 ptr->evalScanline(y, t, c);
                 ptr->evaluated[y-ptr->minY] = true;
             }
