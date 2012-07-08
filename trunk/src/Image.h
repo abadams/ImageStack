@@ -460,49 +460,32 @@ public:
                    (c == 0 || channels == c),
                    "Can only assign from source of matching size\n");
         }
+        
+        // Compute the domain over which we can vectorize
+        bool boundedVX = expr.boundedVecX();
+        int minVX = expr.minVecX();
+        int maxVX = expr.maxVecX();
 
         for (int c = 0; c < channels; c++) {
             for (int t = 0; t < frames; t++) {
-                expr.prepare(0, 0, t, c, width, height, 1, 1);
+                // Assume we chunk here for now
+                expr.prepare(0, 0, 0, t, c, width, height, 1, 1);
+                expr.prepare(1, 0, 0, t, c, width, height, 1, 1);
+
                 #ifdef _OPENMP
                 #pragma omp parallel for
                 #endif
                 for (int y = 0; y < height; y++) {
                     LazyType(T)::Iter iter = expr.scanline(0, y, t, c, width);
-                    setScanline(iter, 0, y, t, c, width);
+                    float *const dst = base + c*cstride + t*tstride + y*ystride;
+                    ImageStack::Lazy::setScanline(iter, dst, 0, width, boundedVX, minVX, maxVX);
                 }
             }
         }
+        // Clean up any resources
+        expr.prepare(2, 0, 0, 0, 0, width, height, frames, channels);
     }
 
-
-    template<typename T>
-    void setScanline(const T &iter, 
-                     int x, const int y, const int t, const int c, const int w) const {
-        float *const dst = base + c*cstride + t*tstride + y*ystride + x;
-
-        const int vec_width = ImageStack::Lazy::Vec::width;
-
-        //printf("set scanline %d %d %d %d %d\n", x, y, t, c, w);
-
-        if (vec_width > 1 && width > vec_width*2) {
-            // warm up
-            while ((size_t)(dst+x) & (vec_width*sizeof(float) - 1)) {
-                dst[x] = iter[x];
-                x++;
-            }
-            // vectorized steady-state
-            while (x < (w-(vec_width-1))) {
-                *((ImageStack::Lazy::Vec::type *)(dst + x)) = iter.vec(x);
-                x += vec_width;
-            }
-        }
-        // Scalar wind down
-        while (x < w) {
-            dst[x] = iter[x];
-            x++;
-        }        
-    }
 
     // A version of set that takes a set of up to 4 expressions and
     // sets the image's channels accordingly. This is more efficient
@@ -576,13 +559,18 @@ public:
         #endif
         return Iter(base + y*ystride + t*tstride + c*cstride);
     }
-    void prepare(int x, int y, int t, int c,
+    bool boundedVecX() const {return true;}
+    int minVecX() const {return 0;}
+    int maxVecX() const {return width-ImageStack::Lazy::Vec::width;}
+
+    void prepare(int phase, int x, int y, int t, int c,
                  int xs, int ys, int ts, int cs) const {
         assert(x >= 0 && x+xs <= width &&
                y >= 0 && y+ys <= height &&
                t >= 0 && t+ts <= frames &&
                c >= 0 && c+cs <= channels, 
-               "Expression would access image out of bounds\n");        
+               "Expression would access image out of bounds: %d %d %d %d  %d %d %d %d\n",
+               x, y, t, c, xs, ys, ts, cs);
     }
 
     // Construct an image from a bounded expression object. No consts
@@ -640,14 +628,21 @@ private:
                (frames == fD || fD == 0),
                "Can only assign from sources of matching size\n");
 
+        // TODO: respect minVecX and maxVecX
+
         // 4 or 8-wide vector code, distributed across cores
         const int vec_width = ImageStack::Lazy::Vec::width;
         for (int t = 0; t < frames; t++) {
 
-            funcA.prepare(0, 0, t, 0, width, height, 1, 1);
-            funcB.prepare(0, 0, t, 0, width, height, 1, 1);
-            funcC.prepare(0, 0, t, 0, width, height, 1, 1);
-            funcD.prepare(0, 0, t, 0, width, height, 1, 1);
+
+            funcA.prepare(0, 0, 0, t, 0, width, height, 1, 1);
+            funcB.prepare(0, 0, 0, t, 0, width, height, 1, 1);
+            funcC.prepare(0, 0, 0, t, 0, width, height, 1, 1);
+            funcD.prepare(0, 0, 0, t, 0, width, height, 1, 1);
+            funcA.prepare(1, 0, 0, t, 0, width, height, 1, 1);
+            funcB.prepare(1, 0, 0, t, 0, width, height, 1, 1);
+            funcC.prepare(1, 0, 0, t, 0, width, height, 1, 1);
+            funcD.prepare(1, 0, 0, t, 0, width, height, 1, 1);
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
@@ -659,7 +654,6 @@ private:
                 const typename B::Iter iterB = funcB.scanline(0, y, t, 0, w);
                 const typename C::Iter iterC = funcC.scanline(0, y, t, 0, w);
                 const typename D::Iter iterD = funcD.scanline(0, y, t, 0, w);
-
 
                 int x = 0;
 
@@ -705,6 +699,10 @@ private:
                 }
             }
         }
+        funcA.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
+        funcB.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
+        funcC.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
+        funcD.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
     }
 
     struct Payload {
