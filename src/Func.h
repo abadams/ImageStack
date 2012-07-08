@@ -36,18 +36,28 @@ namespace Lazy {
             minVecX(e.minVecX()), maxVecX(e.maxVecX()), boundedVecX(e.boundedVecX()) {}
 
         void evalScanline(int y, int t, int c) {
-            //printf("Evaluating at scanline %d %d %d\n", y, t, c);        
+            //printf("Evaluating %p at scanline %d-%d %d %d %d (placing in image at %d-%d %d %d %d)\n", 
+            //       this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
+            //printf("Computing destination address...\n");
+            float *const dst = &im(0-minX, y-minY, t-minT, c-minC);
 
-            setScanline(expr.scanline(minX, y, t, c, maxX - minX), 
-                        &im(0, y-minY, t-minT, c-minC),
-                        minX, maxX, 
+            //printf("Destination address is %p.\n"
+            //       "Computing source iterator...\n", dst);
+            typename T::Iter src = expr.scanline(minX, y, t, c, maxX-minX);
+            
+            //printf("Done. Running kernel...\n");
+
+            setScanline(src, dst, minX, maxX, 
                         boundedVecX, minVecX, maxVecX);
+
+            //printf("Done\n");
         }   
 
         void prepareFunc(int phase, int x, int y, int t, int c,
                          int width, int height, int frames, int channels) {
-            printf("Preparing %p at phase %d over region %d %d %d %d  %d %d %d %d\n", this,
-                   phase, x, y, t, c, width, height, frames, channels);               
+
+            //printf("Preparing %p at phase %d over region %d %d %d %d  %d %d %d %d\n", this,
+            //phase, x, y, t, c, width, height, frames, channels);               
 
             // Each phase we get called multiple times according to
             // how many times we occur in the expression
@@ -83,9 +93,9 @@ namespace Lazy {
                         im.height < maxY - minY ||
                         im.frames < maxT - minT ||
                         im.channels < maxC - minC) {
-                        printf("Allocating backing for %p %d %d %d %d\n", this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
+                        //printf("Allocating backing for %p %d %d %d %d\n", this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
                         im = Image(maxX - minX, maxY - minY, maxT - minT, maxC - minC);
-                        printf("Done\n");
+                        //printf("Done\n");
                     } else {
                         // no need to allocate
                     }
@@ -97,8 +107,8 @@ namespace Lazy {
                 if (lastPhase != 2) {
                     // Clean-up
                     // We're done iterating over everything. Clean up.
-                    //im = Image();
-                    printf("Freeing backing for %p\n", this);
+                    im = Image();
+                    //printf("Freeing backing for %p\n", this);
                 }
             }       
 
@@ -129,10 +139,10 @@ namespace Lazy {
 
         typedef Image::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
-            if (!ptr->evaluated[y])  {
+            if (!ptr->evaluated[y-ptr->minY])  {
                 // TODO: consider locking the scanline during evaluation
                 ptr->evalScanline(y, t, c);
-                ptr->evaluated[y] = true;
+                ptr->evaluated[y-ptr->minY] = true;
             }
             return ptr->im.scanline(x-ptr->minX, y-ptr->minY, t-ptr->minT, c-ptr->minC, width);
         }

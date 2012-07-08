@@ -1132,7 +1132,7 @@ namespace Lazy {
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
             a.prepare(phase, x-xo, y-yo, t-to, c-co, 
-                                  width, height, frames, channels);
+                      width, height, frames, channels);
         }
     };
     
@@ -1178,7 +1178,7 @@ namespace Lazy {
             const typename A::Iter a;
             const bool outOfBounds;
             const int width;
-            Iter() : outOfBounds(false), width(0) {}
+            Iter() : outOfBounds(true), width(0) {}
             Iter(const typename A::Iter &a_, int w) : 
                 a(a_), outOfBounds(false), width(w) {  
             }
@@ -1606,14 +1606,13 @@ namespace Lazy {
                      int x, const int maxX, 
                      const bool boundedVX, const int minVX, const int maxVX) {
 
-        //printf("set scanline %d %d %d %d %d\n", x, y, t, c, w);
-
         if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
             // Walk up to where we're allowed to start vectorizing
             while (boundedVX && x < minVX) {
                 dst[x] = src[x];
                 x++;
             }
+
             // Walk a little further for better store alignment            
             while ((size_t)(dst+x) & (Vec::width*sizeof(float) - 1)) {
                 dst[x] = src[x];
