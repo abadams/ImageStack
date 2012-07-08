@@ -4,6 +4,9 @@
 using namespace ImageStack;
 using namespace ImageStack::Lazy;
 
+#define work(X) ((X+X*X*X)/(sqrt(X)+X*X))
+
+
 int main(int argc, char **argv) {
     start();
 
@@ -16,7 +19,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < 10; i++) {
             // blur the square root
             // inline
-            auto tmp = zeroBoundary((in));
+            auto tmp = zeroBoundary(work(in));
             auto bx = shiftX(tmp, -1) + 2*tmp + shiftX(tmp, 1);
             auto by = shiftY(bx, -1) + 2*bx + shiftY(bx, 1);
             up.set(by);
@@ -26,7 +29,7 @@ int main(int argc, char **argv) {
         printf("Root...\n");
         for (int i = 0; i < 10; i++) {
             // root
-            Image tmp = (in);
+            Image tmp = work(in);
             Image bx = shiftX(zeroBoundary(tmp), -1) + 2*tmp + shiftX(zeroBoundary(tmp), 1);
             Image by = shiftY(zeroBoundary(bx), -1) + 2*bx + shiftY(zeroBoundary(bx), 1);
             up = by;
@@ -36,7 +39,7 @@ int main(int argc, char **argv) {
         printf("Chunk...\n");        
         for (int i = 0; i < 10; i++) {
             // chunk
-            Func tmp = zeroBoundary((in));
+            Func tmp = zeroBoundary(work(in));
             Func bx = shiftX(tmp, -1) + 2*tmp + shiftX(tmp, 1);
             Func by = shiftY(bx, -1) + 2*bx + shiftY(bx, 1);
             up.set(by);
