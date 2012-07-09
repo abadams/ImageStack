@@ -4,8 +4,8 @@
 using namespace ImageStack;
 using namespace ImageStack::Lazy;
 
-#define work(X) ((X+X*X*X)/(sqrt(X)+X*X))
-//#define work(X) (X)
+//#define work(X) ((X+X*X*X)/(sqrt(X)+X*X))
+#define work(X) (X)
 
 void blur_fast(Image in, Image out) {
     __m256 one_third = _mm256_set1_ps(1.0f/3);
