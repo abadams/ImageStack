@@ -468,8 +468,8 @@ public:
 
         for (int c = 0; c < channels; c++) {
             for (int t = 0; t < frames; t++) {
-                for (int yt = 0; yt < height; yt += 16) {
-                    const int maxY = min(yt + 16, height);
+                for (int yt = 0; yt < height; yt += 64) {
+                    const int maxY = min(yt + 64, height);
                     for (int xt = 0; xt < width; xt += 1024) {
                         const int maxX = min(xt + 1024, width);
                         // Assume we chunk here for now. This decision assumes
@@ -490,7 +490,7 @@ public:
                             LazyType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
                             float *const dst = base + c*cstride + t*tstride + y*ystride;
                             ImageStack::Lazy::setScanline(iter, dst, xt, maxX, boundedVX, minVX, maxVX);
-                        }                        
+                        }
                     }
                 }
             }

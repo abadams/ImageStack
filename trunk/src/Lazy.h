@@ -398,7 +398,6 @@ namespace Lazy {
         typedef Const Lazy;
         const float val;
         Const(const float val_) : val(val_) {}
-        float operator()(int x, int, int, int) const {return val;}
 
         // State needed to iterate across a scanline
         struct Iter {
@@ -425,7 +424,6 @@ namespace Lazy {
     // Coordinates
     struct X : public Unbounded {
         typedef X Lazy;
-        float operator()(int x, int, int, int) const {return x;}
 
         // State needed to iterate across a scanline
         struct Iter {
@@ -452,7 +450,6 @@ namespace Lazy {
 
     struct Y : public Unbounded {
         typedef Y Lazy;
-        float operator()(int, int y, int, int) const {return y;}
 
         typedef Const::Iter Iter;
 
@@ -466,7 +463,6 @@ namespace Lazy {
 
     struct T : public Unbounded {
         typedef T Lazy;
-        float operator()(int, int, int t, int) const {return t;}
 
         typedef Const::Iter Iter;
 
@@ -480,7 +476,6 @@ namespace Lazy {
 
     struct C : public Unbounded {
         typedef C Lazy;
-        float operator()(int, int, int, int c) const {return c;}
 
         typedef Const::Iter Iter;
 
@@ -496,8 +491,8 @@ namespace Lazy {
     template<typename A, typename B, typename Op>
     struct BinaryOp {
         typedef BinaryOp<typename A::Lazy, typename B::Lazy, Op> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
         
         BinaryOp(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -511,10 +506,6 @@ namespace Lazy {
         int getSize(int i) const {
             if (a.getSize(i)) return a.getSize(i);
             return b.getSize(i);
-        }
-        
-        float operator()(int x, int y, int t, int c) const {
-            return Op::scalar(a(x, y, t, c), b(x, y, t, c));
         }
         
         struct Iter {
@@ -550,8 +541,8 @@ namespace Lazy {
     template<typename A, typename B, typename Op>
     struct Cmp {
         typedef Cmp<typename A::Lazy, typename B::Lazy, Op> LazyBool;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
         
         Cmp(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -564,10 +555,6 @@ namespace Lazy {
         int getSize(int i) const {
             if (a.getSize(i)) return a.getSize(i);
             return b.getSize(i);
-        }
-        
-        float operator()(int x, int y, int t, int c) const {
-            return Op::scalar(a(x, y, t, c), b(x, y, t, c)) ? 1 : 0;
         }
         
         struct Iter {
@@ -660,11 +647,8 @@ namespace Lazy {
     template<float(*fn)(float), typename A>
     struct Lift {
         typedef Lift<fn, typename A::Lazy> Lazy;
-        typename Handle<A>::type a;
+        const A a;
         Lift(const A &a_) : a(a_) {}
-        float operator()(int x, int y, int t, int c) const {
-            return (*fn)(a(x, y, t, c));
-        }
 
         int getSize(int i) const {return a.getSize(i);}
 
@@ -703,11 +687,8 @@ namespace Lazy {
     template<typename A, typename Op>
     struct UnaryOp {
         typedef UnaryOp<typename A::Lazy, Op> Lazy;
-        typename Handle<A>::type a;
+        const A a;
         UnaryOp(const A &a_) : a(a_) {}
-        float operator()(int x, int y, int t, int c) const {
-            return Op::scalar(x, y, t, c);
-        }
 
         int getSize(int i) const {return a.getSize(i);}
 
@@ -738,8 +719,8 @@ namespace Lazy {
     template<float(*fn)(float, float), typename A, typename B>
     struct Lift2 {
         typedef Lift2<fn, typename A::Lazy, typename B::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
 
         Lift2(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -753,10 +734,6 @@ namespace Lazy {
         int getSize(int i) const {
             if (a.getSize(i)) return a.getSize(i);
             return b.getSize(i);
-        }
-
-        float operator()(int x, int y, int t, int c) const {
-            return (*fn)(a(x, y, t, c), b(x, y, t, c));
         }
 
         struct Iter {
@@ -901,9 +878,9 @@ namespace Lazy {
     template<typename A, typename B, typename C>
     struct _Select {
         typedef _Select<typename A::LazyBool, typename B::Lazy, typename C::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
-        typename Handle<C>::type c;
+        const A a;
+        const B b;
+        const C c;
 
         _Select(const A &a_, const B &b_, const C &c_) : a(a_), b(b_), c(c_) {
             for (int i = 0; i < 4; i++) {
@@ -922,10 +899,6 @@ namespace Lazy {
             if (b.getSize(i)) return b.getSize(i);
             if (c.getSize(i)) return c.getSize(i);
             return 0;
-        }
-
-        float operator()(int x, int y, int t, int c_) const {
-            return (a(x, y, t, c_) ? b(x, y, t, c_) : c(x, y, t, c_));
         }
 
         struct Iter {
@@ -993,9 +966,9 @@ namespace Lazy {
     template<typename A, typename B, typename C>
     struct _IfThenElse {
         typedef _IfThenElse<typename A::LazyBool, typename B::Lazy, typename C::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
-        typename Handle<C>::type c;
+        const A a;
+        const B b;
+        const C c;
 
         _IfThenElse(const A &a_, const B &b_, const C &c_) : a(a_), b(b_), c(c_) {
             for (int i = 0; i < 4; i++) {
@@ -1014,10 +987,6 @@ namespace Lazy {
             if (b.getSize(i)) return b.getSize(i);
             if (c.getSize(i)) return c.getSize(i);
             return 0;
-        }
-
-        float operator()(int x, int y, int t, int c_) const {
-            return (a(x, y, t, c_) ? b(x, y, t, c_) : c(x, y, t, c_));
         }
 
         struct Iter {
@@ -1091,7 +1060,7 @@ namespace Lazy {
     template<typename A>
     struct _Shift {
         typedef _Shift<typename A::Lazy> Lazy;
-        typename Handle<A>::type a;
+        const A a;
         const int xo, yo, to, co;
 
         _Shift(const A &a_, int xo_, int yo_, int to_ = 0, int co_ = 0) : 
@@ -1101,9 +1070,6 @@ namespace Lazy {
                    (to == 0 || a.getSize(2) == 0) &&
                    (co == 0 || a.getSize(3) == 0),
                    "Can't shift expressions in bounded dimensions");
-        }
-        float operator()(int x, int y, int t, int c) const {
-            return a(x-xo, y-yo, t-to, c-co);
         }
         
         int getSize(int i) const {
@@ -1158,18 +1124,8 @@ namespace Lazy {
     template<typename A>
     struct _ZeroBoundary {
         typedef _ZeroBoundary<typename A::Lazy> Lazy;
-        typename Handle<A>::type a;
+        const A a;
         _ZeroBoundary(const A &a_) : a(a_) {}
-        float operator()(int x, int y, int t, int c) const {
-            if (x < 0 || x >= a.getSize(0) ||
-                y < 0 || y >= a.getSize(1) ||
-                t < 0 || t >= a.getSize(2) ||
-                c < 0 || c >= a.getSize(3)) {
-                return 0;
-            } else {
-                return a(x, y, t, c);
-            }
-        }
 
         // Once you add a boundary condition, things are unbounded
         int getSize(int) const {return 0;}
@@ -1270,8 +1226,8 @@ namespace Lazy {
     template<typename A, typename B>
     struct _InterleaveX {
         typedef _InterleaveX<typename A::Lazy, typename B::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
         
         _InterleaveX(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -1290,10 +1246,6 @@ namespace Lazy {
             }
         }
 
-        float operator()(int x, int y, int t, int c) const {
-            if (x & 1) return b(x/2, y, t, c);
-            else return a(x/2, y, t, c);
-        }
 
         struct Iter {
             const typename A::Iter a;
@@ -1359,11 +1311,38 @@ namespace Lazy {
         return _InterleaveX<Const, Const>(Const(a), Const(b));
     }
 
+    // An iterator which is either one thing or another depending on a runtime bool
+    template<typename A, typename B>
+    struct AltIter {
+        const typename A::Iter a;
+        const typename B::Iter b;
+        const bool useA;
+
+        static AltIter<A, B> fromA(const typename A::Iter &a) {
+            return AltIter<A, B>(a, typename B::Iter(), true);
+        }        
+        static AltIter<A, B> fromB(const typename B::Iter &b) {
+            return AltIter<A, B>(typename A::Iter(), b, false);
+        }
+        AltIter() : useA(false) {}
+        AltIter(const typename A::Iter &a_, const typename B::Iter &b_, bool useA_) : 
+            a(a_), b(b_), useA(useA_) {
+        }
+        float operator[](int x) const {
+            if (useA) return a[x];
+            else return b[x];
+        };
+        Vec::type vec(int x) const {
+            if (useA) return a.vec(x);
+            else return b.vec(x);
+        }
+    };
+
     template<typename A, typename B>
     struct _InterleaveY {
         typedef _InterleaveY<typename A::Lazy, typename B::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
         
         _InterleaveY(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -1380,11 +1359,6 @@ namespace Lazy {
             } else {
                 return std::max(a.getSize(i), b.getSize(i));
             }
-        }
-
-        float operator()(int x, int y, int t, int c) const {
-            if (y & 1) return b(x, y/2, t, c);
-            else return a(x, y/2, t, c);
         }
 
         struct Iter {
@@ -1406,9 +1380,11 @@ namespace Lazy {
             }
         };
  
+        typedef AltIter<A, B> Iter;
+
         Iter scanline(int x, int y, int t, int c, int width) const {
-            if (y & 1) return Iter(b.scanline(x, y/2, t, c, width));
-            else return Iter(a.scanline(x, y/2, t, c, width), false);
+            if (y & 1) Iter::fromB(b.scanline(x, y/2, t, c, width));
+            return Iter::fromA(a.scanline(x, y/2, t, c, width));
         }
 
         bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
@@ -1449,8 +1425,8 @@ namespace Lazy {
     template<typename A, typename B>
     struct _InterleaveT {
         typedef _InterleaveT<typename A::Lazy, typename B::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
         
         _InterleaveT(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -1469,16 +1445,11 @@ namespace Lazy {
             }
         }
 
-        float operator()(int x, int y, int t, int c) const {
-            if (t & 1) return b(x, y, t/2, c);
-            else return a(x, y, t/2, c);
-        }
-
-        typedef typename _InterleaveY<A, B>::Iter Iter;
-
+        typedef AltIter<A, B> Iter;
+        
         Iter scanline(int x, int y, int t, int c, int width) const {
-            if (t & 1) return Iter(b.scanline(x, y, t/2, c, width));
-            else return Iter(a.scanline(x, y, t/2, c, width), false);
+            if (t & 1) return Iter::fromB(b.scanline(x, y, t/2, c, width));
+            else return Iter::fromA(a.scanline(x, y, t/2, c, width));
         }
 
         bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
@@ -1518,8 +1489,8 @@ namespace Lazy {
     template<typename A, typename B>
     struct _InterleaveC {
         typedef _InterleaveC<typename A::Lazy, typename B::Lazy> Lazy;
-        typename Handle<A>::type a;
-        typename Handle<B>::type b;
+        const A a;
+        const B b;
         
         _InterleaveC(const A &a_, const B &b_) : a(a_), b(b_) {
             for (int i = 0; i < 4; i++) {
@@ -1538,16 +1509,11 @@ namespace Lazy {
             }
         }
 
-        float operator()(int x, int y, int t, int c) const {
-            if (c & 1) return b(x, y, t, c/2);
-            else return a(x, y, t, c/2);
-        }
-
-        typedef typename _InterleaveY<A, B>::Iter Iter;
+        typedef AltIter<A, B> Iter;
 
         Iter scanline(int x, int y, int t, int c, int width) const {
-            if (c & 1) return Iter(b.scanline(x, y, t, c/2, width));
-            else return Iter(a.scanline(x, y, t, c/2, width), false);
+            if (c & 1) return Iter::fromB(b.scanline(x, y, t, c/2, width));
+            else return Iter::fromA(a.scanline(x, y, t, c/2, width));
         }
 
         bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
@@ -1584,6 +1550,34 @@ namespace Lazy {
     interleaveC(float a, float b) {
         return _InterleaveC<Const, Const>(Const(a), Const(b));
     }
+
+    /*
+    // Subsamplings
+    template<typename A>
+    struct _SubsampleX {
+        typedef _SubsampleX<typename A::Lazy> Lazy;
+        const A a;
+        _SubsampleX(const A &a_, int shift) : a(a_) {
+            assert(shift == 0 || shift == 1,
+                   "Can only use shifts of zero or one in subsample\n");
+        }
+
+        int getSize(int i) {
+            if (i == 0) {
+                const int w = a.getSize(0);
+                if (w) return (w-shift+1)/2;
+                else return 0;
+            }
+            else return a.getSize(i);
+        }
+
+        struct Iter {
+            const typename A::Iter a;
+            Iter(const typename A::Iter &a_) : a(a_) {}
+            
+        };
+    };
+    */
 
     // A trait to check if something is ok to be cast to a lazy expression type, and if so, how.
     template<typename T>

@@ -10,6 +10,7 @@ namespace Lazy {
         Image im;
         int minX, minY, minT, minC;
         int maxX, maxY, maxT, maxC;
+        bool lazy;
 
         vector<int> evaluated;
 
@@ -57,6 +58,9 @@ namespace Lazy {
         void prepareFunc(int phase, int x, int y, int t, int c,
                          int width, int height, int frames, int channels) {
 
+            // recurse
+            expr.prepare(phase, x, y, t, c, width, height, frames, channels);
+
             //printf("Preparing %p at phase %d over region %d %d %d %d  %d %d %d %d\n", this,
             //phase, x, y, t, c, width, height, frames, channels);               
 
@@ -97,12 +101,24 @@ namespace Lazy {
                         //printf("Allocating backing for %p %d %d %d %d\n", this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
                         im = Image(maxX - minX, maxY - minY, maxT - minT, maxC - minC);
                         //printf("Done\n");
+
                     } else {
                         // no need to allocate
                     }
-                    
-                    // No scanlines have been evaluated
-                    evaluated.assign(maxY - minY, false);
+
+                    if (lazy) {
+                        // No scanlines have been evaluated
+                        evaluated.assign(maxY - minY, false);
+                    } else {
+                        // evaluate all scanlines here
+                        for (int c = minC; c < maxC; c++) {
+                            for (int t = minT; t < maxT; t++) {
+                                for (int y = minY; y < maxY; y++) {
+                                    evalScanline(y, t, c);
+                                }
+                            }
+                        }
+                    }                    
                 }
             } else if (phase == 2) {
                 if (lastPhase != 2) {
@@ -115,8 +131,6 @@ namespace Lazy {
 
             lastPhase = phase;
 
-            // recurse
-            expr.prepare(phase, x, y, t, c, width, height, frames, channels);
         }
 
         int getSize(int i) {
@@ -129,6 +143,7 @@ namespace Lazy {
         template<typename T>
         Func(const T t, const typename T::Lazy *enable = NULL) {
             ptr.reset(new DerivedFunc<T>(t));
+            ptr->lazy = true;
         }
 
         // Implement the lazy interface
@@ -140,7 +155,7 @@ namespace Lazy {
 
         typedef _Shift<Image>::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
-            if (!ptr->evaluated[y-ptr->minY])  {
+            if (ptr->lazy && !ptr->evaluated[y-ptr->minY])  {
                 // TODO: consider locking the scanline during
                 // evaluation. As it stands, if multiple threads
                 // hammer on the same scanline, there will be wasted
