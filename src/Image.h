@@ -468,7 +468,14 @@ public:
 
         for (int c = 0; c < channels; c++) {
             for (int t = 0; t < frames; t++) {
-                // Assume we chunk here for now
+                // Assume we chunk here for now. This decision assumes
+                // no footprint in C and T, and could be grossly
+                // wasteful! In future, we should just explicitly
+                // check the footprint and use that to decide where to
+                // chunk.  In fact, with the current logic inside
+                // Func, we only keep track of which scanlines were
+                // evaluated, not which channel or frames, so we're
+                // going to produce bogus output. 
                 expr.prepare(0, 0, 0, t, c, width, height, 1, 1);
                 expr.prepare(1, 0, 0, t, c, width, height, 1, 1);
 
