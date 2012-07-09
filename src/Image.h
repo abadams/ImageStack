@@ -448,7 +448,7 @@ public:
     // The second template argument prevents instantiations from
     // things that don't satisfy the trait "lazyable"
     template<typename T>
-    void set(const T &expr_, const LazyType(T) *enable = NULL) const {
+    void set(const T expr_, const LazyType(T) *enable = NULL) const {
         LazyType(T) expr(expr_);
         {
             assert(defined(), "Can't set undefined image\n");
@@ -468,24 +468,30 @@ public:
 
         for (int c = 0; c < channels; c++) {
             for (int t = 0; t < frames; t++) {
-                // Assume we chunk here for now. This decision assumes
-                // no footprint in C and T, and could be grossly
-                // wasteful! In future, we should just explicitly
-                // check the footprint and use that to decide where to
-                // chunk.  In fact, with the current logic inside
-                // Func, we only keep track of which scanlines were
-                // evaluated, not which channel or frames, so we're
-                // going to produce bogus output. 
-                expr.prepare(0, 0, 0, t, c, width, height, 1, 1);
-                expr.prepare(1, 0, 0, t, c, width, height, 1, 1);
+                for (int yt = 0; yt < height; yt += 16) {
+                    const int maxY = min(yt + 16, height);
+                    for (int xt = 0; xt < width; xt += 1024) {
+                        const int maxX = min(xt + 1024, width);
+                        // Assume we chunk here for now. This decision assumes
+                        // no footprint in C and T, and could be grossly
+                        // wasteful! In future, we should just explicitly
+                        // check the footprint and use that to decide where to
+                        // chunk.  In fact, with the current logic inside
+                        // Func, we only keep track of which scanlines were
+                        // evaluated, not which channel or frames, so we're
+                        // going to produce bogus output. 
+                        expr.prepare(0, xt, yt, t, c, maxX-xt, maxY-yt, 1, 1);
+                        expr.prepare(1, xt, yt, t, c, maxX-xt, maxY-yt, 1, 1);
 
-                #ifdef _OPENMP
-                #pragma omp parallel for
-                #endif
-                for (int y = 0; y < height; y++) {
-                    LazyType(T)::Iter iter = expr.scanline(0, y, t, c, width);
-                    float *const dst = base + c*cstride + t*tstride + y*ystride;
-                    ImageStack::Lazy::setScanline(iter, dst, 0, width, boundedVX, minVX, maxVX);
+                        #ifdef _OPENMP
+                        #pragma omp parallel for
+                        #endif
+                        for (int y = yt; y < maxY; y++) {
+                            LazyType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
+                            float *const dst = base + c*cstride + t*tstride + y*ystride;
+                            ImageStack::Lazy::setScanline(iter, dst, xt, maxX, boundedVX, minVX, maxVX);
+                        }                        
+                    }
                 }
             }
         }
@@ -501,7 +507,7 @@ public:
     // and then each value is stored, preventing nasty chicken-and-egg
     // problems when, for example, permuting channels.
     template<typename A, typename B, typename C, typename D>
-    void setChannels(const A &a, const B &b, const C &c, const D &d,
+    void setChannels(const A a, const B b, const C c, const D d,
                      LazyType(A) *pa = NULL,
                      LazyType(B) *pb = NULL,
                      LazyType(C) *pc = NULL,
@@ -548,6 +554,33 @@ public:
         }
         return 0;
     }
+
+    #ifdef BOUNDS_CHECKING
+    struct Iter {
+        int width;
+        const float *const addr;
+        Iter() : addr(NULL) {}
+        Iter(const float *a, int w) : width(w), addr(a) {}
+        float operator[](int x) const {
+            assert(x >= 0 && x < width, 
+                   "Access out of bounds in image iterator:\n"
+                   "%d is not within 0 - %d\n", x, width);
+            return addr[x];
+        }
+        ImageStack::Lazy::Vec::type vec(int x) const {
+            assert(x >= 0 && x <= width - ImageStack::Lazy::Vec::width,
+                   "Vector access out of bounds in image iterator:\n"
+                   "%d is not sufficiently within 0 - %d\n", x, width);
+            return ImageStack::Lazy::Vec::load(addr+x);
+        }
+    };
+    Iter scanline(int x, int y, int t, int c, int w) const {
+        assert(x >= 0 && x+w <= width,
+               "Scanline will access image out of bounds:\n"
+               "%d - %d is not within 0 - %d\n", x, x+w, width);
+        return Iter(base + y*ystride + t*tstride + c*cstride, width);
+    }
+    #else
     struct Iter {
         const float *const addr;
         Iter() : addr(NULL) {}
@@ -558,14 +591,10 @@ public:
         }
     };
     Iter scanline(int x, int y, int t, int c, int w) const {
-        #ifdef BOUNDS_CHECKING
-        assert(y >= 0 && y < height &&
-               t >= 0 && t < frames &&
-               c >= 0 && c < channels &&
-               x >= 0 && x+w <= width, "Scanline out of bounds\n");
-        #endif
         return Iter(base + y*ystride + t*tstride + c*cstride);
     }
+    #endif
+
     bool boundedVecX() const {return true;}
     int minVecX() const {return 0;}
     int maxVecX() const {return width-ImageStack::Lazy::Vec::width;}

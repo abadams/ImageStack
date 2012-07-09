@@ -11,7 +11,7 @@ namespace Lazy {
         int minX, minY, minT, minC;
         int maxX, maxY, maxT, maxC;
 
-        vector<bool> evaluated;
+        vector<int> evaluated;
 
         // Evaluate myself into buffer at the given scanline. 
         virtual void evalScanline(int y, int t, int c) = 0;
@@ -38,11 +38,12 @@ namespace Lazy {
         void evalScanline(int y, int t, int c) {
             //printf("Evaluating %p at scanline %d-%d %d %d %d (placing in image at %d-%d %d %d %d)\n", 
             //this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
+            //printf("Image has size: %d %d %d %d\n", im.width, im.height, im.frames, im.channels);
             //printf("Computing destination address...\n");
-            float *const dst = &im(0-minX, y-minY, t-minT, c-minC);
+            float *const dst = &im(0, y-minY, t-minT, c-minC) - minX;
 
             //printf("Destination address is %p.\n"
-            //       "Computing source iterator...\n", dst);
+            //"Computing source iterator...\n", dst);
             typename T::Iter src = expr.scanline(minX, y, t, c, maxX-minX);
             
             //printf("Done. Running kernel...\n");
@@ -50,7 +51,7 @@ namespace Lazy {
             setScanline(src, dst, minX, maxX, 
                         boundedVecX, minVecX, maxVecX);
 
-            //printf("Done\n");
+            //printf("Done\n"); fflush(stdout);
         }   
 
         void prepareFunc(int phase, int x, int y, int t, int c,
@@ -137,7 +138,7 @@ namespace Lazy {
             return ptr->getSize(i);
         }
 
-        typedef Image::Iter Iter;
+        typedef _Shift<Image>::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
             if (!ptr->evaluated[y-ptr->minY])  {
                 // TODO: consider locking the scanline during
@@ -149,12 +150,14 @@ namespace Lazy {
                 ptr->evalScanline(y, t, c);
                 ptr->evaluated[y-ptr->minY] = true;
             }
-            return ptr->im.scanline(x-ptr->minX, y-ptr->minY, t-ptr->minT, c-ptr->minC, width);
+            Image::Iter iter = ptr->im.scanline(x-ptr->minX, y-ptr->minY, 
+                                                t-ptr->minT, c-ptr->minC, width);            
+            return _Shift<Image>::Iter(iter, ptr->minX);
         }
-    
+
         bool boundedVecX() const {return false;}
-        int minVecX() const {return 0x80000000;}
-        int maxVecX() const {return 0x7fffffff;}
+        int minVecX() const {return 0xa0000000;} 
+        int maxVecX() const {return 0x3fffffff;}
 
         void prepare(int phase, int x, int y, int t, int c,
                      int width, int height, int frames, int channels) const {

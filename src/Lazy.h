@@ -389,8 +389,8 @@ namespace Lazy {
     struct Unbounded {
         int getSize(int) const {return 0;}
         bool boundedVecX() const {return false;}
-        int minVecX() const {return 0x80000000;}
-        int maxVecX() const {return 0x7fffffff;}
+        int minVecX() const {return 0xa0000000;}
+        int maxVecX() const {return 0x3fffffff;}
     };
 
     // Constants
@@ -1190,7 +1190,15 @@ namespace Lazy {
             Vec::type vec(int x) const {
                 // This only gets called if we're in-bounds in the x dimension
                 if (outOfBounds) return Vec::broadcast(0);
-                else return a.vec(x);
+                else {
+                    #ifdef BOUNDS_CHECKING
+                    assert (x >= 0 && x <= width - Vec::width,
+                            "ZeroBoundary vec(%d) called:\n"
+                            "This is not sufficiently within 0 - %d\n",
+                            x, width);
+                    #endif
+                    return a.vec(x);
+                }
                 /*
                 // Completely out-of-bounds
                 if (outOfBounds || (x < 1-Vec::width) || (x >= width)) {
@@ -1602,11 +1610,12 @@ namespace Lazy {
 
     // Evaluated an expression into an array
     template<typename T>
-    void setScanline(const T &src, float *const dst, 
+    void setScanline(const T src, float *const dst, 
                      int x, const int maxX, 
                      const bool boundedVX, const int minVX, const int maxVX) {
 
         if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
+            //printf("Warm up...\n");
             // Walk up to where we're allowed to start vectorizing
             while (boundedVX && x < minVX) {
                 dst[x] = src[x];
@@ -1618,16 +1627,20 @@ namespace Lazy {
                 dst[x] = src[x];
                 x++;
             }
-            
+
+            //printf("Vectorized...\n");
             // Vectorized steady-state until we reach the end or until
             // we're no longer allowed to vectorize
             int lastX = maxX - Vec::width;
             if (boundedVX) lastX = std::min(lastX, maxVX);
+            asm("# begin vector");
             while (x <= lastX) {
                 Vec::store(src.vec(x), dst+x);
                 x += Vec::width;
             }
+            asm("# end vector");
         }
+        //printf("Wind down...\n");
         // Scalar wind down
         while (x < maxX) {
             dst[x] = src[x];
