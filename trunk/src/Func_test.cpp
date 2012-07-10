@@ -4,24 +4,28 @@
 using namespace ImageStack;
 using namespace ImageStack::Lazy;
 
-//#define work(X) ((X+X*X*X)/(sqrt(X)+X*X))
-#define work(X) (X)
+#define work(X) ((X+X*X*X)/(sqrt(X)+X*X))
+//#define work(X) (X)
+
+#define X_TILE_SIZE 256
+#define Y_TILE_SIZE 32
 
 void blur_fast(Image in, Image out) {
     __m256 one_third = _mm256_set1_ps(1.0f/3);
 
     for (int c = 0; c < in.channels; c++) {
         for (int t = 0; t < in.frames; t++) {
-#pragma omp parallel for
-            
-            for (int yTile = 0; yTile < in.height; yTile += 64) {
+
+
+#pragma omp parallel for            
+            for (int yTile = 0; yTile < in.height; yTile += Y_TILE_SIZE) {
                 __m256 v0, v1, v2, sum, avg;
-                float tmp[(64)*(64+2)];
-                for (int xTile = 0; xTile < in.width; xTile += 64) {
+                float tmp[(X_TILE_SIZE)*(Y_TILE_SIZE+2)];
+                for (int xTile = 0; xTile < in.width; xTile += X_TILE_SIZE) {
                     float *tmpPtr = (float *)tmp;
-                    for (int y = -1; y < 64+1; y++) {
+                    for (int y = -1; y < Y_TILE_SIZE+1; y++) {
                         const float *inPtr = &(in(xTile, yTile+y, t, c));
-                        for (int x = 0; x < 64; x += 8) {          
+                        for (int x = 0; x < X_TILE_SIZE; x += 8) {          
                             v0 = _mm256_loadu_ps(inPtr-1);
                             v1 = _mm256_loadu_ps(inPtr+1);
                             v2 = _mm256_loadu_ps(inPtr);
@@ -33,11 +37,11 @@ void blur_fast(Image in, Image out) {
                         }
                     }
                     tmpPtr = (float *)tmp;
-                    for (int y = 0; y < 64; y++) {
+                    for (int y = 0; y < Y_TILE_SIZE; y++) {
                         float *outPtr = &(out(xTile, yTile+y, t, c));
-                        for (int x = 0; x < 64; x += 8) {
-                            v0 = _mm256_loadu_ps(tmpPtr+(2*64));
-                            v1 = _mm256_loadu_ps(tmpPtr+64);
+                        for (int x = 0; x < X_TILE_SIZE; x += 8) {
+                            v0 = _mm256_loadu_ps(tmpPtr+(2*X_TILE_SIZE));
+                            v1 = _mm256_loadu_ps(tmpPtr+X_TILE_SIZE);
                             v2 = _mm256_loadu_ps(tmpPtr);
                             tmpPtr += 8;
                             sum = _mm256_add_ps(_mm256_add_ps(v0, v1), v2);
@@ -60,6 +64,28 @@ int main(int argc, char **argv) {
         Image in = Load::apply("in.tmp");       
         Image out(in.width, in.height, in.frames, in.channels);
 
+        asm ("# even");
+        Image even = subsampleX(in, 2, 0);
+        asm ("# odd");
+        Image odd = subsampleX(in, 2, 1);
+        asm ("# flipped");
+        Image flipped = subsampleX(in, -1, in.width-1);
+        asm ("# done");
+
+        Image evenRows = subsampleY(in, 2, 0);
+        Image oddRows = subsampleY(in, 2, 1);
+        Image flipY = subsampleY(in, -1, in.height-1);
+        
+
+        Save::apply(even, "even.tmp");
+        Save::apply(odd, "odd.tmp");
+        Save::apply(flipped, "flipped.tmp");
+
+        Save::apply(evenRows, "evenRows.tmp");
+        Save::apply(oddRows, "oddRows.tmp");
+        Save::apply(flipY, "flipY.tmp");
+
+        /*
         printf("Inline...\n");
         out.set(0);
         double t1s = currentTime();
@@ -93,10 +119,9 @@ int main(int argc, char **argv) {
         double t3s = currentTime();
         for (int i = 0; i < 10; i++) {
             // chunk
-            Func tmp = zeroBoundary(work(in));
+            auto tmp = zeroBoundary(work(in));
             Func bx = shiftX(tmp, -1) + tmp + shiftX(tmp, 1);
-            Func by = (shiftY(bx, -1) + bx + shiftY(bx, 1))/9;
-            out.set(by);
+            out.set((shiftY(bx, -1) + bx + shiftY(bx, 1))/9);
         }
         double t3e = currentTime();
         Save::apply(out, "out_chunk.tmp");
@@ -113,6 +138,7 @@ int main(int argc, char **argv) {
 
 
         printf("%f %f %f %f\n", t1e-t1s, t2e-t2s, t3e-t3s, t4e-t4s);
+        */
         
     } catch (Exception &e) {
         printf("Failure: %s\n", e.message);

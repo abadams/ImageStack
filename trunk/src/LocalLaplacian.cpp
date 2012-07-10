@@ -10,7 +10,7 @@
 /*
 Func LocalLaplacian::pyramidDown(Func im) {
     Func dx = subsampleX(im, 2, -1) + 3*subsampleX(im, 2, 0) + 3*subsampleX(im, 2, 1) + subsampleX(im, 2, 2);
-    Func dy = subsampleY(dy, 2, -1) + 3*subsampleY(dy, 2, 0) + 3*subsampleY(dy, 2, 1) + subsampleY(dy, 2, 2);
+    Func dy = subsampleY(dx, 2, -1) + 3*subsampleY(dx, 2, 0) + 3*subsampleY(dx, 2, 1) + subsampleY(dx, 2, 2);
     return dy;
 }
 

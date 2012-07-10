@@ -26,6 +26,10 @@ namespace Lazy {
             return _mm256_set1_ps(v);
         }
 
+        inline type set(float a, float b, float c, float d = 0, float e = 0, float f = 0, float g = 0, float h = 0) {
+            return _mm256_set_ps(a, b, c, d, e, f, g, h);
+        }
+
         inline type zero() {
             return _mm256_setzero_ps();
         }
@@ -90,8 +94,25 @@ namespace Lazy {
         inline type interleave(type a, type b) {
             __m256 r_lo = _mm256_unpacklo_ps(a, b);
             __m256 r_hi = _mm256_unpackhi_ps(a, b);
-            return _mm256_permute2f128_ps(r_lo, r_hi, 1<<5);
+            return _mm256_permute2f128_ps(r_lo, r_hi, 2<<4);
         }
+
+        inline type subsample(type a, type b) {
+            // grab the low 128 bits of each
+            type lo = _mm256_permute2f128_ps(a, b, (2 << 4));
+            // and the high 128 bits
+            type hi = _mm256_permute2f128_ps(a, b, (3 << 4) | 1);
+            // now interleave appropriately
+            return _mm256_shuffle_ps(lo, hi, (2 << 2) | (2 << 6));
+
+        }
+        
+        inline type reverse(type a) {
+            // reverse each half, the reverse the halves
+            type b = _mm256_shuffle_ps(a, a, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6));
+            return _mm256_permute2f128_ps(b, b, 1);
+        }
+
 
         // Unary ops
         struct Floor {
@@ -129,6 +150,10 @@ namespace Lazy {
 
         inline type broadcast(float v) {
             return _mm_set1_ps(v);
+        }
+
+        inline type set(float a, float b, float c, float d = 0, float e = 0, float f = 0, float g = 0, float h = 0) {
+            return _mm_set_ps(a, b, c, d);
         }
 
         inline type zero() {
@@ -191,6 +216,14 @@ namespace Lazy {
             return _mm_unpacklo_ps(a, b);
         }
 
+        inline type subsample(type a, type b) {
+            return _mm_shuffle_ps(a, b, (0 << 0) | (2 << 2) | (0 << 4) | (2 << 6));
+        }
+        
+        inline type reverse(type a) {
+            return _mm_shuffle_ps(a, a, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6));
+        }
+
 #ifdef __SSE4_1__
         // Logical ops
         inline type blend(type a, type b, type mask) {
@@ -225,11 +258,7 @@ namespace Lazy {
                     type v;
                 } v;
                 v.v = a;
-                v.f[0] = scalar(v.f[0]);
-                v.f[1] = scalar(v.f[1]);
-                v.f[2] = scalar(v.f[2]);
-                v.f[3] = scalar(v.f[3]);
-                return v.v;
+                return set(scalar(v.f[0]), scalar(v.f[1]), scalar(v.f[2]), scalar(v.f[3]));
             }
         };
         struct Ceil {
@@ -240,11 +269,7 @@ namespace Lazy {
                     type v;
                 } v;
                 v.v = a;
-                v.f[0] = scalar(v.f[0]);
-                v.f[1] = scalar(v.f[1]);
-                v.f[2] = scalar(v.f[2]);
-                v.f[3] = scalar(v.f[3]);
-                return v.v;
+                return set(scalar(v.f[0]), scalar(v.f[1]), scalar(v.f[2]), scalar(v.f[3]));
             }
         };
         struct Sqrt {
@@ -255,11 +280,7 @@ namespace Lazy {
                     type v;
                 } v;
                 v.v = a;
-                v.f[0] = scalar(v.f[0]);
-                v.f[1] = scalar(v.f[1]);
-                v.f[2] = scalar(v.f[2]);
-                v.f[3] = scalar(v.f[3]);
-                return v.v;
+                return set(scalar(v.f[0]), scalar(v.f[1]), scalar(v.f[2]), scalar(v.f[3]));
             }
         };
 
@@ -348,6 +369,14 @@ namespace Lazy {
             return a;
         }
 
+        inline type subsample(type a, type b) {
+            return a;
+        }
+
+        inline type reverse(type a) {
+            return a;
+        }
+
         // Unary ops
         struct Floor {
             static float scalar(float a) {return floorf(a);}
@@ -429,14 +458,20 @@ namespace Lazy {
         struct Iter {
             float operator[](int x) const {return x;}
             Vec::type vec(int x) const {
-                union {
-                    float f[Vec::width];
-                    Vec::type v;
-                } v;
-                for (int i = 0; i < Vec::width; i++) {
-                    v.f[i] = x+i;
+                if (Vec::width == 8) {
+                    return Vec::set(x, x+1, x+2, x+3, x+4, x+5, x+6, x+7);
+                } else if (Vec::width == 4) {
+                    return Vec::set(x, x+1, x+2, x+3);
+                } else {
+                    union {
+                        float f[Vec::width];
+                        Vec::type v;
+                    } v;
+                    for (int i = 0; i < Vec::width; i++) {
+                        v.f[i] = x+i;
+                    }
+                    return v.v;
                 }
-                return v.v;
             }
         };
 
@@ -1551,33 +1586,240 @@ namespace Lazy {
         return _InterleaveC<Const, Const>(Const(a), Const(b));
     }
 
-    /*
-    // Subsamplings
+    // Samplings of the form im(stride*x + offset). 
+    // Once avx2 becomes available, we can do some of these more efficiently with the new gather op.
     template<typename A>
-    struct _SubsampleX {
-        typedef _SubsampleX<typename A::Lazy> Lazy;
+    struct AffineSampleX {
+        typedef AffineSampleX<typename A::Lazy> Lazy;
         const A a;
-        _SubsampleX(const A &a_, int shift) : a(a_) {
-            assert(shift == 0 || shift == 1,
-                   "Can only use shifts of zero or one in subsample\n");
+        const int stride, offset;
+        AffineSampleX(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
+            const int w = a.getSize(0);
+            if (w != 0) {
+                assert(offset >= 0 && offset < w,
+                       "Sampling out of bounds\n");
+            }
         }
 
-        int getSize(int i) {
+        int getSize(int i) const {
             if (i == 0) {
                 const int w = a.getSize(0);
-                if (w) return (w-shift+1)/2;
-                else return 0;
+                if (w) {
+                    if (stride > 0) return (w-1-offset)/stride + 1;
+                    else if (stride < 0) return offset/(-stride) + 1;
+                } 
+                return 0;
             }
             else return a.getSize(i);
         }
 
         struct Iter {
             const typename A::Iter a;
-            Iter(const typename A::Iter &a_) : a(a_) {}
+            const int stride, offset;
+            Iter(const typename A::Iter &a_, int s, int o) : a(a_), stride(s), offset(o) {}
             
+            float operator[](int x) const {
+                return a[stride*x + offset];
+            }
+
+            Vec::type vec(int x) const {
+                // Some special cases
+                if (stride == 0) {
+                    return Vec::broadcast(a[offset]);
+                } else if (stride == 1) {
+                    return a.vec(x + offset);
+                } else if (stride == 2) {
+                    const int x2 = 2*x+offset;
+                    Vec::type va = a.vec(x2);
+                    Vec::type vb = a.vec(x2 + Vec::width);
+                    return Vec::subsample(va, vb);
+                } else if (stride == -1) {
+                    return Vec::reverse(a.vec(-x+offset-Vec::width+1));
+                } else {
+                    int off = stride * x + offset;
+                    if (Vec::width == 8) {
+                        return Vec::set(a[off+stride*0], a[off+stride*1], 
+                                        a[off+stride*2], a[off+stride*3], 
+                                        a[off+stride*4], a[off+stride*5], 
+                                        a[off+stride*6], a[off+stride*7]);
+                    } else if (Vec::width == 4) {
+                        return Vec::set(a[off+stride*0], a[off+stride*1], 
+                                        a[off+stride*2], a[off+stride*3]);
+                    } else {
+                        // In general we scalarize
+                        union {
+                            float f[Vec::width];
+                            Vec::type v;
+                        } v;           
+                        
+                        for (int i = 0; i < Vec::width; i++) {
+                            v.f[i] = a[off];
+                            off += stride;
+                        }
+                        return v.v;
+                    }
+                }
+            }
         };
+        Iter scanline(int x, int y, int t, int c, int w) const {
+            return Iter(a.scanline(x*stride+offset, y, t, c, (w-1)*stride+1), stride, offset);
+        }
+
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX() * stride + offset;}
+        int maxVecX() const {return a.maxVecX() * stride + offset;}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(phase, x*stride+offset, y, t, c, stride*(width-1)+1, height, frames, channels);
+        }
+
+        
     };
-    */
+
+    template<typename A>
+    struct AffineSampleY {
+        typedef AffineSampleY<typename A::Lazy> Lazy;
+        const A a;
+        const int stride, offset;
+        AffineSampleY(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
+            const int w = a.getSize(1);
+            if (w != 0) {
+                assert(offset >= 0 && offset < w,
+                       "Sampling out of bounds\n");
+            }
+        }
+
+        int getSize(int i) const {
+            if (i == 1) {
+                const int w = a.getSize(1);
+                if (w) {
+                    if (stride > 0) return (w-1-offset)/stride + 1;
+                    else if (stride < 0) return offset/(-stride) + 1;
+                } 
+                return 0;
+            }
+            else return a.getSize(i);
+        }
+
+        typedef typename A::Iter Iter;
+        Iter scanline(int x, int y, int t, int c, int w) const {
+            return a.scanline(x, y*stride+offset, t, c, w);
+        }
+
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX();}
+        int maxVecX() const {return a.maxVecX();}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(phase, x, y*stride+offset, t, c, width, stride*(height-1)+1, frames, channels);
+        }        
+    };
+
+    template<typename A>
+    struct AffineSampleT {
+        typedef AffineSampleT<typename A::Lazy> Lazy;
+        const A a;
+        const int stride, offset;
+        AffineSampleT(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
+            const int w = a.getSize(2);
+            if (w != 0) {
+                assert(offset >= 0 && offset < w,
+                       "Sampling out of bounds\n");
+            }
+        }
+
+        int getSize(int i) const {
+            if (i == 2) {
+                const int w = a.getSize(2);
+                if (w) {
+                    if (stride > 0) return (w-1-offset)/stride + 1;
+                    else if (stride < 0) return offset/(-stride) + 1;
+                } 
+                return 0;
+            }
+            else return a.getSize(i);
+        }
+
+        typedef typename A::Iter Iter;
+        Iter scanline(int x, int y, int t, int c, int w) const {
+            return a.scanline(x, y, t*stride+offset, c, w);
+        }
+
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX();}
+        int maxVecX() const {return a.maxVecX();}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(phase, x, y, t*stride+offset, c, width, height, stride*(frames-1)+1, channels);
+        }        
+    };
+
+    template<typename A>
+    struct AffineSampleC {
+        typedef AffineSampleC<typename A::Lazy> Lazy;
+        const A a;
+        const int stride, offset;
+        AffineSampleC(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
+            const int w = a.getSize(3);
+            if (w != 0) {
+                assert(offset >= 0 && offset < w,
+                       "Sampling out of bounds\n");
+            }
+        }
+
+        int getSize(int i) const {
+            if (i == 3) {
+                const int w = a.getSize(3);
+                if (w) {
+                    if (stride > 0) return (w-1-offset)/stride + 1;
+                    else if (stride < 0) return offset/(-stride) + 1;
+                } 
+                return 0;
+            }
+            else return a.getSize(i);
+        }
+
+        typedef typename A::Iter Iter;
+        Iter scanline(int x, int y, int t, int c, int w) const {
+            return a.scanline(x, y, t, c*stride+offset, w);
+        }
+
+        bool boundedVecX() const {return a.boundedVecX();}
+        int minVecX() const {return a.minVecX();}
+        int maxVecX() const {return a.maxVecX();}
+        
+        void prepare(int phase, int x, int y, int t, int c, 
+                     int width, int height, int frames, int channels) const {
+            a.prepare(phase, x, y, t, c*stride+offset, width, height, frames, stride*(channels-1)+1);
+        }        
+    };
+
+    template<typename A>
+    AffineSampleX<typename A::Lazy>
+    subsampleX(const A &a, int stride, int offset) {
+        return AffineSampleX<A>(a, stride, offset);
+    }
+
+    template<typename A>
+    AffineSampleY<typename A::Lazy>
+    subsampleY(const A &a, int stride, int offset) {
+        return AffineSampleY<A>(a, stride, offset);
+    }
+
+    template<typename A>
+    AffineSampleT<typename A::Lazy>
+    subsampleT(const A &a, int stride, int offset) {
+        return AffineSampleT<A>(a, stride, offset);
+    }
+
+    template<typename A>
+    AffineSampleC<typename A::Lazy>
+    subsampleC(const A &a, int stride, int offset) {
+        return AffineSampleC<A>(a, stride, offset);
+    }
 
     // A trait to check if something is ok to be cast to a lazy expression type, and if so, how.
     template<typename T>
