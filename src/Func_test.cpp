@@ -62,20 +62,21 @@ int main(int argc, char **argv) {
 
     try {
         Image in = Load::apply("in.tmp");       
-        Image out(in.width, in.height, in.frames, in.channels);
+        Image out(in.width, in.height, in.frames, in.channels);        
 
-        asm ("# even");
         Image even = subsampleX(in, 2, 0);
-        asm ("# odd");
         Image odd = subsampleX(in, 2, 1);
-        asm ("# flipped");
         Image flipped = subsampleX(in, -1, in.width-1);
-        asm ("# done");
-
         Image evenRows = subsampleY(in, 2, 0);
         Image oddRows = subsampleY(in, 2, 1);
         Image flipY = subsampleY(in, -1, in.height-1);
-        
+
+        Image small(in.width/2, in.height/2, in.frames, in.channels);
+        auto zb = zeroBoundary(in);
+        Func sx = subsampleX(zb, 2, -1) + 3*subsampleX(zb, 2, 0) + 3*subsampleX(zb, 2, 1) + subsampleX(zb, 2, 2);
+        auto sy = subsampleY(sx, 2, -1) + 3*subsampleY(sx, 2, 0) + 3*subsampleY(sx, 2, 1) + subsampleY(sx, 2, 2);
+        small.set(sy/64);
+        Save::apply(small, "small.tmp");
 
         Save::apply(even, "even.tmp");
         Save::apply(odd, "odd.tmp");
