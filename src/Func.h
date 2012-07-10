@@ -108,11 +108,14 @@ namespace Lazy {
 
                     if (lazy) {
                         // No scanlines have been evaluated
-                        evaluated.assign(maxY - minY, false);
+                        evaluated.assign((maxY - minY)*(maxT - minT)*(maxC - minC), false);
                     } else {
                         // evaluate all scanlines here
                         for (int c = minC; c < maxC; c++) {
                             for (int t = minT; t < maxT; t++) {
+                                #ifdef _OPENMP
+                                #pragma omp parallel for
+                                #endif
                                 for (int y = minY; y < maxY; y++) {
                                     evalScanline(y, t, c);
                                 }
@@ -155,7 +158,9 @@ namespace Lazy {
 
         typedef _Shift<Image>::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
-            if (ptr->lazy && !ptr->evaluated[y-ptr->minY])  {
+            int px = x-ptr->minX, py = y-ptr->minY, pt = t-ptr->minT, pc = c-ptr->minC;
+            int idx = (pc * ptr->im.frames + pt) * ptr->im.height + py;
+            if (ptr->lazy && !ptr->evaluated[idx])  {
                 // TODO: consider locking the scanline during
                 // evaluation. As it stands, if multiple threads
                 // hammer on the same scanline, there will be wasted
@@ -163,10 +168,9 @@ namespace Lazy {
                 // lines).  Fortunately, that's not how openmp
                 // schedules its threads.
                 ptr->evalScanline(y, t, c);
-                ptr->evaluated[y-ptr->minY] = true;
+                ptr->evaluated[idx] = true;
             }
-            Image::Iter iter = ptr->im.scanline(x-ptr->minX, y-ptr->minY, 
-                                                t-ptr->minT, c-ptr->minC, width);            
+            Image::Iter iter = ptr->im.scanline(px, py, pt, pc, width);
             return _Shift<Image>::Iter(iter, ptr->minX);
         }
 
