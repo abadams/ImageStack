@@ -71,11 +71,22 @@ int main(int argc, char **argv) {
         Image oddRows = subsampleY(in, 2, 1);
         Image flipY = subsampleY(in, -1, in.height-1);
 
+        double t1 = currentTime();
         Image small(in.width/2, in.height/2, in.frames, in.channels);
+        /*
         auto zb = zeroBoundary(in);
         Func sx = subsampleX(zb, 2, -1) + 3*subsampleX(zb, 2, 0) + 3*subsampleX(zb, 2, 1) + subsampleX(zb, 2, 2);
         auto sy = subsampleY(sx, 2, -1) + 3*subsampleY(sx, 2, 0) + 3*subsampleY(sx, 2, 1) + subsampleY(sx, 2, 2);
-        small.set(sy/64);
+        */
+        auto sx = subsampleX(in, 2, 0) + subsampleX(in, 2, 1);
+        auto sy = subsampleY(sx, 2, 0) + subsampleY(sx, 2, 1);
+        small.set(sy/4);
+        double t2 = currentTime();
+        Image small2 = Downsample::apply(in, 2, 2, 1);        
+        double t3 = currentTime();
+
+        printf("%f %f\n", t2-t1, t3-t2);
+
         Save::apply(small, "small.tmp");
 
         Save::apply(even, "even.tmp");
@@ -85,6 +96,8 @@ int main(int argc, char **argv) {
         Save::apply(evenRows, "evenRows.tmp");
         Save::apply(oddRows, "oddRows.tmp");
         Save::apply(flipY, "flipY.tmp");
+
+        Save::apply(in - subsampleX(subsampleY(in, 0, 0), 0, 0), "test.tmp");
 
         /*
         printf("Inline...\n");

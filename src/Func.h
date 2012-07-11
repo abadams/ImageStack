@@ -38,7 +38,7 @@ namespace Lazy {
 
         void evalScanline(int y, int t, int c) {
             //printf("Evaluating %p at scanline %d-%d %d %d %d (placing in image at %d-%d %d %d %d)\n", 
-            //this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
+            // this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
             //printf("Image has size: %d %d %d %d\n", im.width, im.height, im.frames, im.channels);
             //printf("Computing destination address...\n");
             float *const dst = &im(0, y-minY, t-minT, c-minC) - minX;
@@ -84,11 +84,13 @@ namespace Lazy {
                     minY = std::min(minY, y);
                     minT = std::min(minT, t);
                     minC = std::min(minC, c);
-                    maxX = std::max(maxX, x);
-                    maxY = std::max(maxY, y);
-                    maxT = std::max(maxT, t);
-                    maxC = std::max(maxC, c);
+                    maxX = std::max(maxX, x + width);
+                    maxY = std::max(maxY, y + height);
+                    maxT = std::max(maxT, t + frames);
+                    maxC = std::max(maxC, c + channels);
                 }
+                //printf("New bounds are %d %d %d %d - %d %d %d %d\n", 
+                //minX, minY, minT, minC, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
             } else if (phase == 1) {
                 // Still at the start of a new page
                 // In phase one (the first time we are called), we prepare storage
@@ -98,7 +100,8 @@ namespace Lazy {
                         im.height < maxY - minY ||
                         im.frames < maxT - minT ||
                         im.channels < maxC - minC) {
-                        //printf("Allocating backing for %p %d %d %d %d\n", this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
+                        //printf("Allocating backing for %p %d %d %d %d\n", 
+                        // this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
                         im = Image(maxX - minX, maxY - minY, maxT - minT, maxC - minC);
                         //printf("Done\n");
 

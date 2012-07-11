@@ -92,18 +92,21 @@ namespace Lazy {
         }
 
         inline type interleave(type a, type b) {
+            // Given vectors a and b, return a[0] b[0] a[1] b[1] a[2] b[2] a[3] b[3]
             __m256 r_lo = _mm256_unpacklo_ps(a, b);
             __m256 r_hi = _mm256_unpackhi_ps(a, b);
             return _mm256_permute2f128_ps(r_lo, r_hi, 2<<4);
         }
 
         inline type subsample(type a, type b) {
-            // grab the low 128 bits of each
-            type lo = _mm256_permute2f128_ps(a, b, (2 << 4));
-            // and the high 128 bits
-            type hi = _mm256_permute2f128_ps(a, b, (3 << 4) | 1);
-            // now interleave appropriately
-            return _mm256_shuffle_ps(lo, hi, (2 << 2) | (2 << 6));
+            // Given vectors a and b, return a[0], a[2], a[4], a[6], b[2], b[4], b[6], b[8]
+            type lo = _mm256_permute2f128_ps(a, b, (0 << 0) | (2 << 4));
+            // lo = a[0] a[1] a[2] a[3] b[0] b[1] b[2] b[3]
+            type hi = _mm256_permute2f128_ps(a, b, (1 << 0) | (3 << 4));
+            // hi = a[4] a[5] a[6] a[7] b[4] b[5] b[6] b[7]
+            type result = _mm256_shuffle_ps(lo, hi, (2 << 2) | (2 << 6));
+            // result = a[0] a[2] a[4] a[6] b[0] b[2] b[4] b[6]
+            return result;
 
         }
         
@@ -405,15 +408,6 @@ namespace Lazy {
 #endif
     }
 
-    // How should expressions hold onto sub-expressions? We use
-    // const copies. Experiments were made with const references to
-    // try and trick g++ into doing more aggressive subexpression
-    // elimination, but results were mixed at best.
-    template<typename T>
-    struct Handle {
-        typedef const T type;
-    };
-
     // A base class for things which do not depend on image data
     struct Unbounded {
         int getSize(int) const {return 0;}
@@ -443,11 +437,6 @@ namespace Lazy {
         }        
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {}
-    };
-
-    template<>
-    struct Handle<Const> {
-        typedef const Const type;
     };
 
     // Coordinates
@@ -1665,9 +1654,33 @@ namespace Lazy {
             return Iter(a.scanline(x*stride+offset, y, t, c, (w-1)*stride+1), stride, offset);
         }
 
-        bool boundedVecX() const {return a.boundedVecX();}
-        int minVecX() const {return a.minVecX() * stride + offset;}
-        int maxVecX() const {return a.maxVecX() * stride + offset;}
+        bool boundedVecX() const {
+            return a.boundedVecX() && (stride == -1 || stride == 1 || stride == 2);
+        }
+
+        int minVecX() const {
+            if (stride == -1) {
+                return -a.maxVecX() + offset - Vec::width + 1;
+            } else if (stride == 1) {
+                return a.minVecX() - offset;
+            } else if (stride == 2) {
+                return (a.minVecX() - offset + 1)/2;
+            } else {
+                return 0xa0000000;
+            }
+        }
+
+        int maxVecX() const {
+            if (stride == -1) {
+                return -a.minVecX() + offset - Vec::width + 1;
+            } else if (stride == 1) {
+                return a.maxVecX() - offset;
+            } else if (stride == 2) {
+                return (a.maxVecX() - offset - Vec::width)/2;
+            } else {
+                return 0x3fffffff;
+            }
+        }
         
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
@@ -1713,7 +1726,10 @@ namespace Lazy {
         
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(phase, x, y*stride+offset, t, c, width, stride*(height-1)+1, frames, channels);
+            int y1 = y*stride + offset;
+            int y2 = (y+height-1) * stride + offset;
+            if (y2 < y1) std::swap(y1, y2);
+            a.prepare(phase, x, y1, t, c, width, y2-y1+1, frames, channels);
         }        
     };
 
@@ -1847,13 +1863,13 @@ namespace Lazy {
     // Evaluated an expression into an array
     template<typename T>
     void setScanline(const T src, float *const dst, 
-                     int x, const int maxX, 
+                     int x, const int maxX,
                      const bool boundedVX, const int minVX, const int maxVX) {
 
         if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
             //printf("Warm up...\n");
             // Walk up to where we're allowed to start vectorizing
-            while (boundedVX && x < minVX) {
+            while (boundedVX && x < std::min(minVX, maxX-1)) {
                 dst[x] = src[x];
                 x++;
             }

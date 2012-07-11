@@ -89,7 +89,7 @@ public:
     }
 
     const Image selectRows(int x, int s) {
-        return region(0, x, 0, 0, width, x, frames, channels);
+        return region(0, x, 0, 0, width, s, frames, channels);
     }
 
     const Image selectFrames(int x, int s) {
