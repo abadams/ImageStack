@@ -27,7 +27,7 @@ namespace Lazy {
         }
 
         inline type set(float a, float b, float c, float d = 0, float e = 0, float f = 0, float g = 0, float h = 0) {
-            return _mm256_set_ps(a, b, c, d, e, f, g, h);
+            return _mm256_set_ps(h, g, f, e, d, c, b, a);
         }
 
         inline type zero() {
@@ -99,13 +99,15 @@ namespace Lazy {
         }
 
         inline type subsample(type a, type b) {
-            // Given vectors a and b, return a[0], a[2], a[4], a[6], b[2], b[4], b[6], b[8]
-            type lo = _mm256_permute2f128_ps(a, b, (0 << 0) | (2 << 4));
-            // lo = a[0] a[1] a[2] a[3] b[0] b[1] b[2] b[3]
-            type hi = _mm256_permute2f128_ps(a, b, (1 << 0) | (3 << 4));
-            // hi = a[4] a[5] a[6] a[7] b[4] b[5] b[6] b[7]
+            // Given vectors a and b, return a[0], a[2], a[4], a[6], b[1], b[3], b[5], b[7]
+            type bodd = _mm256_shuffle_ps(b, b, (1 << 0) | (1 << 2) | (3 << 4) | (3 << 6));
+            // bodd = b[1] b[1] b[3] b[3] b[5] b[5] b[7] b[7]
+            type lo = _mm256_permute2f128_ps(a, bodd, (0 << 0) | (2 << 4));
+            // lo = a[0] a[1] a[2] a[3] b[1] b[1] b[3] b[3]
+            type hi = _mm256_permute2f128_ps(a, bodd, (1 << 0) | (3 << 4));
+            // hi = a[4] a[5] a[6] a[7] b[5] b[5] b[7] b[7]
             type result = _mm256_shuffle_ps(lo, hi, (2 << 2) | (2 << 6));
-            // result = a[0] a[2] a[4] a[6] b[0] b[2] b[4] b[6]
+            // result = a[0] a[2] a[4] a[6] b[1] b[3] b[5] b[7]
             return result;
 
         }
@@ -155,8 +157,8 @@ namespace Lazy {
             return _mm_set1_ps(v);
         }
 
-        inline type set(float a, float b, float c, float d = 0, float e = 0, float f = 0, float g = 0, float h = 0) {
-            return _mm_set_ps(a, b, c, d);
+        inline type set(float a, float b, float c, float d, float e = 0, float f = 0, float g = 0, float h = 0) {
+            return _mm_set_ps(d, c, b, a);
         }
 
         inline type zero() {
@@ -220,7 +222,7 @@ namespace Lazy {
         }
 
         inline type subsample(type a, type b) {
-            return _mm_shuffle_ps(a, b, (0 << 0) | (2 << 2) | (0 << 4) | (2 << 6));
+            return _mm_shuffle_ps(a, b, (0 << 0) | (2 << 2) | (1 << 4) | (3 << 6));
         }
         
         inline type reverse(type a) {
@@ -448,9 +450,9 @@ namespace Lazy {
             float operator[](int x) const {return x;}
             Vec::type vec(int x) const {
                 if (Vec::width == 8) {
-                    return Vec::set(x, x+1, x+2, x+3, x+4, x+5, x+6, x+7);
+                    return Vec::set(x+0, x+1, x+2, x+3, x+4, x+5, x+6, x+7);
                 } else if (Vec::width == 4) {
-                    return Vec::set(x, x+1, x+2, x+3);
+                    return Vec::set(x+0, x+1, x+2, x+3);
                 } else {
                     union {
                         float f[Vec::width];
@@ -1620,7 +1622,7 @@ namespace Lazy {
                 } else if (stride == 2) {
                     const int x2 = 2*x+offset;
                     Vec::type va = a.vec(x2);
-                    Vec::type vb = a.vec(x2 + Vec::width);
+                    Vec::type vb = a.vec(x2 + Vec::width-1);
                     return Vec::subsample(va, vb);
                 } else if (stride == -1) {
                     return Vec::reverse(a.vec(-x+offset-Vec::width+1));
@@ -1676,7 +1678,7 @@ namespace Lazy {
             } else if (stride == 1) {
                 return a.maxVecX() - offset;
             } else if (stride == 2) {
-                return (a.maxVecX() - offset - Vec::width)/2;
+                return (a.maxVecX() - offset - Vec::width + 1)/2;
             } else {
                 return 0x3fffffff;
             }
@@ -1684,7 +1686,10 @@ namespace Lazy {
         
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(phase, x*stride+offset, y, t, c, stride*(width-1)+1, height, frames, channels);
+            int x1 = x * stride + offset;
+            int x2 = (x + width-1) * stride + offset;
+            if (x2 < x1) std::swap(x1, x2);
+            a.prepare(phase, x1, y, t, c, x2-x1+1, height, frames, channels);
         }
 
         
@@ -1769,7 +1774,10 @@ namespace Lazy {
         
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(phase, x, y, t*stride+offset, c, width, height, stride*(frames-1)+1, channels);
+            int t1 = t*stride + offset;
+            int t2 = (t+frames-1) * stride + offset;
+            if (t2 < t1) std::swap(t1, t2);
+            a.prepare(phase, x, y, t1, c, width, height, t2-t1+1, channels);
         }        
     };
 
@@ -1809,7 +1817,10 @@ namespace Lazy {
         
         void prepare(int phase, int x, int y, int t, int c, 
                      int width, int height, int frames, int channels) const {
-            a.prepare(phase, x, y, t, c*stride+offset, width, height, frames, stride*(channels-1)+1);
+            int c1 = c*stride + offset;
+            int c2 = (c+channels-1) * stride + offset;
+            if (c2 < c1) std::swap(c1, c2);
+            a.prepare(phase, x, y, t, c1, width, height, frames, c2-c1+1);
         }        
     };
 
