@@ -146,9 +146,18 @@ namespace Lazy {
 
     struct Func {
         std::shared_ptr<BaseFunc> ptr;
+
+        /*
         template<typename T>
         Func(const T t, const typename T::Lazy *enable = NULL) {
             ptr.reset(new DerivedFunc<T>(t));
+            ptr->lazy = true;
+        }
+        */
+
+        template<typename T>
+        Func(const T t, const typename Lazyable<T>::t *enable = NULL) {            
+            ptr.reset(new DerivedFunc<typename Lazyable<T>::t>(t));
             ptr->lazy = true;
         }
 

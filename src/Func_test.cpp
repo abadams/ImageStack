@@ -73,31 +73,33 @@ int main(int argc, char **argv) {
 
         double t1 = currentTime();
         Image small(in.width/2, in.height/2, in.frames, in.channels);
-        /*
-        auto zb = zeroBoundary(in);
-        Func sx = subsampleX(zb, 2, -1) + 3*subsampleX(zb, 2, 0) + 3*subsampleX(zb, 2, 1) + subsampleX(zb, 2, 2);
-        auto sy = subsampleY(sx, 2, -1) + 3*subsampleY(sx, 2, 0) + 3*subsampleY(sx, 2, 1) + subsampleY(sx, 2, 2);
-        */
         auto sx = subsampleX(in, 2, 0) + subsampleX(in, 2, 1);
         auto sy = subsampleY(sx, 2, 0) + subsampleY(sx, 2, 1);
         small.set(sy/4);
         double t2 = currentTime();
         Image small2 = Downsample::apply(in, 2, 2, 1);        
         double t3 = currentTime();
-
         printf("%f %f\n", t2-t1, t3-t2);
 
-        Save::apply(small, "small.tmp");
 
-        Save::apply(even, "even.tmp");
-        Save::apply(odd, "odd.tmp");
-        Save::apply(flipped, "flipped.tmp");
-
-        Save::apply(evenRows, "evenRows.tmp");
-        Save::apply(oddRows, "oddRows.tmp");
-        Save::apply(flipY, "flipY.tmp");
-
-        Save::apply(in - subsampleX(subsampleY(in, 0, 0), 0, 0), "test.tmp");
+        // Mandelbrot time!
+        Image pos(1024, 1024, 1, 2);
+        Image count(1024, 1024, 1, 1);
+        auto x = (Lazy::X()-512)/350.0f - 0.7;
+        auto y = (Lazy::Y()-512)/350.0f;
+        for (int i = 0; i < 200; i++) {
+            // square in complex sense and add initial position
+            Image p_real = pos.channel(0);
+            Image p_imag = pos.channel(1);
+            pos.setChannels(p_real*p_real - p_imag*p_imag + x,
+                            2 * p_real * p_imag + y);
+            count += Select(p_real*p_real + p_imag*p_imag < 4, 0.0f, 1/200.0f);
+        }
+        count.set(count*count*count*count*count*count);
+        Image display(1024, 1024, 1, 3);
+        display.setChannels(count, 1, count);
+        display = ColorConvert::hsv2rgb(display);
+        Save::apply(display, "mandelbrot.tmp");
 
         /*
         printf("Inline...\n");
