@@ -61,101 +61,12 @@ int main(int argc, char **argv) {
     start();
 
     try {
-        Image in = Load::apply("in.tmp");       
-        Image out(in.width, in.height, in.frames, in.channels);        
-
-        Image even = subsampleX(in, 2, 0);
-        Image odd = subsampleX(in, 2, 1);
-        Image flipped = subsampleX(in, -1, in.width-1);
-        Image evenRows = subsampleY(in, 2, 0);
-        Image oddRows = subsampleY(in, 2, 1);
-        Image flipY = subsampleY(in, -1, in.height-1);
-
-        double t1 = currentTime();
-        Image small(in.width/2, in.height/2, in.frames, in.channels);
-        auto sx = subsampleX(in, 2, 0) + subsampleX(in, 2, 1);
-        auto sy = subsampleY(sx, 2, 0) + subsampleY(sx, 2, 1);
-        small.set(sy/4);
-        double t2 = currentTime();
-        Image small2 = Downsample::apply(in, 2, 2, 1);        
-        double t3 = currentTime();
-        printf("%f %f\n", t2-t1, t3-t2);
-
-
-        // Mandelbrot time!
-        Image pos(2560, 1600, 1, 2);
-        Image count(2560, 1600, 1, 1);
-        auto x = (Expr::X()-1280.0f)/1600.0f - 0.7;
-        auto y = (Expr::Y())/1600.0f-1;
-        for (int i = 0; i < 500; i++) {
-            // square in complex sense and add initial position
-            Image p_real = pos.channel(0);
-            Image p_imag = pos.channel(1);
-            pos.setChannels(p_real*p_real - p_imag*p_imag + x,
-                            2 * p_real * p_imag + y);
-            count += Select(p_real*p_real + p_imag*p_imag < 4, 0.0f, 1/500.0f);
-        }
-        count.set(count*count*count*count*count*count*count*count*count);
-        Image display(2560, 1600, 1, 3);
-        display.setChannels(count, 1, count);
-        display = ColorConvert::hsv2rgb(display);
-        Save::apply(display, "mandelbrot.tmp");
-
-        /*
-        printf("Inline...\n");
-        out.set(0);
-        double t1s = currentTime();
-        for (int i = 0; i < 10; i++) {
-            // blur the square root
-            // inline
-            auto tmp = zeroBoundary(work(in));
-            auto bx = shiftX(tmp, -1) + tmp + shiftX(tmp, 1);
-            auto by = shiftY(bx, -1) + bx + shiftY(bx, 1);
-            out.set(by*(1.0f/9));
-        }
-        double t1e = currentTime();
-        Save::apply(out, "out_inline.tmp");
-
-
-        printf("Root...\n");
-        out.set(0);
-        double t2s = currentTime();
-        for (int i = 0; i < 10; i++) {
-            // root
-            Image tmp = work(in);
-            Image bx = shiftX(zeroBoundary(tmp), -1) + tmp + shiftX(zeroBoundary(tmp), 1);
-            Image by = (shiftY(zeroBoundary(bx), -1) + bx + shiftY(zeroBoundary(bx), 1))/9;
-            out = by;
-        }
-        double t2e = currentTime();
-        Save::apply(out, "out_root.tmp");
-
-        printf("Chunk...\n");        
-        out.set(0);
-        double t3s = currentTime();
-        for (int i = 0; i < 10; i++) {
-            // chunk
-            auto tmp = zeroBoundary(work(in));
-            Func bx = shiftX(tmp, -1) + tmp + shiftX(tmp, 1);
-            out.set((shiftY(bx, -1) + bx + shiftY(bx, 1))/9);
-        }
-        double t3e = currentTime();
-        Save::apply(out, "out_chunk.tmp");
-
-        printf("Manual...\n");
-        out.set(0);
-        double t4s = currentTime();
-        for (int i = 0; i < 10; i++) {
-            blur_fast(in.region(1, 1, 0, 0, in.width-2, in.height-2, in.frames, in.channels), 
-                      out.region(1, 1, 0, 0, in.width-2, in.height-2, in.frames, in.channels));
-        }
-        double t4e = currentTime();
-        Save::apply(out, "out_manual.tmp");
-
-
-        printf("%f %f %f %f\n", t1e-t1s, t2e-t2s, t3e-t3s, t4e-t4s);
-        */
-        
+        Func f;
+        X x; Y y;
+        f = x;
+        Image foo(128, 128, 1, 1);        
+        foo.set(f(toInt(sqrt(toFloat(x+y))), x-y, 0, 0));
+        Save::apply(foo, "foo.tmp");
     } catch (Exception &e) {
         printf("Failure: %s\n", e.message);
     }

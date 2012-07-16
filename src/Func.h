@@ -18,8 +18,7 @@ namespace Expr {
         virtual void evalScanline(int y, int t, int c) = 0;
 
         // Prepare to be evaluated over a given region
-        virtual void prepareFunc(int phase, int x, int y, int t, int c, 
-                                 int width, int height, int frames, int channels) = 0;
+        virtual void prepareFunc(int phase, Region r) = 0;
 
         virtual int getSize(int i) = 0;
     };
@@ -37,8 +36,8 @@ namespace Expr {
             minVecX(e.minVecX()), maxVecX(e.maxVecX()), boundedVecX(e.boundedVecX()) {}
 
         void evalScanline(int y, int t, int c) {
-            //printf("Evaluating %p at scanline %d-%d %d %d %d (placing in image at %d-%d %d %d %d)\n", 
-            // this, minX, maxX, y, t, c, 0, maxX-minX, y-minY, t-minT, c-minC);        
+            //printf("Evaluating %p at scanline %d-%d %d %d %d\n",
+            //this, minX, maxX, y, t, c);
             //printf("Image has size: %d %d %d %d\n", im.width, im.height, im.frames, im.channels);
             //printf("Computing destination address...\n");
             float *const dst = &im(0, y-minY, t-minT, c-minC) - minX;
@@ -55,14 +54,13 @@ namespace Expr {
             //printf("Done\n"); fflush(stdout);
         }   
 
-        void prepareFunc(int phase, int x, int y, int t, int c,
-                         int width, int height, int frames, int channels) {
+        void prepareFunc(int phase, Region r) {
 
             // recurse
-            expr.prepare(phase, x, y, t, c, width, height, frames, channels);
+            expr.prepare(phase, r);
 
             //printf("Preparing %p at phase %d over region %d %d %d %d  %d %d %d %d\n", this,
-            //phase, x, y, t, c, width, height, frames, channels);               
+            //phase, r.x, r.y, r.t, r.c, r.width, r.height, r.frames, r.channels);               
 
             // Each phase we get called multiple times according to
             // how many times we occur in the expression
@@ -71,23 +69,23 @@ namespace Expr {
             // In phase zero we take unions of the regions requested
             if (phase == 0) {
                 if (lastPhase != 0) {
-                    minX = x;
-                    minY = y;
-                    minT = t;
-                    minC = c;
-                    maxX = x + width;
-                    maxY = y + height;
-                    maxT = t + frames;
-                    maxC = c + channels;
+                    minX = r.x;
+                    minY = r.y;
+                    minT = r.t;
+                    minC = r.c;
+                    maxX = r.x + r.width;
+                    maxY = r.y + r.height;
+                    maxT = r.t + r.frames;
+                    maxC = r.c + r.channels;
                 } else {
-                    minX = std::min(minX, x);
-                    minY = std::min(minY, y);
-                    minT = std::min(minT, t);
-                    minC = std::min(minC, c);
-                    maxX = std::max(maxX, x + width);
-                    maxY = std::max(maxY, y + height);
-                    maxT = std::max(maxT, t + frames);
-                    maxC = std::max(maxC, c + channels);
+                    minX = std::min(minX, r.x);
+                    minY = std::min(minY, r.y);
+                    minT = std::min(minT, r.t);
+                    minC = std::min(minC, r.c);
+                    maxX = std::max(maxX, r.x + r.width);
+                    maxY = std::max(maxY, r.y + r.height);
+                    maxT = std::max(maxT, r.t + r.frames);
+                    maxC = std::max(maxC, r.c + r.channels);
                 }
                 //printf("New bounds are %d %d %d %d - %d %d %d %d\n", 
                 //minX, minY, minT, minC, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
@@ -147,17 +145,9 @@ namespace Expr {
     struct Func {
         std::shared_ptr<BaseFunc> ptr;
 
-        /*
         template<typename T>
-        Func(const T t, const typename T::Expr *enable = NULL) {
-            ptr.reset(new DerivedFunc<T>(t));
-            ptr->lazy = true;
-        }
-        */
-
-        template<typename T>
-        Func(const T t, const typename AsFloatExpr<T, T>::t *enable = NULL) {            
-            ptr.reset(new DerivedFunc<typename AsFloatExpr<T, T>::t>(t));
+        Func(const T t, FloatExprType(T) *enable = NULL) {            
+            ptr.reset(new DerivedFunc<FloatExprType(T)>(t));
             ptr->lazy = true;
         }
 
@@ -170,6 +160,127 @@ namespace Expr {
         int getSize(int i) const {
             return ptr->getSize(i);
         }
+
+        template<typename SX, typename SY, typename ST, typename SC>
+        struct FuncRef {
+            typedef FuncRef<SX, SY, ST, SC> FloatExpr;
+            const SX sx;
+            const SY sy;
+            const ST st;
+            const SC sc;
+            std::shared_ptr<BaseFunc> ptr;
+            FuncRef(const std::shared_ptr<BaseFunc> &ptr_,
+                    const SX &sx_, 
+                    const SY &sy_, 
+                    const ST &st_, 
+                    const SC &sc_) : 
+                ptr(ptr_), sx(sx_), sy(sy_), st(st_), sc(sc_) {
+                // We're going to be sampling this func somewhat arbitrarily, so it can't be lazy
+                ptr->lazy = false;
+            }
+
+            int getSize(int i) {
+                // TODO: max of sizes of sx, sy, st, sc
+                return 0;
+            }
+
+            struct Iter {                
+                const Image im;
+                const int minX, minY, minT, minC;
+                const typename SX::Iter sx;
+                const typename SY::Iter sy;
+                const typename ST::Iter st;
+                const typename SC::Iter sc;
+                Iter() {}
+                Iter(const std::shared_ptr<BaseFunc> &f,
+                     const typename SX::Iter &sx_,
+                     const typename SY::Iter &sy_,
+                     const typename ST::Iter &st_,
+                     const typename SC::Iter &sc_) : 
+                    im(f->im), minX(f->minX), minY(f->minY), minT(f->minT), minC(f->minC),
+                    sx(sx_), sy(sy_), st(st_), sc(sc_) {
+                }
+                float operator[](int x) const {
+                    return im(sx[x]-minX, sy[x]-minY, st[x]-minT, sc[x]-minC);
+                }
+                Vec::type vec(int x) const {
+                    if (Vec::width == 8) {
+                        return Vec::set((*this)[x],
+                                        (*this)[x+1],
+                                        (*this)[x+2],
+                                        (*this)[x+3],
+                                        (*this)[x+4],
+                                        (*this)[x+5],
+                                        (*this)[x+6],
+                                        (*this)[x+7]);
+                    } else if (Vec::width == 4) {
+                        return Vec::set((*this)[x],
+                                        (*this)[x+1],
+                                        (*this)[x+2],
+                                        (*this)[x+3]);
+                    } else {
+                        union {
+                            float f[Vec::width];
+                            Vec::type v;
+                        } v;
+                        for (int i = 0; i < Vec::width; i++) {
+                            v.f[i] = (*this)[x];
+                        }
+                        return v.v;
+                    }
+                }                                     
+            };
+            Iter scanline(int x, int y, int t, int c, int width) const {
+                return Iter(ptr,
+                            sx.scanline(x, y, t, c, width),
+                            sy.scanline(x, y, t, c, width),
+                            st.scanline(x, y, t, c, width),
+                            sc.scanline(x, y, t, c, width));                            
+            }
+
+            // We never call .vec on any dependents, so feel free to
+            // vectorize this over any range - it resolves to a gather
+            // from the backing image.
+            bool boundedVecX() const {
+                return false;
+            }
+            int minVecX() const {
+                return 0xa0000000;
+            }
+            int maxVecX() const {
+                return 0x3fffffff;
+            }
+
+            void prepare(int phase, Region r) const {
+                // prepare the args over this range
+                sx.prepare(phase, r);
+                sy.prepare(phase, r);
+                st.prepare(phase, r);
+                sc.prepare(phase, r);
+
+                // Prepare the func for more arbitrary sampling
+                std::pair<int, int> xb = sx.bounds(r);
+                std::pair<int, int> yb = sy.bounds(r);
+                std::pair<int, int> tb = st.bounds(r);
+                std::pair<int, int> cb = sc.bounds(r);
+
+                // Make sure the region is adequately bounded
+                Region r2 = {xb.first, yb.first, tb.first, cb.first, 
+                             xb.second - xb.first + 1,
+                             yb.second - yb.first + 1,
+                             tb.second - tb.first + 1,
+                             cb.second - cb.first + 1};
+                ptr->prepareFunc(phase, r2);
+            }
+        };
+
+        template<typename SX, typename SY, typename ST, typename SC>
+        FuncRef<IntExprType(SX), IntExprType(SY), IntExprType(ST), IntExprType(SC)>
+        operator()(const SX &x, const SY &y, const ST &t, const SC &c) const {
+            return FuncRef<IntExprType(SX), IntExprType(SY), IntExprType(ST), IntExprType(SC)>(ptr, x, y, t, c);
+        }
+
+        // TODO: special-case func samplings that return more restricted types
 
         typedef _Shift<Image>::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
@@ -193,10 +304,8 @@ namespace Expr {
         int minVecX() const {return 0xa0000000;} 
         int maxVecX() const {return 0x3fffffff;}
 
-        void prepare(int phase, int x, int y, int t, int c,
-                     int width, int height, int frames, int channels) const {
-            ptr->prepareFunc(phase, x, y, t, c,
-                             width, height, frames, channels);
+        void prepare(int phase, Region r) const {
+            ptr->prepareFunc(phase, r);
         }
     };
 }
