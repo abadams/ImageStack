@@ -37,30 +37,9 @@ Image pyramidDown(Image im) {
     Image small(im.width/2, im.height/2, im.frames, im.channels);
     small.set(dy/64);
     return small;
-    /*
-    Image blurry = im.copy();
-    FastBlur::apply(blurry, 2, 2, 2);
-    return Subsample::apply(blurry, 2, 2, 0, 0);
-    */
 }
 
 Expr::Func pyramidUp(Image im) {
-    //Image larger(w, h, f, im.channels);
-
-    /*
-    for (int c = 0; c < im.channels; c++) {
-        for (int t = 0; t < f; t++) {
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
-                    larger(x, y, t, c) = im(x/2, y/2, t/2, c);
-                }
-            }
-        }
-    }
-
-    FastBlur::apply(larger, 2, 2, 2);
-    */
-
     auto zb = Expr::zeroBoundary(im);
     Expr::Func upx = interleaveX(shiftX(zb, 1) + 3*zb, 3*zb + shiftX(zb, -1));
     return interleaveY(shiftY(upx, 1) + 3*upx, 3*upx + shiftY(upx, -1))/16;
@@ -89,6 +68,7 @@ void LocalLaplacian::help() {
 bool LocalLaplacian::test() {
     Image im = Downsample::apply(Load::apply("pics/dog1.jpg"), 2, 2, 1);
     Stats si(im);
+    si.variance();
     LocalLaplacian::apply(im, 1.2, 0.2);
     Stats se(im);
     return (se.minimum() < si.minimum() &&
@@ -137,7 +117,6 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
     Image remap(16*256, 1, 1, 1);
     auto fx = (Expr::X()-8*256) / 256.0f;
     remap.set(alpha*fx*exp(-fx*fx/2.0f));
-    Save::apply(remap, "remap.tmp");
     
     // Make a set of K processed images
     printf("Computing different processed images\n");
@@ -190,8 +169,6 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
             output = newOutput;
         }
 
-        printf("output size: %d %d %d %d\n", output.width, output.height, output.frames, output.channels);
-
         // Add in the next pyramid level
         for (int t = 0; t < imPyramid[j].frames; t++) {
             for (int y = 0; y < imPyramid[j].height; y++) {
@@ -222,11 +199,10 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
 
     }
 
-    Save::apply(output, "output.tmp"); 
-
     // Reintroduce color
+    output /= gray;
     for (int c = 0; c < im.channels; c++) {
-        im.channel(c).set((im.channel(c) / gray) * output);
+        im.channel(c) *= output;
     }
 }
 

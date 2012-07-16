@@ -25,7 +25,7 @@ bool Inpaint::test() {
 
     // Patch a corrupted region of a smooth ramp
     Image im(99, 97, 1, 3);
-    im.set((x + y)/100);
+    im.set((x + y)/100.0f);
     Image corrupted = im.copy();
     Noise::apply(corrupted.region(40, 40, 0, 0, 20, 20, 1, 3), -20, 20);
     Image after = Inpaint::apply(corrupted, mask);
