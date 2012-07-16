@@ -294,10 +294,21 @@ void Test::help() {
 
 void Test::parse(vector<string> args) {
     if (args.size() == 0) {
-        OperationMapIterator i;
-        for (i = operationMap.begin(); i != operationMap.end(); ++i) {
-            apply(i->first, i->second);
+        vector<string> failures;
+        for (OperationMapIterator i = operationMap.begin(); i != operationMap.end(); ++i) {
+            bool result = apply(i->first, i->second);
+            if (!result) failures.push_back(i->first);
         }
+
+        if (failures.empty()) {
+            printf("All tests passed\n");
+        } else {
+            printf("The following tests failed:\n");
+            for (size_t i = 0; i < failures.size(); i++) {
+                printf("%s\n", failures[i].c_str());
+            }
+        }
+
     } else {
         for (size_t i = 0; i < args.size(); i++) {
             string opname = '-' + args[i];
@@ -311,13 +322,15 @@ void Test::parse(vector<string> args) {
     }
 }
 
-void Test::apply(string name, Operation *op) {
+bool Test::apply(string name, Operation *op) {
     printf("Testing %s ...\n", name.c_str());
     fflush(stdout);
     if (op->test()) {
         printf("Passed\n");
+        return true;
     } else {
         printf("*** Failed: %s ***\n", name.c_str());
+        return false;
     }
 };
 

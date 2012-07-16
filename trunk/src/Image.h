@@ -441,14 +441,12 @@ public:
 
     }
 
-#define ExprType(T) typename ImageStack::Expr::AsFloatExpr<T, T>::t
-
     // Evaluate a expression object defined in Expr.h
     // The second template argument prevents instantiations from
     // things that don't satisfy the trait "lazyable"
     template<typename T>
-    void set(const T expr_, const ExprType(T) *enable = NULL) const {
-        ExprType(T) expr(expr_);
+    void set(const T expr_, const FloatExprType(T) *enable = NULL) const {
+        FloatExprType(T) expr(expr_);
         {
             assert(defined(), "Can't set undefined image\n");
             int w = expr.getSize(0), h = expr.getSize(1),
@@ -479,14 +477,16 @@ public:
                         // Func, we only keep track of which scanlines were
                         // evaluated, not which channel or frames, so we're
                         // going to produce bogus output. 
-                        expr.prepare(0, xt, yt, t, c, maxX-xt, maxY-yt, 1, 1);
-                        expr.prepare(1, xt, yt, t, c, maxX-xt, maxY-yt, 1, 1);
+                        Region r = {xt, yt, t, c, maxX-xt, maxY-yt, 1, 1};
+                        expr.prepare(0, r);
+                        expr.prepare(1, r);
 
                         #ifdef _OPENMP
                         #pragma omp parallel for
                         #endif
                         for (int y = yt; y < maxY; y++) {
-                            ExprType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
+                            //printf("Evaluating at scanline %d\n", y);
+                            FloatExprType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
                             float *const dst = base + c*cstride + t*tstride + y*ystride;
                             ImageStack::Expr::setScanline(iter, dst, xt, maxX, boundedVX, minVX, maxVX);
                         }
@@ -495,7 +495,8 @@ public:
             }
         }
         // Clean up any resources
-        expr.prepare(2, 0, 0, 0, 0, width, height, frames, channels);
+        Region everything = {0, 0, 0, 0, width, height, frames, channels};
+        expr.prepare(2, everything);
     }
 
 
@@ -507,38 +508,38 @@ public:
     // problems when, for example, permuting channels.
     template<typename A, typename B, typename C, typename D>
     void setChannels(const A a, const B b, const C c, const D d,
-                     ExprType(A) *pa = NULL,
-                     ExprType(B) *pb = NULL,
-                     ExprType(C) *pc = NULL,
-                     ExprType(D) *pd = NULL) const {
-        setChannelsGeneric<4, ExprType(A), ExprType(B), ExprType(C), ExprType(D)>(
-            ExprType(A)(a),
-            ExprType(B)(b),
-            ExprType(C)(c),
-            ExprType(D)(d));
+                     FloatExprType(A) *pa = NULL,
+                     FloatExprType(B) *pb = NULL,
+                     FloatExprType(C) *pc = NULL,
+                     FloatExprType(D) *pd = NULL) const {
+        setChannelsGeneric<4, FloatExprType(A), FloatExprType(B), FloatExprType(C), FloatExprType(D)>(
+            FloatExprType(A)(a),
+            FloatExprType(B)(b),
+            FloatExprType(C)(c),
+            FloatExprType(D)(d));
     }
 
     template<typename A, typename B, typename C>
     void setChannels(const A &a, const B &b, const C &c,
-                     ExprType(A) *pa = NULL,
-                     ExprType(B) *pb = NULL,
-                     ExprType(C) *pc = NULL) const {
-        setChannelsGeneric<3, ExprType(A), ExprType(B), ExprType(C), ExprType(float)>(
-            ExprType(A)(a),
-            ExprType(B)(b),
-            ExprType(C)(c),
-            ExprType(float)(0));
+                     FloatExprType(A) *pa = NULL,
+                     FloatExprType(B) *pb = NULL,
+                     FloatExprType(C) *pc = NULL) const {
+        setChannelsGeneric<3, FloatExprType(A), FloatExprType(B), FloatExprType(C), FloatExprType(float)>(
+            FloatExprType(A)(a),
+            FloatExprType(B)(b),
+            FloatExprType(C)(c),
+            FloatExprType(float)(0));
     }
 
     template<typename A, typename B>
     void setChannels(const A &a, const B &b,
-                     ExprType(A) *pa = NULL,
-                     ExprType(B) *pb = NULL) const {
-        setChannelsGeneric<2, ExprType(A), ExprType(B), ExprType(float), ExprType(float)>(
-            ExprType(A)(a),
-            ExprType(B)(b),
-            ExprType(float)(0),
-            ExprType(float)(0));
+                     FloatExprType(A) *pa = NULL,
+                     FloatExprType(B) *pb = NULL) const {
+        setChannelsGeneric<2, FloatExprType(A), FloatExprType(B), FloatExprType(float), FloatExprType(float)>(
+            FloatExprType(A)(a),
+            FloatExprType(B)(b),
+            FloatExprType(float)(0),
+            FloatExprType(float)(0));
     }
 
     // An image itself is one such expression thing. Here's the
@@ -598,19 +599,18 @@ public:
     int minVecX() const {return 0;}
     int maxVecX() const {return width-ImageStack::Expr::Vec::width;}
 
-    void prepare(int phase, int x, int y, int t, int c,
-                 int xs, int ys, int ts, int cs) const {
-        assert(x >= 0 && x+xs <= width &&
-               y >= 0 && y+ys <= height &&
-               t >= 0 && t+ts <= frames &&
-               c >= 0 && c+cs <= channels, 
+    void prepare(int phase, Region r) const {
+        assert(r.x >= 0 && r.x+r.width <= width &&
+               r.y >= 0 && r.y+r.height <= height &&
+               r.t >= 0 && r.t+r.frames <= frames &&
+               r.c >= 0 && r.c+r.channels <= channels, 
                "Expression would access image out of bounds: %d %d %d %d  %d %d %d %d\n",
-               x, y, t, c, xs, ys, ts, cs);
+               r.x, r.y, r.t, r.c, r.width, r.height, r.frames, r.channels);
     }
 
     // Construct an image from a bounded expression object. No consts
     // allowed, so we require a ::Expr subtype instead of the more
-    // general ExprType(T) macro.
+    // general FloatExprType(T) macro.
     template<typename T>
     Image(const T &func, const typename T::FloatExpr *ptr = NULL) :
         width(0), height(0), frames(0), channels(0),
@@ -669,15 +669,15 @@ private:
         const int vec_width = ImageStack::Expr::Vec::width;
         for (int t = 0; t < frames; t++) {
 
-
-            funcA.prepare(0, 0, 0, t, 0, width, height, 1, 1);
-            funcB.prepare(0, 0, 0, t, 0, width, height, 1, 1);
-            funcC.prepare(0, 0, 0, t, 0, width, height, 1, 1);
-            funcD.prepare(0, 0, 0, t, 0, width, height, 1, 1);
-            funcA.prepare(1, 0, 0, t, 0, width, height, 1, 1);
-            funcB.prepare(1, 0, 0, t, 0, width, height, 1, 1);
-            funcC.prepare(1, 0, 0, t, 0, width, height, 1, 1);
-            funcD.prepare(1, 0, 0, t, 0, width, height, 1, 1);
+            Region r = {0, 0, t, 0, width, height, 1, 1};
+            funcA.prepare(0, r);
+            funcB.prepare(0, r);
+            funcC.prepare(0, r);
+            funcD.prepare(0, r);
+            funcA.prepare(1, r);
+            funcB.prepare(1, r);
+            funcC.prepare(1, r);
+            funcD.prepare(1, r);
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
@@ -734,10 +734,11 @@ private:
                 }
             }
         }
-        funcA.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
-        funcB.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
-        funcC.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
-        funcD.prepare(2, 0, 0, 0, 0, width, height, frames, 1);
+        Region everything = {0, 0, 0, 0, width, height, frames, 1};
+        funcA.prepare(2, everything);
+        funcB.prepare(2, everything);
+        funcC.prepare(2, everything); 
+        funcD.prepare(2, everything); 
     }
 
     struct Payload {
@@ -793,10 +794,6 @@ private:
 };
 
 // Clean up after myself
-#undef ExprType
-
-
-
 
 #include "footer.h"
 #endif

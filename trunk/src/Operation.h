@@ -27,7 +27,7 @@ public:
     void help();
     bool test() {return true;}
     void parse(vector<string> args);
-    static void apply(string name, Operation *op);
+    static bool apply(string name, Operation *op);
 };
 
 #include "footer.h"
