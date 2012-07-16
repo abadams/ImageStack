@@ -20,7 +20,7 @@ void Inpaint::help() {
 bool Inpaint::test() {
     // A circular mask
     Image mask(99, 97, 1, 1);
-    Lazy::X x; Lazy::Y y;
+    Expr::X x; Expr::Y y;
     mask.set(Select((x-50)*(x-50) + (y-50)*(y-50) < 30*30, 0, 1));
 
     // Patch a corrupted region of a smooth ramp
@@ -128,7 +128,7 @@ bool SeamlessClone::test() {
 
     // A circular mask
     Image mask(99, 97, 1, 1);
-    Lazy::X x; Lazy::Y y;
+    Expr::X x; Expr::Y y;
     mask.set(Select((x-50)*(x-50) + (y-50)*(y-50) < 30*30, 0, 1));
 
     // The background is a smooth ramp

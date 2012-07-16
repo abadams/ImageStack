@@ -4,7 +4,7 @@
 #include "Image.h"
 #include "header.h"
 
-namespace Lazy {
+namespace Expr {
 
     struct BaseFunc {
         Image im;
@@ -24,7 +24,7 @@ namespace Lazy {
         virtual int getSize(int i) = 0;
     };
 
-    template<typename T>
+    template<typename T, typename Enable = typename T::FloatExpr>
     struct DerivedFunc : public BaseFunc {
         const T expr;
         int lastPhase;
@@ -114,13 +114,13 @@ namespace Lazy {
                         evaluated.assign((maxY - minY)*(maxT - minT)*(maxC - minC), false);
                     } else {
                         // evaluate all scanlines here
-                        for (int c = minC; c < maxC; c++) {
-                            for (int t = minT; t < maxT; t++) {
+                        for (int ec = minC; ec < maxC; ec++) {
+                            for (int et = minT; et < maxT; et++) {
                                 #ifdef _OPENMP
                                 #pragma omp parallel for
                                 #endif
-                                for (int y = minY; y < maxY; y++) {
-                                    evalScanline(y, t, c);
+                                for (int ey = minY; ey < maxY; ey++) {
+                                    evalScanline(ey, et, ec);
                                 }
                             }
                         }
@@ -149,20 +149,23 @@ namespace Lazy {
 
         /*
         template<typename T>
-        Func(const T t, const typename T::Lazy *enable = NULL) {
+        Func(const T t, const typename T::Expr *enable = NULL) {
             ptr.reset(new DerivedFunc<T>(t));
             ptr->lazy = true;
         }
         */
 
         template<typename T>
-        Func(const T t, const typename Lazyable<T>::t *enable = NULL) {            
-            ptr.reset(new DerivedFunc<typename Lazyable<T>::t>(t));
+        Func(const T t, const typename AsFloatExpr<T, T>::t *enable = NULL) {            
+            ptr.reset(new DerivedFunc<typename AsFloatExpr<T, T>::t>(t));
             ptr->lazy = true;
         }
 
-        // Implement the lazy interface
-        typedef Func Lazy;
+        Func() {
+        }
+
+        // Implements the float expr interface
+        typedef Func FloatExpr;
 
         int getSize(int i) const {
             return ptr->getSize(i);

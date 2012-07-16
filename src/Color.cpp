@@ -425,7 +425,7 @@ Image ColorConvert::xyz2rgb(Image im) {
     // Convert from linear luminance to gamma-encoded srgb
     out.set(Select(out <= 0.0031308f,
                    12.92f * out,
-                   1.055f * pow(Lazy::max(out, 0), 1.0f/2.4f) - 0.055f));
+                   1.055f * pow(Expr::max(out, 0), 1.0f/2.4f) - 0.055f));
 
     return out;
 }
@@ -492,7 +492,7 @@ Image ColorConvert::argb2xyz(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     // Apply inverse adobe rgb gamma curve to get to linear-luminance
-    Image out = pow(Lazy::max(im, 0), 563.0f/256);
+    Image out = pow(Expr::max(im, 0), 563.0f/256);
     Image r = out.channel(0), g = out.channel(1), b = out.channel(2);
 
     // Apply argb to xyz linear transform
@@ -514,7 +514,7 @@ Image ColorConvert::xyz2argb(Image im) {
                     0.01344f * x - 0.11836f * y + 1.01517f * z);
 
     // Apply adobe rgb gamma curve
-    out.set(pow(Lazy::max(out, 0), 256/563.0f));
+    out.set(pow(Expr::max(out, 0), 256/563.0f));
 
     return out;
 }

@@ -5,7 +5,7 @@
 #include "Geometry.h"
 #include "header.h"
 
-using namespace Lazy;
+using namespace Expr;
 
 void Eval::help() {
     printf("\n-eval takes a simple expression and evaluates it, writing the result to the\n"
@@ -15,7 +15,7 @@ void Eval::help() {
 }
 
 bool Eval::test() {
-    // This also tests much of the Lazy module
+    // This also tests much of the Expr module
 
     Image im(123, 234, 2, 3);
     Noise::apply(im, 0, 1);
@@ -269,7 +269,7 @@ void Composite::help() {
 bool Composite::test() {
     Image mask(123, 234, 1, 1);
 
-    mask.set((X()+Y())/(123+234));
+    mask.set((X()+Y())/(123.0f+234.0f));
 
     Image a(123, 234, 1, 3);
     Image b(123, 234, 1, 3);

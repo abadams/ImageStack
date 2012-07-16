@@ -173,6 +173,7 @@ bool ComplexReal::test() {
     Image a_imag = ComplexImag::apply(a);
     Image mag = ComplexMagnitude::apply(a);
     ComplexMultiply::apply(a, a, true);
+    
     if (!nearlyEqual(ComplexReal::apply(a), a_real*a_real + a_imag*a_imag)) return false;
     if (!nearlyEqual(ComplexReal::apply(a), mag*mag)) return false;
 
@@ -353,7 +354,7 @@ Image ComplexPhase::apply(Image im) {
     for (int c = 0; c < out.channels; c++) {
         Image real = im.channel(2*c);
         Image imag = im.channel(2*c+1);
-        out.channel(c).set(Lazy::atan2(imag, real));
+        out.channel(c).set(Expr::atan2(imag, real));
     }
 
     return out;

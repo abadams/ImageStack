@@ -41,7 +41,7 @@ bool DCT::test() {
     if (!nearlyEqual(d1, d2)) return false;
 
     // Check a single cosine curve creates a spike
-    a.set(cos(16 * M_PI * Lazy::X() / 122.0));
+    a.set(cos(16 * M_PI * Expr::X() / 122.0));
     DCT::apply(a, true, true, true);
     if (a(16, 0, 0, 0) < 1) return false;
     a(16, 0, 0, 0) = 0;
@@ -165,8 +165,8 @@ bool FFT::test() {
     if (!nearlyEqual(d1, d2)) return false;
 
     // Check a single shifted curve creates a spike
-    a.channel(0).set(cos(16 * M_PI * Lazy::X() / 123.0 + M_PI/8));
-    a.channel(1).set(sin(16 * M_PI * Lazy::X() / 123.0 + M_PI/8));
+    a.channel(0).set(cos(16 * M_PI * Expr::X() / 123.0 + M_PI/8));
+    a.channel(1).set(sin(16 * M_PI * Expr::X() / 123.0 + M_PI/8));
     a.channel(2).set(a.channel(0));
     a.channel(3).set(a.channel(1));
     FFT::apply(a, true, true, true);

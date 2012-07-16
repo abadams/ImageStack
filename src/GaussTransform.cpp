@@ -656,13 +656,13 @@ void JointBilateral::apply(Image im, Image ref,
             // Then the spatial terms
             int c = ref.channels;
             if (filterX) {
-                splat.channel(c++).set(Lazy::X() / filterWidth);
+                splat.channel(c++).set(Expr::X() / filterWidth);
             }
             if (filterY) {
-                splat.channel(c++).set(Lazy::Y() / filterHeight);
+                splat.channel(c++).set(Expr::Y() / filterHeight);
             }
             if (filterT) {
-                splat.channel(c++).set(Lazy::T() / filterFrames);
+                splat.channel(c++).set(Expr::T() / filterFrames);
             }
         }
 
