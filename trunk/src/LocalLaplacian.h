@@ -7,10 +7,7 @@ public:
     void help();
     bool test();
     void parse(vector<string> args);
-    static Image apply(Image im, float alpha, float beta);
-private:
-    static Image pyramidDown(Image im);
-    static Image pyramidUp(Image im, int w, int h, int f);
+    static void apply(Image im, float alpha, float beta);
 };
 
 

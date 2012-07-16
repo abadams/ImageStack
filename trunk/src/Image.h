@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_IMAGE_H
 #define IMAGESTACK_IMAGE_H
 
-#include "Lazy.h"
+#include "Expr.h"
 
 #include "tables.h"
 #include "header.h"
@@ -140,28 +140,28 @@ public:
         set((*this) / f);
     }
 
-    template<typename A, typename B, typename Enable = typename A::Lazy>
-    struct LazyCheck {
+    template<typename A, typename B, typename Enable = typename A::FloatExpr>
+    struct ExprCheck {
         typedef B result;
     };
 
     template<typename T>
-    typename LazyCheck<T, void>::result operator+=(const T &other) const {
+    typename ExprCheck<T, void>::result operator+=(const T &other) const {
         set((*this) + other);
     }
 
     template<typename T>
-    typename LazyCheck<T, void>::result operator*=(const T &other) const {
+    typename ExprCheck<T, void>::result operator*=(const T &other) const {
         set((*this) * other);
     }
 
     template<typename T>
-    typename LazyCheck<T, void>::result operator-=(const T &other) const {
+    typename ExprCheck<T, void>::result operator-=(const T &other) const {
         set((*this) - other);
     }
 
     template<typename T>
-    typename LazyCheck<T, void>::result operator/=(const T &other) const {
+    typename ExprCheck<T, void>::result operator/=(const T &other) const {
         set((*this) / other);
     }
 
@@ -441,15 +441,14 @@ public:
 
     }
 
-    // A macro to check if a type is castable to a lazy expression type
-    #define LazyType(T) typename ImageStack::Lazy::Lazyable<T>::t
+#define ExprType(T) typename ImageStack::Expr::AsFloatExpr<T, T>::t
 
-    // Evaluate a expression object defined in Lazy.h
+    // Evaluate a expression object defined in Expr.h
     // The second template argument prevents instantiations from
     // things that don't satisfy the trait "lazyable"
     template<typename T>
-    void set(const T expr_, const LazyType(T) *enable = NULL) const {
-        LazyType(T) expr(expr_);
+    void set(const T expr_, const ExprType(T) *enable = NULL) const {
+        ExprType(T) expr(expr_);
         {
             assert(defined(), "Can't set undefined image\n");
             int w = expr.getSize(0), h = expr.getSize(1),
@@ -487,9 +486,9 @@ public:
                         #pragma omp parallel for
                         #endif
                         for (int y = yt; y < maxY; y++) {
-                            LazyType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
+                            ExprType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
                             float *const dst = base + c*cstride + t*tstride + y*ystride;
-                            ImageStack::Lazy::setScanline(iter, dst, xt, maxX, boundedVX, minVX, maxVX);
+                            ImageStack::Expr::setScanline(iter, dst, xt, maxX, boundedVX, minVX, maxVX);
                         }
                     }
                 }
@@ -508,43 +507,43 @@ public:
     // problems when, for example, permuting channels.
     template<typename A, typename B, typename C, typename D>
     void setChannels(const A a, const B b, const C c, const D d,
-                     LazyType(A) *pa = NULL,
-                     LazyType(B) *pb = NULL,
-                     LazyType(C) *pc = NULL,
-                     LazyType(D) *pd = NULL) const {
-        setChannelsGeneric<4, LazyType(A), LazyType(B), LazyType(C), LazyType(D)>(
-            LazyType(A)(a),
-            LazyType(B)(b),
-            LazyType(C)(c),
-            LazyType(D)(d));
+                     ExprType(A) *pa = NULL,
+                     ExprType(B) *pb = NULL,
+                     ExprType(C) *pc = NULL,
+                     ExprType(D) *pd = NULL) const {
+        setChannelsGeneric<4, ExprType(A), ExprType(B), ExprType(C), ExprType(D)>(
+            ExprType(A)(a),
+            ExprType(B)(b),
+            ExprType(C)(c),
+            ExprType(D)(d));
     }
 
     template<typename A, typename B, typename C>
     void setChannels(const A &a, const B &b, const C &c,
-                     LazyType(A) *pa = NULL,
-                     LazyType(B) *pb = NULL,
-                     LazyType(C) *pc = NULL) const {
-        setChannelsGeneric<3, LazyType(A), LazyType(B), LazyType(C), LazyType(float)>(
-            LazyType(A)(a),
-            LazyType(B)(b),
-            LazyType(C)(c),
-            LazyType(float)(0));
+                     ExprType(A) *pa = NULL,
+                     ExprType(B) *pb = NULL,
+                     ExprType(C) *pc = NULL) const {
+        setChannelsGeneric<3, ExprType(A), ExprType(B), ExprType(C), ExprType(float)>(
+            ExprType(A)(a),
+            ExprType(B)(b),
+            ExprType(C)(c),
+            ExprType(float)(0));
     }
 
     template<typename A, typename B>
     void setChannels(const A &a, const B &b,
-                     LazyType(A) *pa = NULL,
-                     LazyType(B) *pb = NULL) const {
-        setChannelsGeneric<2, LazyType(A), LazyType(B), LazyType(float), LazyType(float)>(
-            LazyType(A)(a),
-            LazyType(B)(b),
-            LazyType(float)(0),
-            LazyType(float)(0));
+                     ExprType(A) *pa = NULL,
+                     ExprType(B) *pb = NULL) const {
+        setChannelsGeneric<2, ExprType(A), ExprType(B), ExprType(float), ExprType(float)>(
+            ExprType(A)(a),
+            ExprType(B)(b),
+            ExprType(float)(0),
+            ExprType(float)(0));
     }
 
     // An image itself is one such expression thing. Here's the
     // interface it needs to implement for that to happen:
-    typedef Image Lazy;
+    typedef Image FloatExpr;
     int getSize(int i) const {
         switch (i) {
         case 0: return width;
@@ -567,11 +566,11 @@ public:
                    "%d is not within 0 - %d\n", x, width);
             return addr[x];
         }
-        ImageStack::Lazy::Vec::type vec(int x) const {
-            assert(x >= 0 && x <= width - ImageStack::Lazy::Vec::width,
+        ImageStack::Expr::Vec::type vec(int x) const {
+            assert(x >= 0 && x <= width - ImageStack::Expr::Vec::width,
                    "Vector access out of bounds in image iterator:\n"
                    "%d is not sufficiently within 0 - %d\n", x, width);
-            return ImageStack::Lazy::Vec::load(addr+x);
+            return ImageStack::Expr::Vec::load(addr+x);
         }
     };
     Iter scanline(int x, int y, int t, int c, int w) const {
@@ -586,8 +585,8 @@ public:
         Iter() : addr(NULL) {}
         Iter(const float *a) : addr(a) {}
         float operator[](int x) const {return addr[x];}
-        ImageStack::Lazy::Vec::type vec(int x) const {
-            return ImageStack::Lazy::Vec::load(addr+x);
+        ImageStack::Expr::Vec::type vec(int x) const {
+            return ImageStack::Expr::Vec::load(addr+x);
         }
     };
     Iter scanline(int x, int y, int t, int c, int w) const {
@@ -597,7 +596,7 @@ public:
 
     bool boundedVecX() const {return true;}
     int minVecX() const {return 0;}
-    int maxVecX() const {return width-ImageStack::Lazy::Vec::width;}
+    int maxVecX() const {return width-ImageStack::Expr::Vec::width;}
 
     void prepare(int phase, int x, int y, int t, int c,
                  int xs, int ys, int ts, int cs) const {
@@ -610,10 +609,10 @@ public:
     }
 
     // Construct an image from a bounded expression object. No consts
-    // allowed, so we require a ::Lazy subtype instead of the more
-    // general LazyType(T) macro.
+    // allowed, so we require a ::Expr subtype instead of the more
+    // general ExprType(T) macro.
     template<typename T>
-    Image(const T &func, const typename T::Lazy *ptr = NULL) :
+    Image(const T &func, const typename T::FloatExpr *ptr = NULL) :
         width(0), height(0), frames(0), channels(0),
         ystride(0), tstride(0), cstride(0), data(), base(NULL) {
         assert(func.getSize(0) && func.getSize(1) && func.getSize(2) && func.getSize(3),
@@ -667,7 +666,7 @@ private:
         // TODO: respect minVecX and maxVecX
 
         // 4 or 8-wide vector code, distributed across cores
-        const int vec_width = ImageStack::Lazy::Vec::width;
+        const int vec_width = ImageStack::Expr::Vec::width;
         for (int t = 0; t < frames; t++) {
 
 
@@ -694,8 +693,8 @@ private:
                 int x = 0;
 
                 if (vec_width > 1 && w > vec_width*2) {
-                    while (x < (w-(ImageStack::Lazy::Vec::width-1))) {
-                        ImageStack::Lazy::Vec::type va, vb, vc, vd;
+                    while (x < (w-(ImageStack::Expr::Vec::width-1))) {
+                        ImageStack::Expr::Vec::type va, vb, vc, vd;
 
                         // Compute the value of each input at this pixel
                         va = iterA.vec(x);
@@ -704,13 +703,13 @@ private:
                         if (outChannels > 3) vd = iterD.vec(x);
 
                         // Store the results
-                        ImageStack::Lazy::Vec::store(va, dst + x);
+                        ImageStack::Expr::Vec::store(va, dst + x);
                         if (outChannels > 1)
-                            ImageStack::Lazy::Vec::store(vb, dst + cs + x);
+                            ImageStack::Expr::Vec::store(vb, dst + cs + x);
                         if (outChannels > 2)
-                            ImageStack::Lazy::Vec::store(vc, dst + cs*2 + x);
+                            ImageStack::Expr::Vec::store(vc, dst + cs*2 + x);
                         if (outChannels > 3)
-                            ImageStack::Lazy::Vec::store(vd, dst + cs*3 + x);
+                            ImageStack::Expr::Vec::store(vd, dst + cs*3 + x);
                         x += vec_width;
                     }
                 }
@@ -794,7 +793,7 @@ private:
 };
 
 // Clean up after myself
-#undef LazyType
+#undef ExprType
 
 
 

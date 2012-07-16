@@ -535,10 +535,9 @@ void Gamma::parse(vector<string> args) {
 }
 
 void Gamma::apply(Image a, float gamma) {
-    a.set(
-        Lazy::IfThenElse(a > 0,
-                         Lazy::pow(a, gamma),
-                         -Lazy::pow(-a, gamma)));
+    a.set(Expr::IfThenElse(a > 0,
+                           Expr::pow(a, gamma),
+                           -Expr::pow(-a, gamma)));
 }
 
 void Mod::help() {
@@ -575,10 +574,10 @@ void Mod::parse(vector<string> args) {
 }
 
 void Mod::apply(Image a, float m) {
-    a.set(Lazy::IfThenElse(
+    a.set(Expr::IfThenElse(
               a > 0,
-              Lazy::fmod(a, m),
-              Lazy::fmod(a, m) + m));
+              Expr::fmod(a, m),
+              Expr::fmod(a, m) + m));
 }
 
 void Clamp::help() {
@@ -610,7 +609,7 @@ void Clamp::parse(vector<string> args) {
 }
 
 void Clamp::apply(Image a, float lower, float upper) {
-    a.set(Lazy::clamp(a, lower, upper));
+    a.set(Expr::clamp(a, lower, upper));
 }
 
 void DeNaN::help() {
@@ -645,14 +644,14 @@ void DeNaN::parse(vector<string> args) {
 }
 
 namespace {
-// A scalar version of DeNan. We'll lift it to an image version using the Lazy::Lift operator.
+// A scalar version of DeNan. We'll lift it to an image version using the Expr::Lift operator.
 float denan(float a, float replacement) {
     if (isnan(a)) return replacement;
     return a;
 }
 }
 void DeNaN::apply(Image a, float replacement) {
-    a.set(Lazy::Lift2<denan, Image, Lazy::Const>(a, replacement));
+    a.set(Expr::Lift2<denan, Image, Expr::ConstFloat>(a, replacement));
 }
 
 void Threshold::help() {
@@ -751,7 +750,7 @@ void Quantize::parse(vector<string> args) {
 
 void Quantize::apply(Image a, float increment) {
     // Mod does the wrong thing when its arg is less than zero
-    a.set(a - Lazy::fmod(a, increment) - Lazy::Select(a > 0, 0, increment));
+    a.set(a - Expr::fmod(a, increment) - Expr::Select(a > 0, 0, increment));
 }
 
 #include "footer.h"

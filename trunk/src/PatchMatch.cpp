@@ -43,7 +43,7 @@ bool PatchMatch::test() {
     Image shifted = Translate::apply(dog, 10, 5, 0);
     Image flow = PatchMatch::apply(dog, shifted, 5, 7);
     Image correct(dog.width-20, dog.height-20, 1, 4);
-    correct.setChannels(Lazy::X() + 10, Lazy::Y() + 5, 0.0f, 0.0f);
+    correct.setChannels(Expr::X() + 10, Expr::Y() + 5, 0.0f, 0.0f);
     return nearlyEqual(flow.region(0, 0, 0, 0, dog.width-20, dog.height-20, 1, 4), correct);
 }
 
@@ -532,7 +532,7 @@ bool Heal::test() {
 
     // A circular mask
     Image mask(99, 97, 1, 1);
-    Lazy::X x; Lazy::Y y;
+    Expr::X x; Expr::Y y;
     mask.set(Select((x-50)*(x-50) + (y-50)*(y-50) < 30*30, 0, 1));
 
     // Patch a corrupted region of a smooth ramp
