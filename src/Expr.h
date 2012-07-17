@@ -501,10 +501,13 @@ namespace Expr {
         int maxVecX() const {return 0x3fffffff;}
     };
 
-
     // Constants
     struct ConstFloat : public Unbounded {
         typedef ConstFloat FloatExpr;
+
+        // A useful predicate that statically tells us whether this expression depends on X
+        const static bool dependsOnX = false;
+
         const float val;
         ConstFloat(const float val_) : val(val_) {}
 
@@ -530,6 +533,9 @@ namespace Expr {
 
     struct ConstInt {
         typedef ConstInt IntExpr;
+
+        const static bool dependsOnX = false;
+
         const int val;
         ConstInt(const int val_) : val(val_) {}
 
@@ -556,6 +562,8 @@ namespace Expr {
     template<typename A>
     struct IntToFloat {
         typedef IntToFloat<typename A::IntExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
 
         IntToFloat(const A &a_) : a(a_) {}
 
@@ -605,6 +613,8 @@ namespace Expr {
     struct FloatToInt {
         typedef FloatToInt<typename A::FloatExpr> IntExpr;
 
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
 
         FloatToInt(const A &a_) : a(a_) {}
@@ -645,6 +655,8 @@ namespace Expr {
     struct X {
         typedef X IntExpr;
 
+        const static bool dependsOnX = true;
+
         int getSize(int) const {return 0;}
 
         // State needed to iterate across a scanline
@@ -667,6 +679,8 @@ namespace Expr {
     struct Y {
         typedef Y IntExpr;
 
+        const static bool dependsOnX = false;
+
         int getSize(int) const {return 0;}
 
         typedef ConstInt::Iter Iter;
@@ -687,6 +701,8 @@ namespace Expr {
     struct T {
         typedef T IntExpr;
 
+        const static bool dependsOnX = false;
+
         int getSize(int) const {return 0;}
 
         typedef ConstInt::Iter Iter;
@@ -706,6 +722,8 @@ namespace Expr {
 
     struct C {
         typedef C IntExpr;
+
+        const static bool dependsOnX = false;
 
         int getSize(int) const {return 0;}
 
@@ -728,6 +746,9 @@ namespace Expr {
     template<typename A, typename B, typename Op>
     struct FBinaryOp {
         typedef FBinaryOp<typename A::FloatExpr, typename B::FloatExpr, Op> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -779,6 +800,9 @@ namespace Expr {
     template<typename A, typename B, typename Op>
     struct IBinaryOp {
         typedef IBinaryOp<typename A::IntExpr, typename B::IntExpr, Op> IntExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -823,6 +847,9 @@ namespace Expr {
     template<typename A, typename B, typename Op>
     struct FCmp {
         typedef FCmp<typename A::FloatExpr, typename B::FloatExpr, Op> BoolExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -869,6 +896,9 @@ namespace Expr {
     template<typename A, typename B, typename Op>
     struct ICmp {
         typedef ICmp<typename A::IntExpr, typename B::IntExpr, Op> BoolExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -990,6 +1020,9 @@ namespace Expr {
     template<float(*fn)(float), typename A>
     struct Lift {
         typedef Lift<fn, typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         Lift(const A &a_) : a(a_) {}
 
@@ -1031,6 +1064,9 @@ namespace Expr {
     template<typename A, typename Op>
     struct UnaryOp {
         typedef UnaryOp<typename A::FloatExpr, Op> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         UnaryOp(const A &a_) : a(a_) {}
 
@@ -1065,6 +1101,9 @@ namespace Expr {
     template<float(*fn)(float, float), typename A, typename B>
     struct Lift2 {
         typedef Lift2<fn, typename A::FloatExpr, typename B::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
 
@@ -1223,6 +1262,9 @@ namespace Expr {
     template<typename A, typename B, typename C>
     struct _Select {
         typedef _Select<typename A::BoolExpr, typename B::FloatExpr, typename C::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX || C::dependsOnX;
+
         const A a;
         const B b;
         const C c;
@@ -1316,6 +1358,9 @@ namespace Expr {
     template<typename A, typename B, typename C>
     struct _IfThenElse {
         typedef _IfThenElse<typename A::BoolExpr, typename B::FloatExpr, typename C::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX || C::dependsOnX;
+
         const A a;
         const B b;
         const C c;
@@ -1414,6 +1459,9 @@ namespace Expr {
     template<typename A>
     struct _Shift {
         typedef _Shift<typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         const int xo, yo, to, co;
 
@@ -1488,6 +1536,9 @@ namespace Expr {
     template<typename A>
     struct _ZeroBoundary {
         typedef _ZeroBoundary<typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = true;
+
         const A a;
         _ZeroBoundary(const A &a_) : a(a_) {}
 
@@ -1601,6 +1652,9 @@ namespace Expr {
     template<typename A, typename B>
     struct _InterleaveX {
         typedef _InterleaveX<typename A::FloatExpr, typename B::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = true;
+
         const A a;
         const B b;
         
@@ -1733,6 +1787,9 @@ namespace Expr {
     template<typename A, typename B>
     struct _InterleaveY {
         typedef _InterleaveY<typename A::FloatExpr, typename B::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -1816,6 +1873,9 @@ namespace Expr {
     template<typename A, typename B>
     struct _InterleaveT {
         typedef _InterleaveT<typename A::FloatExpr, typename B::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -1900,6 +1960,9 @@ namespace Expr {
     template<typename A, typename B>
     struct _InterleaveC {
         typedef _InterleaveC<typename A::FloatExpr, typename B::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX || B::dependsOnX;
+
         const A a;
         const B b;
         
@@ -1985,6 +2048,9 @@ namespace Expr {
     template<typename A>
     struct AffineSampleX {
         typedef AffineSampleX<typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         const int stride, offset;
         AffineSampleX(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
@@ -2109,6 +2175,9 @@ namespace Expr {
     template<typename A>
     struct AffineSampleY {
         typedef AffineSampleY<typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         const int stride, offset;
         AffineSampleY(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
@@ -2162,6 +2231,9 @@ namespace Expr {
     template<typename A>
     struct AffineSampleT {
         typedef AffineSampleT<typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         const int stride, offset;
         AffineSampleT(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
@@ -2215,6 +2287,9 @@ namespace Expr {
     template<typename A>
     struct AffineSampleC {
         typedef AffineSampleC<typename A::FloatExpr> FloatExpr;
+
+        const static bool dependsOnX = A::dependsOnX;
+
         const A a;
         const int stride, offset;
         AffineSampleC(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
@@ -2351,7 +2426,6 @@ namespace Expr {
                 x++;
             }
 
-            //printf("Vectorized...\n");
             // Vectorized steady-state until we reach the end or until
             // we're no longer allowed to vectorize
             int lastX = maxX - Vec::width;

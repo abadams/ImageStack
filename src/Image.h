@@ -545,6 +545,7 @@ public:
     // An image itself is one such expression thing. Here's the
     // interface it needs to implement for that to happen:
     typedef Image FloatExpr;
+    const static bool dependsOnX = true;
     int getSize(int i) const {
         switch (i) {
         case 0: return width;
@@ -780,7 +781,7 @@ private:
         // alignment if you allocate an image from scratch.
         assert(xs > 0 && ys > 0 && ts > 0 && cs > 0,
                "Region must have strictly positive size: %d %d %d %d\n", xs, ys, ts, cs);
-        /* Some regions may venture into invalid areas to help with indexing math
+        /* Some regions may venture into invalid areas to help with indexing math 
         assert(x >= 0 && x+xs <= im.width &&
                y >= 0 && y+ys <= im.height &&
                t >= 0 && t+ts <= im.frames &&
