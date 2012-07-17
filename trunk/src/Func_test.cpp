@@ -10,6 +10,7 @@ using namespace ImageStack::Expr;
 #define X_TILE_SIZE 256
 #define Y_TILE_SIZE 32
 
+/*
 void blur_fast(Image in, Image out) {
     __m256 one_third = _mm256_set1_ps(1.0f/3);
 
@@ -55,18 +56,83 @@ void blur_fast(Image in, Image out) {
         }
     }
 }
+*/
+
+Func blur_halide(Func in) {
+    X x; Y y; C c;
+    Func blurx = (in(x-1, y, c) + in(x, y, c) + in(x+1, y, c))/3;
+    //Func blurx = (shiftX(in, -1) + in + shiftX(in, +1))/3;
+    //Func blury = (blurx(x, y-1, c) + blurx(x, y, c) + blurx(x, y+1, c))/3;
+    Func blury = (shiftY(blurx, -1) + blurx + shiftY(blurx, +1))/3;
+    return blury;
+}
+
+
+
+Func blur_halide2(Func in) {
+    Func blurx = (shiftX(in, -1) + in + shiftX(in, +1))/3;
+    Func blury = (shiftY(blurx, -1) + blurx + shiftY(blurx, +1))/3;
+    return blury;
+}
+
 
 
 int main(int argc, char **argv) {
     start();
 
+    Image input = Load::apply(argv[1]);
+    input = input.selectColumns(0, ((input.width-2)/X_TILE_SIZE)*X_TILE_SIZE+2);
+    input = input.selectRows(0, ((input.height-2)/Y_TILE_SIZE)*Y_TILE_SIZE+2);
+
+    printf("Using %d x %d of the input\n", input.width, input.height);
+
+    const int iterations = 20;
+
     try {
-        Func f;
-        X x; Y y;
-        f = x;
-        Image foo(128, 128, 1, 1);        
-        foo.set(f(toInt(sqrt(toFloat(x+y))), x-y, 0, 0));
-        Save::apply(foo, "foo.tmp");
+
+        Image output(input.width, input.height, input.frames, input.channels);
+        double t;
+
+        
+        output.set(0);
+        Func f1 = blur_halide(zeroBoundary(input));        
+        t = currentTime();
+        for (int i = 0; i < iterations; i++) {
+            f1.realize(output);
+        }
+        printf("%f\n", currentTime() - t);
+        Save::apply(output, "output1.tmp");
+        
+        output.set(0);        
+        Func f2 = blur_halide2(zeroBoundary(input));
+        t = currentTime();
+        for (int i = 0; i < iterations; i++) {
+            f2.realize(output);
+        }
+        printf("%f\n", currentTime() - t);
+        Save::apply(output, "output2.tmp");
+
+        /*
+        output.set(0);
+        t = currentTime();
+        for (int i = 0; i < iterations; i++) {
+            auto zb = zeroBoundary(input);
+            Func blurX = (shiftX(zb, -1) + zb + shiftX(zb, 1))/3;           
+            output.set((shiftY(blurX, -1) + blurX + shiftY(blurX, 1))/3);
+        }
+        printf("%f\n", currentTime() - t);
+        Save::apply(output, "output3.tmp");
+
+        output.set(0);
+        t = currentTime();
+        for (int i = 0; i < iterations; i++) {
+            blur_fast(input.region(1, 1, 0, 0, input.width-2, input.height-2, input.frames, input.channels),
+                      output.region(1, 1, 0, 0, input.width-2, input.height-2, input.frames, input.channels));
+        }
+        printf("%f\n", currentTime() - t);
+        Save::apply(output, "output4.tmp");
+        */
+
     } catch (Exception &e) {
         printf("Failure: %s\n", e.message);
     }

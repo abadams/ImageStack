@@ -6,6 +6,90 @@
 
 namespace Expr {
 
+    // Is an expression of the form a x + b
+    #define AffineInX(T) _AffineInX<T>::value
+
+    template<typename T>
+    struct _AffineInX {
+        static const bool value = false;
+    };
+    
+    template<>
+    struct _AffineInX<X> {
+        static const bool value = true;
+    };
+    
+    template<>
+    struct _AffineInX<int> {
+        static const bool value = true;
+    };
+
+    template<>
+    struct _AffineInX<ConstInt> {
+        static const bool value = true;
+    };
+    
+    template<typename A, typename B>
+    struct _AffineInX<IBinaryOp<A, B, Vec::Add> > {
+        static const bool value = AffineInX(A) && AffineInX(B);
+    };
+    
+    template<typename A, typename B>
+    struct _AffineInX<IBinaryOp<A, B, Vec::Sub> > {
+        static const bool value = AffineInX(A) && AffineInX(B);
+    };
+    
+    template<typename A>
+    struct _AffineInX<IBinaryOp<ConstInt, A, Vec::Mul> > {
+        static const bool value = AffineInX(A);
+    };
+    
+    template<typename A>
+    struct _AffineInX<IBinaryOp<A, ConstInt, Vec::Mul> > {
+        static const bool value = AffineInX(A);
+    };
+    
+    // Is an expression of the form x + b
+    #define ShiftedInX(T) _ShiftedInX<T>::value
+
+    template<typename T>
+    struct _ShiftedInX {
+        static const bool value = false;
+    };
+
+    template<>
+    struct _ShiftedInX<X> {
+        static const bool value = true;
+    };
+
+    template<typename A>
+    struct _ShiftedInX<IBinaryOp<A, ConstInt, Vec::Add> > {
+        static const bool value = ShiftedInX(A);
+    };
+
+    template<typename A>
+    struct _ShiftedInX<IBinaryOp<A, ConstInt, Vec::Sub> > {
+        static const bool value = ShiftedInX(A);
+    };
+
+    // Is an expression constant per scanline
+    #define IndependentOfX(T) _IndependentOfX<T>::value
+
+    template<typename T>
+    struct _IndependentOfX {
+        static const bool value = !T::dependsOnX;
+    };
+
+    template<>
+    struct _IndependentOfX<int> {
+        static const bool value = true;
+    };
+
+    template<>
+    struct _IndependentOfX<float> {
+        static const bool value = true;
+    };
+
     struct BaseFunc {
         Image im;
         int minX, minY, minT, minC;
@@ -14,11 +98,38 @@ namespace Expr {
 
         vector<int> evaluated;
 
+        // Evaluate myself at the given scanline only if necessary
+        void evalScanlineIfNeeded(int y, int t, int c) {
+            if (!lazy) return;
+           
+            int idx = ((c-minC) * im.frames + t-minT) * im.height + y-minY;
+            if (!evaluated[idx])  {
+                // TODO: consider locking the scanline during
+                // evaluation. As it stands, if multiple threads
+                // hammer on the same scanline, there will be wasted
+                // work (and probably lots of fighting over cache
+                // lines).  Fortunately, that's not how openmp
+                // schedules its threads.
+                evalScanline(y, t, c);
+                evaluated[idx] = true;
+            }
+            
+        }
+
+        _Shift<Image>::Iter scanline(int x, int y, int t, int c, int width) {
+            evalScanlineIfNeeded(y, t, c);
+            Image::Iter iter = im.scanline(x-minX, y-minY, t-minT, c-minC, width);
+            return _Shift<Image>::Iter(iter, minX);            
+        }
+
         // Evaluate myself into buffer at the given scanline. 
         virtual void evalScanline(int y, int t, int c) = 0;
 
         // Prepare to be evaluated over a given region
         virtual void prepareFunc(int phase, Region r) = 0;
+
+        // Evaluate your expression into an image (i.e. call im.set(expr))
+        virtual void realize(Image im) = 0;
 
         virtual int getSize(int i) = 0;
     };
@@ -34,6 +145,10 @@ namespace Expr {
         DerivedFunc(const T &e) : 
             expr(e), lastPhase(-1), 
             minVecX(e.minVecX()), maxVecX(e.maxVecX()), boundedVecX(e.boundedVecX()) {}
+
+        void realize(Image m) {
+            m.set(expr);
+        }
 
         void evalScanline(int y, int t, int c) {
             //printf("Evaluating %p at scanline %d-%d %d %d %d\n",
@@ -99,7 +214,7 @@ namespace Expr {
                         im.frames < maxT - minT ||
                         im.channels < maxC - minC) {
                         //printf("Allocating backing for %p %d %d %d %d\n", 
-                        // this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
+                        //this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
                         im = Image(maxX - minX, maxY - minY, maxT - minT, maxC - minC);
                         //printf("Done\n");
 
@@ -157,90 +272,156 @@ namespace Expr {
         // Implements the float expr interface
         typedef Func FloatExpr;
 
+        const static bool dependsOnX = true;
+
         int getSize(int i) const {
             return ptr->getSize(i);
         }
 
+        template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
+        struct FuncRefIter;
+            
+        // Iterate across a scanline of a function that we're sampling in an unrestricted manner
         template<typename SX, typename SY, typename ST, typename SC>
+        struct FuncRefIter<SX, SY, ST, SC, false, false> {
+            const Image im;
+            const int minX, minY, minT, minC;
+            const typename SX::Iter sx;
+            const typename SY::Iter sy;
+            const typename ST::Iter st;
+            const typename SC::Iter sc;
+            FuncRefIter() {}
+            FuncRefIter(const std::shared_ptr<BaseFunc> &f,
+                        const typename SX::Iter &sx_,
+                        const typename SY::Iter &sy_,
+                        const typename ST::Iter &st_,
+                        const typename SC::Iter &sc_) : 
+                im(f->im), minX(f->minX), minY(f->minY), minT(f->minT), minC(f->minC),
+                sx(sx_), sy(sy_), st(st_), sc(sc_) {
+            }
+            float operator[](int x) const {
+                return im(sx[x]-minX, sy[x]-minY, st[x]-minT, sc[x]-minC);
+            }
+            Vec::type vec(int x) const {
+                if (Vec::width == 8) {
+                    return Vec::set((*this)[x],
+                                    (*this)[x+1],
+                                    (*this)[x+2],
+                                    (*this)[x+3],
+                                    (*this)[x+4],
+                                    (*this)[x+5],
+                                    (*this)[x+6],
+                                    (*this)[x+7]);
+                } else if (Vec::width == 4) {
+                    return Vec::set((*this)[x],
+                                    (*this)[x+1],
+                                    (*this)[x+2],
+                                    (*this)[x+3]);
+                } else {
+                    union {
+                        float f[Vec::width];
+                        Vec::type v;
+                    } v;
+                    for (int i = 0; i < Vec::width; i++) {
+                        v.f[i] = (*this)[x];
+                    }
+                    return v.v;
+                }
+            }                                            
+        };
+
+        // Iterate across a scanline of a function where
+        // 1) The index in X is affine
+        // 2) No other indices depend on X
+        template<typename SX, typename SY, typename ST, typename SC>
+        struct FuncRefIter<SX, SY, ST, SC, true, false> {
+            AffineSampleX<Image>::Iter iter;
+            FuncRefIter() {}
+            FuncRefIter(const std::shared_ptr<BaseFunc> &f,
+                        const typename SX::Iter &sx,
+                        const typename SY::Iter &sy,
+                        const typename ST::Iter &st,
+                        const typename SC::Iter &sc) : 
+                iter(f->im.scanline(0, sy[0]-f->minY, st[0]-f->minT, sc[0]-f->minC, f->im.width), 
+                     sx[1] - sx[0], sx[0] - f->minX) {
+                // Make sure the relevant scanline has been evaluated
+
+                f->evalScanlineIfNeeded(sy[0], st[0], sc[0]);
+            }
+            float operator[](int x) const {
+                return iter[x];
+            }
+            Vec::type vec(int x) const {
+                return iter.vec(x);
+            }                             
+        };
+
+        // Iterate across a scanline of a function where
+        // 1) The index in X is X + constant
+        // 2) No other indices depend on X
+        template<typename SX, typename SY, typename ST, typename SC>
+        struct FuncRefIter<SX, SY, ST, SC, true, true> {
+            _Shift<Image>::Iter iter;
+            FuncRefIter() {}
+            FuncRefIter(const std::shared_ptr<BaseFunc> &f,
+                        const typename SX::Iter &sx,
+                        const typename SY::Iter &sy,
+                        const typename ST::Iter &st,
+                        const typename SC::Iter &sc) : 
+                iter(f->im.scanline(0, sy[0]-f->minY, st[0]-f->minT, sc[0]-f->minC, f->im.width), 
+                     f->minX - sx[0]) {
+                // Make sure the relevant scanline has been evaluated
+                f->evalScanlineIfNeeded(sy[0], st[0], sc[0]);
+            }
+            float operator[](int x) const {
+                return iter[x];
+            }
+            Vec::type vec(int x) const {
+                return iter.vec(x);
+            }                             
+        };
+
+        template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
         struct FuncRef {
-            typedef FuncRef<SX, SY, ST, SC> FloatExpr;
+            typedef FuncRef<SX, SY, ST, SC, AffineCase, ShiftedCase> FloatExpr;
+
+            static const bool dependsOnX = true;
+
+            std::shared_ptr<BaseFunc> ptr;
             const SX sx;
             const SY sy;
             const ST st;
-            const SC sc;
-            std::shared_ptr<BaseFunc> ptr;
+            const SC sc;            
+
+
             FuncRef(const std::shared_ptr<BaseFunc> &ptr_,
                     const SX &sx_, 
                     const SY &sy_, 
                     const ST &st_, 
                     const SC &sc_) : 
                 ptr(ptr_), sx(sx_), sy(sy_), st(st_), sc(sc_) {
-                // We're going to be sampling this func somewhat arbitrarily, so it can't be lazy
-                ptr->lazy = false;
+
+                // If we're going to be sampling this func somewhat arbitrarily, then it can't be lazy
+                if (!AffineCase && !ShiftedCase) ptr->lazy = false;
             }
 
-            int getSize(int i) {
+            int getSize(int i) const {
                 // TODO: max of sizes of sx, sy, st, sc
                 return 0;
             }
 
-            struct Iter {                
-                const Image im;
-                const int minX, minY, minT, minC;
-                const typename SX::Iter sx;
-                const typename SY::Iter sy;
-                const typename ST::Iter st;
-                const typename SC::Iter sc;
-                Iter() {}
-                Iter(const std::shared_ptr<BaseFunc> &f,
-                     const typename SX::Iter &sx_,
-                     const typename SY::Iter &sy_,
-                     const typename ST::Iter &st_,
-                     const typename SC::Iter &sc_) : 
-                    im(f->im), minX(f->minX), minY(f->minY), minT(f->minT), minC(f->minC),
-                    sx(sx_), sy(sy_), st(st_), sc(sc_) {
-                }
-                float operator[](int x) const {
-                    return im(sx[x]-minX, sy[x]-minY, st[x]-minT, sc[x]-minC);
-                }
-                Vec::type vec(int x) const {
-                    if (Vec::width == 8) {
-                        return Vec::set((*this)[x],
-                                        (*this)[x+1],
-                                        (*this)[x+2],
-                                        (*this)[x+3],
-                                        (*this)[x+4],
-                                        (*this)[x+5],
-                                        (*this)[x+6],
-                                        (*this)[x+7]);
-                    } else if (Vec::width == 4) {
-                        return Vec::set((*this)[x],
-                                        (*this)[x+1],
-                                        (*this)[x+2],
-                                        (*this)[x+3]);
-                    } else {
-                        union {
-                            float f[Vec::width];
-                            Vec::type v;
-                        } v;
-                        for (int i = 0; i < Vec::width; i++) {
-                            v.f[i] = (*this)[x];
-                        }
-                        return v.v;
-                    }
-                }                                     
-            };
+            typedef FuncRefIter<SX, SY, ST, SC, AffineCase, ShiftedCase> Iter;
+
             Iter scanline(int x, int y, int t, int c, int width) const {
                 return Iter(ptr,
                             sx.scanline(x, y, t, c, width),
                             sy.scanline(x, y, t, c, width),
                             st.scanline(x, y, t, c, width),
-                            sc.scanline(x, y, t, c, width));                            
+                            sc.scanline(x, y, t, c, width));
             }
 
-            // We never call .vec on any dependents, so feel free to
-            // vectorize this over any range - it resolves to a gather
-            // from the backing image.
+            // In all cases we resolve to a load from an image, so
+            // we're not particularly bounded in how we can vectorize
             bool boundedVecX() const {
                 return false;
             }
@@ -274,30 +455,46 @@ namespace Expr {
             }
         };
 
+#define ShiftedCase(SX, SY, ST, SC)                                     \
+        (ShiftedInX(SX) && IndependentOfX(SY) && IndependentOfX(ST) && IndependentOfX(SC)) 
+        
+#define AffineCase(SX, SY, ST, SC)                                      \
+        (AffineInX(SX) && IndependentOfX(SY) && IndependentOfX(ST) && IndependentOfX(SC)) 
+        
+        // Sample a function        
         template<typename SX, typename SY, typename ST, typename SC>
-        FuncRef<IntExprType(SX), IntExprType(SY), IntExprType(ST), IntExprType(SC)>
+        FuncRef<IntExprType(SX), IntExprType(SY), IntExprType(ST), IntExprType(SC), 
+                AffineCase(SX, SY, ST, SC), ShiftedCase(SX, SY, ST, SC)>
         operator()(const SX &x, const SY &y, const ST &t, const SC &c) const {
-            return FuncRef<IntExprType(SX), IntExprType(SY), IntExprType(ST), IntExprType(SC)>(ptr, x, y, t, c);
+            return FuncRef<IntExprType(SX), IntExprType(SY), IntExprType(ST), IntExprType(SC), 
+                           AffineCase(SX, SY, ST, SC), ShiftedCase(SX, SY, ST, SC)>
+                (ptr, x, y, t, c);
         }
 
-        // TODO: special-case func samplings that return more restricted types
+        template<typename SX, typename SY, typename SC>
+        FuncRef<IntExprType(SX), IntExprType(SY), ConstInt, IntExprType(SC), 
+                AffineCase(SX, SY, ConstInt, SC), ShiftedCase(SX, SY, ConstInt, SC)>
+        operator()(const SX &x, const SY &y, const SC &c) const {
+            return FuncRef<IntExprType(SX), IntExprType(SY), ConstInt, IntExprType(SC), 
+                           AffineCase(SX, SY, ConstInt, SC), ShiftedCase(SX, SY, ConstInt, SC)>
+                (ptr, x, y, 0, c);
+        }
+
+        template<typename SX, typename SY>
+        FuncRef<IntExprType(SX), IntExprType(SY), ConstInt, ConstInt, 
+                AffineCase(SX, SY, ConstInt, ConstInt), ShiftedCase(SX, SY, ConstInt, ConstInt)>
+        operator()(const SX &x, const SY &y) const {
+            return FuncRef<IntExprType(SX), IntExprType(SY), ConstInt, ConstInt, 
+                           AffineCase(SX, SY, ConstInt, ConstInt), ShiftedCase(SX, SY, ConstInt, ConstInt)>
+                (ptr, x, y, 0, 0);
+        }
+
+#undef AffineCase        
+#undef ShiftedCase
 
         typedef _Shift<Image>::Iter Iter;
         Iter scanline(int x, int y, int t, int c, int width) const {        
-            int px = x-ptr->minX, py = y-ptr->minY, pt = t-ptr->minT, pc = c-ptr->minC;
-            int idx = (pc * ptr->im.frames + pt) * ptr->im.height + py;
-            if (ptr->lazy && !ptr->evaluated[idx])  {
-                // TODO: consider locking the scanline during
-                // evaluation. As it stands, if multiple threads
-                // hammer on the same scanline, there will be wasted
-                // work (and probably lots of fighting over cache
-                // lines).  Fortunately, that's not how openmp
-                // schedules its threads.
-                ptr->evalScanline(y, t, c);
-                ptr->evaluated[idx] = true;
-            }
-            Image::Iter iter = ptr->im.scanline(px, py, pt, pc, width);
-            return _Shift<Image>::Iter(iter, ptr->minX);
+            return ptr->scanline(x, y, t, c, width);
         }
 
         bool boundedVecX() const {return false;}
@@ -307,6 +504,19 @@ namespace Expr {
         void prepare(int phase, Region r) const {
             ptr->prepareFunc(phase, r);
         }
+
+        // Evaluate yourself into an existing image
+        void realize(Image im) {
+            ptr->realize(im);
+        }
+
+        // Evaluate yourself into a new image
+        Image realize(int w, int h, int f, int c) {
+            Image im(w, h, f, c);
+            ptr->realize(im);
+            return im;
+        }
+
     };
 }
 
