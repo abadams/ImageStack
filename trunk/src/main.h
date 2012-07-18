@@ -7,10 +7,6 @@
 #include <string.h>
 #include <ctype.h>
 
-// DUMA is a useful library that puts an electric fence at the end of
-// every allocation to detect overruns.
-//#include <duma.h>
-
 #include <map>
 #include <string>
 #include <vector>

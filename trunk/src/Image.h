@@ -16,6 +16,8 @@
 // are those which do not change the metadata, not those which do not
 // change the pixel data.
 
+
+
 class Image {
 public:
 
@@ -124,23 +126,7 @@ public:
         return !(*this == other);
     }
 
-    void operator+=(const float f) const {
-        set((*this) + f);
-    }
-
-    void operator*=(const float f) const {
-        set((*this) * f);
-    }
-
-    void operator-=(const float f) const {
-        set((*this) - f);
-    }
-
-    void operator/=(const float f) const {
-        set((*this) / f);
-    }
-
-    template<typename A, typename B, typename Enable = typename A::FloatExpr>
+    template<typename A, typename B, typename Enable = FloatExprType(A) >
     struct ExprCheck {
         typedef B result;
     };
@@ -442,10 +428,10 @@ public:
     }
 
     // Evaluate a expression object defined in Expr.h
-    // The second template argument prevents instantiations from
-    // things that don't satisfy the trait "lazyable"
+    // The second argument prevents calls to set from things that are
+    // neither floats nor float expression types
     template<typename T>
-    void set(const T expr_, const FloatExprType(T) *enable = NULL) const {
+    void set(const T expr_, const FloatExprType(T) *check = NULL) const {
         FloatExprType(T) expr(expr_);
         {
             assert(defined(), "Can't set undefined image\n");
@@ -477,7 +463,7 @@ public:
                         // Func, we only keep track of which scanlines were
                         // evaluated, not which channel or frames, so we're
                         // going to produce bogus output. 
-                        Region r = {xt, yt, t, c, maxX-xt, maxY-yt, 1, 1};
+                        Expr::Region r = {xt, yt, t, c, maxX-xt, maxY-yt, 1, 1};
                         expr.prepare(0, r);
                         expr.prepare(1, r);
 
@@ -495,8 +481,15 @@ public:
             }
         }
         // Clean up any resources
-        Region everything = {0, 0, 0, 0, width, height, frames, channels};
+        Expr::Region everything = {0, 0, 0, 0, width, height, frames, channels};
         expr.prepare(2, everything);
+    }
+
+    void set(const Expr::Func &func) const {
+        realizeFuncIntoImage(*this, func);
+    }
+    Image(const Expr::Func &func) {
+        (*this) = realizeFuncIntoNewImage(func);
     }
 
 
@@ -555,7 +548,6 @@ public:
         }
         return 0;
     }
-
     #ifdef BOUNDS_CHECKING
     struct Iter {
         int width;
@@ -600,7 +592,7 @@ public:
     int minVecX() const {return 0;}
     int maxVecX() const {return width-ImageStack::Expr::Vec::width;}
 
-    void prepare(int phase, Region r) const {
+    void prepare(int phase, Expr::Region r) const {
         assert(r.x >= 0 && r.x+r.width <= width &&
                r.y >= 0 && r.y+r.height <= height &&
                r.t >= 0 && r.t+r.frames <= frames &&
@@ -609,17 +601,17 @@ public:
                r.x, r.y, r.t, r.c, r.width, r.height, r.frames, r.channels);
     }
 
-    // Construct an image from a bounded expression object. No consts
-    // allowed, so we require a ::Expr subtype instead of the more
-    // general FloatExprType(T) macro.
+
+    // Construct an image from a bounded expression object. 
     template<typename T>
-    Image(const T &func, const typename T::FloatExpr *ptr = NULL) :
+    Image(const T &expr_, const FloatExprType(T) *ptr = NULL) :
         width(0), height(0), frames(0), channels(0),
         ystride(0), tstride(0), cstride(0), data(), base(NULL) {
-        assert(func.getSize(0) && func.getSize(1) && func.getSize(2) && func.getSize(3),
+        FloatExprType(T) expr(expr_);
+        assert(expr.getSize(0) && expr.getSize(1) && expr.getSize(2) && expr.getSize(3),
                "Can only construct an image from a bounded expression\n");
-        (*this) = Image(func.getSize(0), func.getSize(1), func.getSize(2), func.getSize(3));
-        set(func);
+        (*this) = Image(expr.getSize(0), expr.getSize(1), expr.getSize(2), expr.getSize(3));
+        set(expr);
     }
 
     Image(const Image &other) :
@@ -632,20 +624,20 @@ private:
 
 
     template<int outChannels, typename A, typename B, typename C, typename D>
-    void setChannelsGeneric(const A &funcA,
-                            const B &funcB,
-                            const C &funcC,
-                            const D &funcD) const {
-        int wA = funcA.getSize(0), hA = funcA.getSize(1), fA = funcA.getSize(2);
-        int wB = funcB.getSize(0), hB = funcB.getSize(1), fB = funcB.getSize(2);
-        int wC = funcC.getSize(0), hC = funcC.getSize(1), fC = funcC.getSize(2);
-        int wD = funcD.getSize(0), hD = funcD.getSize(1), fD = funcD.getSize(2);
+    void setChannelsGeneric(const A &exprA,
+                            const B &exprB,
+                            const C &exprC,
+                            const D &exprD) const {
+        int wA = exprA.getSize(0), hA = exprA.getSize(1), fA = exprA.getSize(2);
+        int wB = exprB.getSize(0), hB = exprB.getSize(1), fB = exprB.getSize(2);
+        int wC = exprC.getSize(0), hC = exprC.getSize(1), fC = exprC.getSize(2);
+        int wD = exprD.getSize(0), hD = exprD.getSize(1), fD = exprD.getSize(2);
         assert(channels == outChannels,
                "The number of channels must equal the number of arguments\n");
-        assert(funcA.getSize(3) <= 1 &&
-               funcB.getSize(3) <= 1 &&
-               funcC.getSize(3) <= 1 &&
-               funcD.getSize(3) <= 1,
+        assert(exprA.getSize(3) <= 1 &&
+               exprB.getSize(3) <= 1 &&
+               exprC.getSize(3) <= 1 &&
+               exprD.getSize(3) <= 1,
                "Each argument must be unbounded across channels or single-channel\n");
         assert((width == wA || wA == 0) &&
                (height == hA || hA == 0) &&
@@ -664,82 +656,57 @@ private:
                (frames == fD || fD == 0),
                "Can only assign from sources of matching size\n");
 
-        // TODO: respect minVecX and maxVecX
+        bool boundedVX = (exprA.boundedVecX() || 
+                          exprB.boundedVecX() || 
+                          exprC.boundedVecX() || 
+                          exprD.boundedVecX());       
+        int minVX = max(max(exprA.minVecX(), exprB.minVecX()),
+                        max(exprC.minVecX(), exprD.minVecX()));
+        int maxVX = min(min(exprA.maxVecX(), exprB.maxVecX()),
+                        min(exprC.maxVecX(), exprD.maxVecX()));
 
         // 4 or 8-wide vector code, distributed across cores
-        const int vec_width = ImageStack::Expr::Vec::width;
         for (int t = 0; t < frames; t++) {
 
-            Region r = {0, 0, t, 0, width, height, 1, 1};
-            funcA.prepare(0, r);
-            funcB.prepare(0, r);
-            funcC.prepare(0, r);
-            funcD.prepare(0, r);
-            funcA.prepare(1, r);
-            funcB.prepare(1, r);
-            funcC.prepare(1, r);
-            funcD.prepare(1, r);
+            Expr::Region r = {0, 0, t, 0, width, height, 1, 1};
+            exprA.prepare(0, r);
+            exprB.prepare(0, r);
+            exprC.prepare(0, r);
+            exprD.prepare(0, r);
+            exprA.prepare(1, r);
+            exprB.prepare(1, r);
+            exprC.prepare(1, r);
+            exprD.prepare(1, r);
+
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
             for (int y = 0; y < height; y++) {
                 const int w = width;
                 const int cs = cstride;
-                float *const dst = base + t*tstride + y*ystride;
-                const typename A::Iter iterA = funcA.scanline(0, y, t, 0, w);
-                const typename B::Iter iterB = funcB.scanline(0, y, t, 0, w);
-                const typename C::Iter iterC = funcC.scanline(0, y, t, 0, w);
-                const typename D::Iter iterD = funcD.scanline(0, y, t, 0, w);
 
-                int x = 0;
+                const typename A::Iter iterA = exprA.scanline(0, y, t, 0, w);
+                const typename B::Iter iterB = exprB.scanline(0, y, t, 0, w);
+                const typename C::Iter iterC = exprC.scanline(0, y, t, 0, w);
+                const typename D::Iter iterD = exprD.scanline(0, y, t, 0, w);
 
-                if (vec_width > 1 && w > vec_width*2) {
-                    while (x < (w-(ImageStack::Expr::Vec::width-1))) {
-                        ImageStack::Expr::Vec::type va, vb, vc, vd;
+                float *const dst1 = base + t*tstride + y*ystride;
+                float *const dst2 = outChannels > 1 ? dst1 + cs : NULL;
+                float *const dst3 = outChannels > 2 ? dst2 + cs : NULL;
+                float *const dst4 = outChannels > 3 ? dst3 + cs : NULL;
 
-                        // Compute the value of each input at this pixel
-                        va = iterA.vec(x);
-                        if (outChannels > 1) vb = iterB.vec(x);
-                        if (outChannels > 2) vc = iterC.vec(x);
-                        if (outChannels > 3) vd = iterD.vec(x);
-
-                        // Store the results
-                        ImageStack::Expr::Vec::store(va, dst + x);
-                        if (outChannels > 1)
-                            ImageStack::Expr::Vec::store(vb, dst + cs + x);
-                        if (outChannels > 2)
-                            ImageStack::Expr::Vec::store(vc, dst + cs*2 + x);
-                        if (outChannels > 3)
-                            ImageStack::Expr::Vec::store(vd, dst + cs*3 + x);
-                        x += vec_width;
-                    }
-                }
-
-                // Scalar part at the end
-                while (x < w) {
-                    float va, vb, vc, vd;
-
-                    va = iterA[x];
-                    if (outChannels > 1) vb = iterB[x];
-                    if (outChannels > 2) vc = iterC[x];
-                    if (outChannels > 3) vd = iterD[x];
-
-                    dst[x] = va;
-                    if (outChannels > 1)
-                        dst[x + cs] = vb;
-                    if (outChannels > 2)
-                        dst[x + cs*2] = vc;
-                    if (outChannels > 3)
-                        dst[x + cs*3] = vd;
-                    x++;
-                }
+                Expr::setScanlineMulti(iterA, iterB, iterC, iterD,
+                                       dst1, dst2, dst3, dst4,
+                                       0, width, 
+                                       boundedVX, minVX, maxVX);                
             }
         }
-        Region everything = {0, 0, 0, 0, width, height, frames, 1};
-        funcA.prepare(2, everything);
-        funcB.prepare(2, everything);
-        funcC.prepare(2, everything); 
-        funcD.prepare(2, everything); 
+
+        Expr::Region everything = {0, 0, 0, 0, width, height, frames, 1};
+        exprA.prepare(2, everything);
+        exprB.prepare(2, everything);
+        exprC.prepare(2, everything); 
+        exprD.prepare(2, everything); 
     }
 
     struct Payload {

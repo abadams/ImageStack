@@ -257,8 +257,9 @@ namespace Expr {
         }
     };
 
-    struct Func {
+    class Func {
         std::shared_ptr<BaseFunc> ptr;
+    public:
 
         template<typename T>
         Func(const T t, FloatExprType(T) *enable = NULL) {            
@@ -274,22 +275,19 @@ namespace Expr {
 
         const static bool dependsOnX = true;
 
-        int getSize(int i) const {
-            return ptr->getSize(i);
-        }
-
         template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
         struct FuncRefIter;
             
         // Iterate across a scanline of a function that we're sampling in an unrestricted manner
         template<typename SX, typename SY, typename ST, typename SC>
-        struct FuncRefIter<SX, SY, ST, SC, false, false> {
+        class FuncRefIter<SX, SY, ST, SC, false, false> {
             const Image im;
             const int minX, minY, minT, minC;
             const typename SX::Iter sx;
             const typename SY::Iter sy;
             const typename ST::Iter st;
             const typename SC::Iter sc;
+        public:
             FuncRefIter() {}
             FuncRefIter(const std::shared_ptr<BaseFunc> &f,
                         const typename SX::Iter &sx_,
@@ -334,8 +332,9 @@ namespace Expr {
         // 1) The index in X is affine
         // 2) No other indices depend on X
         template<typename SX, typename SY, typename ST, typename SC>
-        struct FuncRefIter<SX, SY, ST, SC, true, false> {
+        class FuncRefIter<SX, SY, ST, SC, true, false> {
             AffineSampleX<Image>::Iter iter;
+        public:
             FuncRefIter() {}
             FuncRefIter(const std::shared_ptr<BaseFunc> &f,
                         const typename SX::Iter &sx,
@@ -360,8 +359,9 @@ namespace Expr {
         // 1) The index in X is X + constant
         // 2) No other indices depend on X
         template<typename SX, typename SY, typename ST, typename SC>
-        struct FuncRefIter<SX, SY, ST, SC, true, true> {
+        class FuncRefIter<SX, SY, ST, SC, true, true> {
             _Shift<Image>::Iter iter;
+        public:
             FuncRefIter() {}
             FuncRefIter(const std::shared_ptr<BaseFunc> &f,
                         const typename SX::Iter &sx,
@@ -382,18 +382,18 @@ namespace Expr {
         };
 
         template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
-        struct FuncRef {
-            typedef FuncRef<SX, SY, ST, SC, AffineCase, ShiftedCase> FloatExpr;
-
-            static const bool dependsOnX = true;
-
+        class FuncRef {
             std::shared_ptr<BaseFunc> ptr;
             const SX sx;
             const SY sy;
             const ST st;
             const SC sc;            
+            int sizes[4];
+        public:
+            typedef FuncRef<SX, SY, ST, SC, AffineCase, ShiftedCase> FloatExpr;
 
-
+            static const bool dependsOnX = true;
+            
             FuncRef(const std::shared_ptr<BaseFunc> &ptr_,
                     const SX &sx_, 
                     const SY &sy_, 
@@ -401,13 +401,25 @@ namespace Expr {
                     const SC &sc_) : 
                 ptr(ptr_), sx(sx_), sy(sy_), st(st_), sc(sc_) {
 
+                for (int i = 0; i < 4; i++) {                    
+                    sizes[i] = std::max(std::max(sx.getSize(i), sy.getSize(i)), 
+                                        std::max(st.getSize(i), sc.getSize(i)));
+                    assert(sx.getSize(i) == 0 || sx.getSize(i) == sizes[i], 
+                           "X coordinate must be unbounded or have the same size as other coordinates\n");
+                    assert(sy.getSize(i) == 0 || sy.getSize(i) == sizes[i], 
+                           "Y coordinate must be unbounded or have the same size as other coordinates\n");
+                    assert(st.getSize(i) == 0 || st.getSize(i) == sizes[i], 
+                           "T coordinate must be unbounded or have the same size as other coordinates\n");
+                    assert(sc.getSize(i) == 0 || sc.getSize(i) == sizes[i], 
+                           "C coordinate must be unbounded or have the same size as other coordinates\n");
+                }
+
                 // If we're going to be sampling this func somewhat arbitrarily, then it can't be lazy
                 if (!AffineCase && !ShiftedCase) ptr->lazy = false;
             }
 
             int getSize(int i) const {
-                // TODO: max of sizes of sx, sy, st, sc
-                return 0;
+                return sizes[i];
             }
 
             typedef FuncRefIter<SX, SY, ST, SC, AffineCase, ShiftedCase> Iter;
@@ -497,6 +509,10 @@ namespace Expr {
             return ptr->scanline(x, y, t, c, width);
         }
 
+        int getSize(int i) const {
+            return ptr->getSize(i);
+        }
+
         bool boundedVecX() const {return false;}
         int minVecX() const {return 0xa0000000;} 
         int maxVecX() const {return 0x3fffffff;}
@@ -506,19 +522,40 @@ namespace Expr {
         }
 
         // Evaluate yourself into an existing image
-        void realize(Image im) {
+        void realize(Image im) const {
             ptr->realize(im);
         }
 
         // Evaluate yourself into a new image
-        Image realize(int w, int h, int f, int c) {
+        Image realize(int w, int h, int f, int c) const {
             Image im(w, h, f, c);
             ptr->realize(im);
             return im;
         }
 
+        // For funcs with bounds, evaluate over the bounds into a new
+        // image
+        Image realize() const {
+            assert(getSize(0) && getSize(1) && getSize(2) && getSize(3), 
+                   "Can only construct an image from a bounded function.\n"
+                   "Call realize(width, height, frames, channels) instead.\n");
+            Image im(getSize(0), getSize(1), getSize(2), getSize(3));
+            ptr->realize(im);
+            return im;
+        }
     };
+
+    inline void realizeFuncIntoImage(const Image &im, const Func &func) {    
+        func.realize(im);
+    }
+    
+    inline Image realizeFuncIntoNewImage(const Func &func) {
+        return func.realize();
+    }
 }
+
+
+
 
 #include "footer.h"
 #endif
