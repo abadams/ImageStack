@@ -85,6 +85,13 @@ void LocalLaplacian::parse(vector<string> args) {
 void LocalLaplacian::apply(Image im, float alpha, float beta) {
     const int K = 8, J = 8;
 
+    if (im.frames > 1) {
+        for (int t = 0; t < im.frames; t++) {
+            apply(im.frame(t), alpha, beta);
+        }
+        return;
+    }
+
     // Compute a discretized set of K intensities that span the values in the image
     Stats s = Stats(im);
     float target[K];
@@ -96,7 +103,7 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
     alpha /= K;
 
     // Convert to grayscale
-    Image gray(im.width, im.height, im.frames, 1);
+    Image gray(im.width, im.height, 1, 1);
     for (int c = 0; c < im.channels; c++) {
         gray += im.channel(c) / im.channels;
     }
@@ -120,35 +127,34 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
     
     // Make a set of K processed images
     printf("Computing different processed images\n");
-    Image pyramid[K][J];
+    Image pyramid[J];
+    pyramid[0] = Image(gray.width, gray.height, 1, K);
     for (int i = 0; i < K; i++) {
-        Image p(gray.width, gray.height, gray.frames, 1);
+        Image p = pyramid[0].channel(i);
 
-        for (int t = 0; t < im.frames; t++) {
-            for (int y = 0; y < im.height; y++) {
-                for (int x = 0; x < im.width; x++) {
-                    float luminance = gray(x, y, t, 0);
-                    float v = (luminance - target[i]) * sigma;
-                    int idx = clamp((int)(v * 256 + 8*256), 0, remap.width-1);
-                    float adjustment = remap(idx, 0); //alpha * v * fastexp(sigma*v*v);
-                    p(x, y, t, 0) = luminance + adjustment;
-                }
+        #pragma omp parallel for
+        for (int y = 0; y < im.height; y++) {
+            for (int x = 0; x < im.width; x++) {
+                float luminance = gray(x, y);
+                float v = (luminance - target[i]) * sigma;
+                int idx = clamp((int)(v * 256 + 8*256), 0, remap.width-1);
+                float adjustment = remap(idx, 0); //alpha * v * fastexp(sigma*v*v);
+                p(x, y) = luminance + adjustment;
             }
         }
-
-        // Compute a J-level laplacian pyramid per processed image
-        pyramid[i][0] = p;
-        for (int j = 1; j < J; j++) {
-            pyramid[i][j] = pyramidDown(pyramid[i][j-1]);
-            pyramid[i][j-1] -= pyramidUp(pyramid[i][j]);
-        }
+    }
+    
+    // Compute a J-level laplacian pyramid of the processed images
+    for (int j = 1; j < J; j++) {
+        pyramid[j] = pyramidDown(pyramid[j-1]);
+        pyramid[j-1] -= pyramidUp(pyramid[j]);
     }
 
     // Now construct output laplacian pyramid by looking up the
     // Laplacian pyramids as a function of intensity found in the
     // Gaussian pyramid
     printf("Computing laplacian pyramid for output\n");
-    Image output(imPyramid[J-1].width, imPyramid[J-1].height, imPyramid[J-1].frames, 1);
+    Image output(imPyramid[J-1].width, imPyramid[J-1].height, 1, 1);
     for (int j = J-1; j >= 0; j--) {
 
         float scale;
@@ -169,11 +175,13 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
             output = newOutput;
         }
 
-        // Add in the next pyramid level
+        // Add in the next pyramid level        
+
         for (int t = 0; t < imPyramid[j].frames; t++) {
+            #pragma omp parallel for
             for (int y = 0; y < imPyramid[j].height; y++) {
                 for (int x = 0; x < imPyramid[j].width; x++) {
-                    float luminance = imPyramid[j](x, y, t, 0);
+                    float luminance = imPyramid[j](x, y);
                     
                     luminance -= s.minimum();
                     luminance /= s.maximum() - s.minimum();
@@ -188,11 +196,12 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
                     float interp = luminance - K0;
                     
                     float modified =
-                        interp * pyramid[K1][j](x, y, t, 0) +
-                        (1 - interp) * pyramid[K0][j](x, y, t, 0);
+                        interp * pyramid[j](x, y, K1) +
+                        (1 - interp) * pyramid[j](x, y, K0);
                     
-                    output(x, y, t, 0) += 
-                      (1-scale) * imLPyramid[j](x, y, t, 0) + scale * modified;
+                    output(x, y) += 
+                      (1-scale) * imLPyramid[j](x, y) + scale * modified;
+
                 }
             }
         }

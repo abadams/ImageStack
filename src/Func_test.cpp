@@ -88,6 +88,11 @@ int main(int argc, char **argv) {
 
     try {
 
+        Image noise(128, 128, 128, 1);
+        Noise::apply(noise, 0, 1);
+        Image testY = interleaveY(noise, 0);
+        Save::apply(testY, "interleaveY.tmp");
+
         Image output(input.width, input.height, input.frames, input.channels);
         double t;
 
