@@ -1,9 +1,8 @@
 #ifndef IMAGESTACK_EXPR_H
 #define IMAGESTACK_EXPR_H
 
-#include <immintrin.h>
 #include <stdint.h>
-
+#include "Exception.h" // assert
 #include "header.h"
 
 // This file defines a set of image-like function objects. They
@@ -17,488 +16,43 @@
 
 class Image;
 
-struct Region {
-    int x, y, t, c, width, height, frames, channels;
-};
+// Include structures describing various primitive ops like add and floor
+
+// Scalar versions of the ops
+#include "Expr_scalar.h"
+#ifdef __AVX__
+// vectors are 8-wide floats
+#include "Expr_avx.h"
+#else
+#ifdef __SSE__
+// vectors are 4-wide floats
+#include "Expr_sse.h"
+#else
+// "vectors" are just floats
+#include "Expr_scalar_fallback.h"
+#endif
+#endif
+
+// Used for safety when comparing bounds of things. In general we
+// don't expect things will be compared against this, but in case they
+// are, it's large enough to be bigger than any reasonable image size,
+// but small enough to not overflow.
+const int HUGE_INT = 0x3fffffff;
 
 namespace Expr {
 
-    namespace Scalar {
-        // Arithmetic binary operators
-        struct Add {
-            static float scalar_f(float a, float b) {return a + b;}
-            static int scalar_i(int a, int b) {return a + b;}
+    using namespace ImageStack;
 
-            // Interval arithmetic versions
-            template<typename T>
-            static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-                return std::make_pair(a.first+b.first, a.second+b.second);
-            }
-
-        };
-        struct Sub {
-            static float scalar_f(float a, float b) {return a - b;}
-            static int scalar_i(int a, int b) {return a - b;}
-
-            template<typename T>
-            static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-                return std::make_pair(a.first - b.second, a.second - b.first);
-            }
-        };
-        struct Mul {
-            static float scalar_f(float a, float b) {return a * b;}
-            static int scalar_i(int a, int b) {return a * b;}
-
-            template<typename T>
-            static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-                T v1 = a.first * b.first;
-                T v2 = a.first * b.second;
-                T v3 = a.second * b.first;
-                T v4 = a.second * b.second;
-                return std::make_pair(
-                    std::min(std::min(v1, v2), std::min(v3, v4)), 
-                    std::max(std::max(v1, v2), std::max(v3, v4)));
-            }
-
-        };
-
-        struct UnboundedDivisionException {};
-
-        struct Div {
-            static float scalar_f(float a, float b) {return a / b;}
-            static int scalar_i(int a, int b) {return a / b;}
-
-            template<typename T>
-            static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-                if (b.first <= 0 && b.second >= 0) throw UnboundedDivisionException();
-                T v1 = a.first / b.first;
-                T v2 = a.first / b.second;
-                T v3 = a.second / b.first;
-                T v4 = a.second / b.second;
-                return std::make_pair(
-                    std::min(std::min(v1, v2), std::min(v3, v4)), 
-                    std::max(std::max(v1, v2), std::max(v3, v4)));
-            }
-
-        };
-        struct Min {
-            static float scalar_f(float a, float b) {return std::min(a, b);}
-            static int scalar_i(int a, int b) {return std::min(a, b);}
-
-            template<typename T>
-            static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-                return std::make_pair(std::min(a.first, b.first),
-                                      std::min(a.second, b.second));
-            }
-        };
-        struct Max {
-            static float scalar_f(float a, float b) {return std::max(a, b);}
-            static int scalar_i(int a, int b) {return std::max(a, b);}
-
-            template<typename T>
-            static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-                return std::make_pair(std::min(a.first, b.first),
-                                      std::min(a.second, b.second));
-            }
-        };
-
-        // Comparisons
-        struct GT {
-            static bool scalar_f(float a, float b) {return a > b;}
-            static bool scalar_i(int a, int b) {return a > b;}
-        };
-        struct LT {
-            static bool scalar_f(float a, float b) {return a < b;}
-            static bool scalar_i(int a, int b) {return a < b;}
-        };
-        struct GE {
-            static bool scalar_f(float a, float b) {return a >= b;}
-            static bool scalar_i(int a, int b) {return a >= b;}
-        };
-        struct LE {
-            static bool scalar_f(float a, float b) {return a <= b;}
-            static bool scalar_i(int a, int b) {return a <= b;}
-        };
-        struct EQ {
-            static bool scalar_f(float a, float b) {return a == b;}
-            static bool scalar_i(int a, int b) {return a == b;}
-        };
-        struct NEQ {
-            static bool scalar_f(float a, float b) {return a != b;}
-            static bool scalar_i(int a, int b) {return a != b;}
-        };        
-
-        // Unary ops
-        struct Ceil {
-            static float scalar_f(float a) {return ceilf(a);}
-
-            static std::pair<float, float> interval(std::pair<float, float> a) {
-                return make_pair(scalar_f(a.first), scalar_f(a.second));
-            }
-        };
-
-        struct Floor {
-            static float scalar_f(float a) {return floorf(a);}
-
-            static std::pair<float, float> interval(std::pair<float, float> a) {
-                return make_pair(scalar_f(a.first), scalar_f(a.second));
-            }
-        };
-
-        struct Sqrt {
-            static float scalar_f(float a) {return sqrtf(a);}
-
-            static std::pair<float, float> interval(std::pair<float, float> a) {
-                return make_pair(scalar_f(a.first), scalar_f(a.second));
-            }
-        };
+    struct Region {
+        int x, y, t, c, width, height, frames, channels;
     };
-
-    namespace Vec {
-#ifdef __AVX__
-        typedef __m256 type;
-        const int width = 8;
-
-        inline type broadcast(float v) {
-            return _mm256_set1_ps(v);
-        }
-
-        inline type set(float a, float b, float c, float d = 0, float e = 0, float f = 0, float g = 0, float h = 0) {
-            return _mm256_set_ps(h, g, f, e, d, c, b, a);
-        }
-
-        inline type zero() {
-            return _mm256_setzero_ps();
-        }
-
-        // Arithmetic binary operators
-        struct Add : public Scalar::Add {
-            static type vec(type a, type b) {return _mm256_add_ps(a, b);}
-        };
-        struct Sub : public Scalar::Sub {
-            static type vec(type a, type b) {return _mm256_sub_ps(a, b);}
-        };
-        struct Mul : public Scalar::Mul {
-            static type vec(type a, type b) {return _mm256_mul_ps(a, b);}
-        };
-        struct Div : public Scalar::Div {
-            static type vec(type a, type b) {return _mm256_div_ps(a, b);}
-        };
-        struct Min : public Scalar::Min {
-            static type vec(type a, type b) {return _mm256_min_ps(a, b);}
-        };
-        struct Max : public Scalar::Max {
-            static type vec(type a, type b) {return _mm256_max_ps(a, b);}
-        };
-
-        // Comparisons
-        struct GT : public Scalar::GT {
-            static type vec(type a, type b) {return _mm256_cmp_ps(a, b, _CMP_GT_OQ);}
-        };
-        struct LT : public Scalar::LT {
-            static type vec(type a, type b) {return _mm256_cmp_ps(a, b, _CMP_LT_OQ);}
-        };
-        struct GE : public Scalar::GE {
-            static type vec(type a, type b) {return _mm256_cmp_ps(a, b, _CMP_GE_OQ);}
-        };
-        struct LE : public Scalar::LE {
-            static type vec(type a, type b) {return _mm256_cmp_ps(a, b, _CMP_LE_OQ);}
-        };
-        struct EQ : public Scalar::EQ {
-            static type vec(type a, type b) {return _mm256_cmp_ps(a, b, _CMP_EQ_OQ);}
-        };
-        struct NEQ : public Scalar::NEQ {
-            static type vec(type a, type b) {return _mm256_cmp_ps(a, b, _CMP_NEQ_OQ);}
-        };
-
-        // Logical ops
-        inline type blend(type a, type b, type mask) {
-            return _mm256_blendv_ps(a, b, mask);
-        }
-
-        inline type interleave(type a, type b) {
-            // Given vectors a and b, return a[0] b[0] a[1] b[1] a[2] b[2] a[3] b[3]
-            __m256 r_lo = _mm256_unpacklo_ps(a, b);
-            __m256 r_hi = _mm256_unpackhi_ps(a, b);
-            return _mm256_permute2f128_ps(r_lo, r_hi, 2<<4);
-        }
-
-        inline type subsample(type a, type b) {
-            // Given vectors a and b, return a[0], a[2], a[4], a[6], b[1], b[3], b[5], b[7]
-            type bodd = _mm256_shuffle_ps(b, b, (1 << 0) | (1 << 2) | (3 << 4) | (3 << 6));
-            // bodd = b[1] b[1] b[3] b[3] b[5] b[5] b[7] b[7]
-            type lo = _mm256_permute2f128_ps(a, bodd, (0 << 0) | (2 << 4));
-            // lo = a[0] a[1] a[2] a[3] b[1] b[1] b[3] b[3]
-            type hi = _mm256_permute2f128_ps(a, bodd, (1 << 0) | (3 << 4));
-            // hi = a[4] a[5] a[6] a[7] b[5] b[5] b[7] b[7]
-            type result = _mm256_shuffle_ps(lo, hi, (2 << 2) | (2 << 6));
-            // result = a[0] a[2] a[4] a[6] b[1] b[3] b[5] b[7]
-            return result;
-
-        }
-        
-        inline type reverse(type a) {
-            // reverse each half, the reverse the halves
-            type b = _mm256_shuffle_ps(a, a, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6));
-            return _mm256_permute2f128_ps(b, b, 1);
-        }
-
-
-        // Unary ops
-        struct Floor : public Scalar::Floor {
-            static type vec(type a) {return _mm256_floor_ps(a);}
-        };
-        struct Ceil : public Scalar::Ceil {
-            static type vec(type a) {return _mm256_ceil_ps(a);}
-        };
-        struct Sqrt : public Scalar::Sqrt {
-            static type vec(type a) {return _mm256_sqrt_ps(a);}
-        };
-
-        // Loads and stores
-        inline type load(const float *f) {
-            return _mm256_loadu_ps(f);
-        }
-
-        inline void store(type a, float *f) {
-            _mm256_storeu_ps(f, a);
-        }
-
-#else
-#ifdef __SSE__
-        typedef __m128 type;
-        const int width = 4;
-
-        inline type broadcast(float v) {
-            return _mm_set1_ps(v);
-        }
-
-        inline type set(float a, float b, float c, float d, float e = 0, float f = 0, float g = 0, float h = 0) {
-            return _mm_set_ps(d, c, b, a);
-        }
-
-        inline type zero() {
-            return _mm_setzero_ps();
-        }
-
-        // Arithmetic binary operators
-        struct Add : public Scalar::Add {
-            static type vec(type a, type b) {return _mm_add_ps(a, b);}
-        };
-        struct Sub : public Scalar::Sub {
-            static type vec(type a, type b) {return _mm_sub_ps(a, b);}
-        };
-        struct Mul : public Scalar::Mul {
-            static type vec(type a, type b) {return _mm_mul_ps(a, b);}
-        };
-        struct Div : public Scalar::Div {
-            static type vec(type a, type b) {return _mm_div_ps(a, b);}
-        };
-        struct Min : public Scalar::Min {
-            static type vec(type a, type b) {return _mm_min_ps(a, b);}
-        };
-        struct Max : public Scalar::Max {
-            static type vec(type a, type b) {return _mm_max_ps(a, b);}
-        };
-
-        // Comparisons
-        struct GT : public Scalar::GT {
-            static type vec(type a, type b) {return _mm_cmpgt_ps(a, b);}
-        };
-        struct LT : public Scalar::LT {
-            static type vec(type a, type b) {return _mm_cmplt_ps(a, b);}
-        };
-        struct GE : public Scalar::GE {
-            static type vec(type a, type b) {return _mm_cmpge_ps(a, b);}
-        };
-        struct LE : public Scalar::LE {
-            static type vec(type a, type b) {return _mm_cmple_ps(a, b);}
-        };
-        struct EQ : public Scalar::EQ {
-            static type vec(type a, type b) {return _mm_cmpeq_ps(a, b);}
-        };
-        struct NEQ : public Scalar::NEQ {
-            static type vec(type a, type b) {return _mm_cmpneq_ps(a, b);}
-        };
-
-        inline type interleave(type a, type b) {
-            return _mm_unpacklo_ps(a, b);
-        }
-
-        inline type subsample(type a, type b) {
-            return _mm_shuffle_ps(a, b, (0 << 0) | (2 << 2) | (1 << 4) | (3 << 6));
-        }
-        
-        inline type reverse(type a) {
-            return _mm_shuffle_ps(a, a, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6));
-        }
-
-#ifdef __SSE4_1__
-        // Logical ops
-        inline type blend(type a, type b, type mask) {
-            return _mm_blendv_ps(a, b, mask);
-        }
-
-        // Unary ops
-        struct Floor : public Scalar::Floor {
-            static type vec(type a) {return _mm_floor_ps(a);}
-        };
-        struct Ceil : public Scalar::Ceil {
-            static type vec(type a) {return _mm_ceil_ps(a);}
-        };
-        struct Sqrt : public Scalar::Sqrt {
-            static type vec(type a) {return _mm_sqrt_ps(a);}
-        };
-#else
-
-        inline type blend(type a, type b, type mask) {
-            return _mm_or_ps(_mm_and_ps(mask, b),
-                             _mm_andnot_ps(mask, a));
-        }
-
-        struct Floor : public Scalar::Floor {
-            static type vec(type a) {
-                union {
-                    float f[width];
-                    type v;
-                } v;
-                v.v = a;
-                return set(scalar_f(v.f[0]), scalar_f(v.f[1]), scalar_f(v.f[2]), scalar_f(v.f[3]));
-            }
-        };
-        struct Ceil : public Scalar::Ceil {
-            static type vec(type a) {
-                union {
-                    float f[width];
-                    type v;
-                } v;
-                v.v = a;
-                return set(scalar_f(v.f[0]), scalar_f(v.f[1]), scalar_f(v.f[2]), scalar_f(v.f[3]));
-            }
-        };
-        struct Sqrt : public Scalar::Sqrt {
-            static type vec(type a) {
-                union {
-                    float f[width];
-                    type v;
-                } v;
-                v.v = a;
-                return set(scalar_f(v.f[0]), scalar_f(v.f[1]), scalar_f(v.f[2]), scalar_f(v.f[3]));
-            }
-        };
-
-#endif
-
-        // Loads and stores
-        inline type load(const float *f) {
-            return _mm_loadu_ps(f);
-        }
-
-        inline void store(type a, float *f) {
-            _mm_storeu_ps(f, a);
-        }
-
-#else
-        // scalar fallback
-        typedef float type;
-        const int width = 1;
-
-        inline type broadcast(float v) {
-            return v;
-        }
-
-        inline type zero() {
-            return 0;
-        }
-
-        // Arithmetic binary operators
-        struct Add : public Scalar::Add {
-            static type vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct Sub : public Scalar::Sub {
-            static type vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct Mul : public Scalar::Mul {
-            static type vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct Div : public Scalar::Div {
-            static type vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct Min : public Scalar::Min {
-            static type vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct Max : public Scalar::Max {
-            static type vec(type a, type b) {return scalar_f(a, b);}
-        };
-
-        // Comparisons
-        struct GT : public Scalar::GT {
-            static bool vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct LT : public Scalar::Lt {
-            static bool vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct GE : public Scalar::GE {
-            static bool vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct LE : public Scalar::LE {
-            static bool vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct EQ : public Scalar::EQ {
-            static bool vec(type a, type b) {return scalar_f(a, b);}
-        };
-        struct NEQ : public Scalar::NEQ {
-            static bool vec(type a, type b) {return scalar_f(a, b);}
-        };
-
-        // Logical ops
-        inline type blend(bool mask, type a, type b) {
-            return (mask ? b : a);
-        }
-
-        inline type interleave(type a, type b) {
-            return a;
-        }
-
-        inline type subsample(type a, type b) {
-            return a;
-        }
-
-        inline type reverse(type a) {
-            return a;
-        }
-
-        // Unary ops
-        struct Floor : public Scalar::Floor {
-            static type vec(type a) {return scalar_f(a);}
-        };
-        struct Ceil : public Scalar::Ceil {
-            static type vec(type a) {return scalar_f(a);}
-        };
-        struct Sqrt : public Scalar::Sqrt {
-            static type vec(type a) {return scalar_f(a);}
-        };
-
-        // Loads and stores
-        inline type load(const float *f) {
-            return *f;
-        }
-
-        inline void store(type a, float *f) {
-            *f = a;
-        }
-
-
-#endif
-#endif
-    }
 
     // A base class for things which do not depend on image data
     struct Unbounded {
         int getSize(int) const {return 0;}
         bool boundedVecX() const {return false;}
-        int minVecX() const {return 0xa0000000;}
-        int maxVecX() const {return 0x3fffffff;}
+        int minVecX() const {return -HUGE_INT;}
+        int maxVecX() const {return HUGE_INT;}
     };
 
     // Constants
@@ -571,8 +125,8 @@ namespace Expr {
 
         int getSize(int i) const {return a.getSize(i);}
         bool boundedVecX() const {return false;}
-        int minVecX() const {return 0xa0000000;}
-        int maxVecX() const {return 0x3fffffff;}
+        int minVecX() const {return -HUGE_INT;}
+        int maxVecX() const {return HUGE_INT;}
 
         struct Iter {
             const typename A::Iter a;
@@ -950,8 +504,8 @@ namespace Expr {
                         b.scanline(x, y, t, c, width));
         }
         bool boundedVecX() const {return false;}
-        int minVecX() const {return 0xa0000000;}
-        int maxVecX() const {return 0x3fffffff;}
+        int minVecX() const {return -HUGE_INT;}
+        int maxVecX() const {return HUGE_INT;}
         
         void prepare(int phase, Region r) const { 
             a.prepare(phase, r);
@@ -2046,13 +1600,15 @@ namespace Expr {
     // Samplings of the form im(stride*x + offset). 
     // Once avx2 becomes available, we can do some of these more efficiently with the new gather op.
     template<typename A>
-    struct AffineSampleX {
+    class AffineSampleX {
+        const A a;
+        const int stride, offset;
+    public:
+
         typedef AffineSampleX<typename A::FloatExpr> FloatExpr;
 
         const static bool dependsOnX = A::dependsOnX;
 
-        const A a;
-        const int stride, offset;
         AffineSampleX(const A &a_, int s, int o) : a(a_), stride(s), offset(o) {
             const int w = a.getSize(0);
             if (w != 0) {
@@ -2137,7 +1693,7 @@ namespace Expr {
             } else if (stride == 2) {
                 return (a.minVecX() - offset + 1)/2;
             } else {
-                return 0xa0000000;
+                return -HUGE_INT;
             }
         }
 
@@ -2149,7 +1705,7 @@ namespace Expr {
             } else if (stride == 2) {
                 return (a.maxVecX() - offset - Vec::width + 1)/2;
             } else {
-                return 0x3fffffff;
+                return HUGE_INT;
             }
         }
         
@@ -2364,7 +1920,8 @@ namespace Expr {
         return AffineSampleC<A>(a, stride, offset);
     }
 
-    // Convert something to a float expr
+    // Convert something to a float/int expr if possible. Fails to
+    // instantiate if not possible. Useful for sfinae checks.
     template<typename T, typename Check>
     struct AsFloatExpr;
 
@@ -2406,22 +1963,56 @@ namespace Expr {
 #define FloatExprType(T) typename ImageStack::Expr::AsFloatExpr<T, T>::t
 #define IntExprType(T) typename ImageStack::Expr::AsIntExpr<T>::t
 
+    // Check if something is castable to a float/int expr via the
+    // Float/IntExprType macros. Useful for static asserts.
+    template<typename T, typename Check>
+    struct CheckFloatExprType {
+        static const bool value = false;
+    };
+    template<>
+    struct CheckFloatExprType<float, float> {
+        static const bool value = true;
+    };
+    template<>
+    struct CheckFloatExprType<int, int> {
+        static const bool value = true;
+    };
+    template<>
+    struct CheckFloatExprType<double, double> {
+        static const bool value = true;
+    };
+    template<typename T>
+    struct CheckFloatExprType<T, FloatExprType(T)> {
+        static const bool value = true;
+    };
+    template<typename T, typename Check>
+    struct CheckIntExprType {
+        static const bool value = false;
+    };
+    template<>
+    struct CheckIntExprType<int, int> {
+        static const bool value = true;
+    };
+    template<typename T>
+    struct CheckIntExprType<T, IntExprType(T)> {
+        static const bool value = true;
+    };
+
+#define IsFloatExprType(T) ImageStack::Expr::CheckFloatExprType<T, T>::value
+#define IsIntExprType(T) ImageStack::Expr::CheckIntExprType<T, T>::value
+
     // Evaluated an expression into an array
     template<typename T>
     void setScanline(const T src, float *const dst, 
                      int x, const int maxX,
                      const bool boundedVX, const int minVX, const int maxVX) {
 
+        // Is it worth vectorizing this?
         if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
-            //printf("Warm up...\n");
-            // Walk up to where we're allowed to start vectorizing
-            while (boundedVX && x < std::min(minVX, maxX-1)) {
-                dst[x] = src[x];
-                x++;
-            }
-
-            // Walk a little further for better store alignment            
-            while ((size_t)(dst+x) & (Vec::width*sizeof(float) - 1)) {
+            // Scalar warm up
+            while (x < maxX &&  // Don't go past the end
+                   ((boundedVX && x < minVX) || // Walk at least until it's safe to start vectorizing
+                    ((size_t)(dst+x) & (Vec::width*sizeof(float) - 1)))) { // Walk a little further for store alignment
                 dst[x] = src[x];
                 x++;
             }
@@ -2430,6 +2021,9 @@ namespace Expr {
             // we're no longer allowed to vectorize
             int lastX = maxX - Vec::width;
             if (boundedVX) lastX = std::min(lastX, maxVX);
+
+            // Put a marker in the asm to make the important bit
+            // easier to find for checking it's doing the right thing
             asm("# begin vector");
             while (x <= lastX) {
                 Vec::store(src.vec(x), dst+x);
@@ -2437,14 +2031,68 @@ namespace Expr {
             }
             asm("# end vector");
         }
-        //printf("Wind down...\n");
-        // Scalar wind down
+
+        // Scalar wind down 
         while (x < maxX) {
             dst[x] = src[x];
             x++;
         }        
-    }
+    }    
 
+    // Evaluate from two to four expressions in lockstep
+    template<typename T1, typename T2, typename T3, typename T4>
+    void setScanlineMulti(const T1 src1, const T2 src2, const T3 src3, const T4 src4,
+                          float *const dst1, float *const dst2, float *const dst3, float *const dst4, 
+                          int x, const int maxX,
+                          const bool boundedVX, const int minVX, const int maxVX) {
+
+        if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
+            //printf("Warm up...\n");
+            // Walk up to where we're allowed to start vectorizing
+            while (boundedVX && x < std::min(minVX, maxX-1)) {
+                const float v1 = src1[x];
+                const float v2 = src2[x];
+                const float v3 = src3[x];
+                const float v4 = src4[x];
+                dst1[x] = v1;
+                if (dst2) dst2[x] = v2;
+                if (dst3) dst3[x] = v3;
+                if (dst4) dst4[x] = v4;
+                x++;
+            }
+
+            // Vectorized steady-state until we reach the end or until
+            // we're no longer allowed to vectorize
+            int lastX = maxX - Vec::width;
+            if (boundedVX) lastX = std::min(lastX, maxVX);
+            asm("# begin vector");
+            while (x <= lastX) {                
+                const Vec::type v1 = src1.vec(x);
+                const Vec::type v2 = src2.vec(x);
+                const Vec::type v3 = src3.vec(x);
+                const Vec::type v4 = src4.vec(x);
+                Vec::store(v1, dst1+x);
+                if (dst2) Vec::store(v2, dst2+x);
+                if (dst3) Vec::store(v3, dst3+x);
+                if (dst4) Vec::store(v4, dst4+x);
+                x += Vec::width;
+            }
+            asm("# end vector");
+        }
+        //printf("Wind down...\n");
+        // Scalar wind down
+        while (x < maxX) {
+            const float v1 = src1[x];
+            const float v2 = src2[x];
+            const float v3 = src3[x];
+            const float v4 = src4[x];
+            dst1[x] = v1;
+            if (dst2) dst2[x] = v2;
+            if (dst3) dst3[x] = v3;
+            if (dst4) dst4[x] = v4;
+            x++;
+        }        
+    }    
 }
 
 // We need to generate a stupid number of operators to overload.
@@ -2452,78 +2100,78 @@ namespace Expr {
 
 // First arg is class to use (FBinaryOp or FCmp or ICmp)
 // Second arg is the Symbol (e.g. +)
-// Third arg is the Expr::Vec struct that does the operation (e.g. Add)
+// Third arg is the Vec struct that does the operation (e.g. Add)
 // There are three macros - the one that takes two expr args,
 // and the ones where one of the args is a numeric const (float, int, double).
 // In this second case, the fourth arg is the type of the numeric const.
 #define MAKE_OP_FF(T, S, N)                                             \
     template<typename A, typename B>                                    \
-    Expr::T<typename A::FloatExpr, typename B::FloatExpr, Expr::Vec::N> \
+    Expr::T<typename A::FloatExpr, typename B::FloatExpr, Vec::N> \
     operator S(const A &a, const B &b) {                                \
-        return Expr::T<A, B, Expr::Vec::N>(a, b);                       \
+        return Expr::T<A, B, Vec::N>(a, b);                       \
     }
 
 #define MAKE_OP_CF(T, S, N, CT)                                         \
     template<typename B>                                                \
-    Expr::T<Expr::ConstFloat, typename B::FloatExpr, Expr::Vec::N>      \
+    Expr::T<Expr::ConstFloat, typename B::FloatExpr, Vec::N>      \
     operator S(CT a, const B &b) {                                      \
-        return Expr::T<Expr::ConstFloat, B, Expr::Vec::N>(Expr::ConstFloat(a), b); \
+        return Expr::T<Expr::ConstFloat, B, Vec::N>(Expr::ConstFloat(a), b); \
     }
 
 #define MAKE_OP_FC(T, S, N, CT)                                         \
     template<typename A>                                                \
-    Expr::T<typename A::FloatExpr, Expr::ConstFloat, Expr::Vec::N>      \
+    Expr::T<typename A::FloatExpr, Expr::ConstFloat, Vec::N>      \
     operator S(const A &a, CT b) {                                      \
-        return Expr::T<A, Expr::ConstFloat, Expr::Vec::N>(a, Expr::ConstFloat(b)); \
+        return Expr::T<A, Expr::ConstFloat, Vec::N>(a, Expr::ConstFloat(b)); \
     }
 
 #define MAKE_OP_II(T, S, N)                                             \
     template<typename A, typename B>                                    \
-    Expr::T<typename A::IntExpr, typename B::IntExpr, Expr::Vec::N>     \
+    Expr::T<typename A::IntExpr, typename B::IntExpr, Vec::N>     \
     operator S(const A &a, const B &b) {                                \
-        return Expr::T<A, B, Expr::Vec::N>(a, b);                       \
+        return Expr::T<A, B, Vec::N>(a, b);                       \
     }
 
 #define MAKE_OP_FI(T, S, N)                                             \
     template<typename A, typename B>                                    \
-    Expr::T<typename A::FloatExpr, Expr::IntToFloat<typename B::IntExpr>, Expr::Vec::N> \
+    Expr::T<typename A::FloatExpr, Expr::IntToFloat<typename B::IntExpr>, Vec::N> \
     operator S(const A &a, const B &b) {                                \
         return a S Expr::IntToFloat<B>(b);                              \
     }
 
 #define MAKE_OP_IF(T, S, N)                                             \
     template<typename A, typename B>                                    \
-    Expr::T<Expr::IntToFloat<typename A::IntExpr>, typename B::FloatExpr, Expr::Vec::N> \
+    Expr::T<Expr::IntToFloat<typename A::IntExpr>, typename B::FloatExpr, Vec::N> \
     operator S(const A &a, const B &b) {                                \
         return Expr::IntToFloat<A>(a) S b;                              \
     }
 
 #define MAKE_OP_CIF(T, S, N, CT)                                         \
     template<typename B>                                                \
-    Expr::T<Expr::ConstFloat, Expr::IntToFloat<typename B::IntExpr>, Expr::Vec::N> \
+    Expr::T<Expr::ConstFloat, Expr::IntToFloat<typename B::IntExpr>, Vec::N> \
     operator S(CT a, const B &b) {                                      \
         return a S Expr::IntToFloat<B>(b);                              \
     }
 
 #define MAKE_OP_ICF(T, S, N, CT)                                         \
     template<typename A>                                                \
-    Expr::T<Expr::IntToFloat<typename A::IntExpr>, Expr::ConstFloat, Expr::Vec::N> \
+    Expr::T<Expr::IntToFloat<typename A::IntExpr>, Expr::ConstFloat, Vec::N> \
     operator S(const A &a, CT b) {                                      \
         return Expr::IntToFloat<A>(a) S b;                              \
     }
 
 #define MAKE_OP_ICI(T, S, N, CT)                                        \
     template<typename A>                                                \
-    Expr::T<typename A::IntExpr, Expr::ConstInt, Expr::Vec::N>          \
+    Expr::T<typename A::IntExpr, Expr::ConstInt, Vec::N>          \
     operator S(const A &a, CT b) {                                      \
-        return Expr::T<A, Expr::ConstInt, Expr::Vec::N>(a, Expr::ConstInt(b)); \
+        return Expr::T<A, Expr::ConstInt, Vec::N>(a, Expr::ConstInt(b)); \
     }
 
 #define MAKE_OP_CII(T, S, N, CT)                                        \
     template<typename B>                                                \
-    Expr::T<Expr::ConstInt, typename B::IntExpr, Expr::Vec::N>          \
+    Expr::T<Expr::ConstInt, typename B::IntExpr, Vec::N>          \
     operator S(CT a, const B &b) {                                      \
-        return Expr::T<Expr::ConstInt, B, Expr::Vec::N>(Expr::ConstInt(a), b); \
+        return Expr::T<Expr::ConstInt, B, Vec::N>(Expr::ConstInt(a), b); \
     }
 
 
@@ -2569,13 +2217,13 @@ MAKE_IOP(ICmp, !=, NEQ)
 
 // Unary negation is a special case
 template<typename A>
-Expr::FBinaryOp<Expr::ConstFloat, typename A::FloatExpr, Expr::Vec::Sub>
+Expr::FBinaryOp<Expr::ConstFloat, typename A::FloatExpr, Vec::Sub>
 operator-(const A &a) {
     return Expr::ConstFloat(0.0f) - a;
 }
 
 template<typename A>
-Expr::FBinaryOp<Expr::ConstInt, typename A::IntExpr, Expr::Vec::Sub>
+Expr::FBinaryOp<Expr::ConstInt, typename A::IntExpr, Vec::Sub>
 operator-(const A &a) {
     return Expr::ConstInt(0) - a;
 }
@@ -2594,32 +2242,41 @@ MAKE_OP_CII(IBinaryOp, /, Div, int)
 MAKE_OP_ICI(IBinaryOp, /, Div, int)
 
 template<typename A>
-Expr::FBinaryOp<typename A::FloatExpr, Expr::ConstFloat, Expr::Vec::Mul>
+Expr::FBinaryOp<typename A::FloatExpr, Expr::ConstFloat, Vec::Mul>
 operator/(const A &a, float b) {
     return a * (1.0f/b);
 }
 template<typename A>
-Expr::FBinaryOp<typename A::FloatExpr, Expr::ConstFloat, Expr::Vec::Mul>
+Expr::FBinaryOp<typename A::FloatExpr, Expr::ConstFloat, Vec::Mul>
 operator/(const A &a, int b) {
     return a * (1.0f/b);
 }
 template<typename A>
-Expr::FBinaryOp<typename A::FloatExpr, Expr::ConstFloat, Expr::Vec::Mul>
+Expr::FBinaryOp<typename A::FloatExpr, Expr::ConstFloat, Vec::Mul>
 operator/(const A &a, double b) {
     return a * (1.0f/b);
 }
 
 template<typename A>
-Expr::FBinaryOp<Expr::IntToFloat<typename A::IntExpr>, Expr::ConstFloat, Expr::Vec::Mul>
+Expr::FBinaryOp<Expr::IntToFloat<typename A::IntExpr>, Expr::ConstFloat, Vec::Mul>
 operator/(const A &a, float b) {
     return a * (1.0f/b);
 }
 
 template<typename A>
-Expr::FBinaryOp<Expr::IntToFloat<typename A::IntExpr>, Expr::ConstFloat, Expr::Vec::Mul>
+Expr::FBinaryOp<Expr::IntToFloat<typename A::IntExpr>, Expr::ConstFloat, Vec::Mul>
 operator/(const A &a, double b) {
     return a * (1.0f/b);
 }
+
+
+namespace Expr {
+    // Construct an image from a func, or evaluate a func into an image. These are implemented in Func.h
+    class Func;
+    void realizeFuncIntoImage(const Image &im, const Func &func);
+    Image realizeFuncIntoNewImage(const Func &func);
+}
+
 
 #include "footer.h"
 

@@ -10,7 +10,7 @@ using namespace ImageStack::Expr;
 #define X_TILE_SIZE 256
 #define Y_TILE_SIZE 32
 
-/*
+
 void blur_fast(Image in, Image out) {
     __m256 one_third = _mm256_set1_ps(1.0f/3);
 
@@ -56,14 +56,12 @@ void blur_fast(Image in, Image out) {
         }
     }
 }
-*/
+
 
 Func blur_halide(Func in) {
     X x; Y y; C c;
     Func blurx = (in(x-1, y, c) + in(x, y, c) + in(x+1, y, c))/3;
-    //Func blurx = (shiftX(in, -1) + in + shiftX(in, +1))/3;
-    //Func blury = (blurx(x, y-1, c) + blurx(x, y, c) + blurx(x, y+1, c))/3;
-    Func blury = (shiftY(blurx, -1) + blurx + shiftY(blurx, +1))/3;
+    Func blury = (blurx(x, y-1, c) + blurx(x, y, c) + blurx(x, y+1, c))/3;
     return blury;
 }
 
@@ -93,45 +91,53 @@ int main(int argc, char **argv) {
         Image output(input.width, input.height, input.frames, input.channels);
         double t;
 
+        Func f = input+1;
+        output = f;
         
         output.set(0);
-        Func f1 = blur_halide(zeroBoundary(input));        
-        t = currentTime();
+        t = 1e10;
         for (int i = 0; i < iterations; i++) {
-            f1.realize(output);
+            double t1 = currentTime();
+            output.set(blur_halide(zeroBoundary(input)));
+            t = std::min(t, currentTime() - t1);
         }
-        printf("%f\n", currentTime() - t);
+        printf("%f\n", t);
         Save::apply(output, "output1.tmp");
         
         output.set(0);        
-        Func f2 = blur_halide2(zeroBoundary(input));
-        t = currentTime();
+        t = 1e10;
         for (int i = 0; i < iterations; i++) {
-            f2.realize(output);
+            double t1 = currentTime();
+            output.set(blur_halide2(zeroBoundary(input)));
+            t = std::min(t, currentTime() - t1);
         }
-        printf("%f\n", currentTime() - t);
+        printf("%f\n", t);
         Save::apply(output, "output2.tmp");
 
-        /*
+        
         output.set(0);
-        t = currentTime();
+        t = 1e10;
         for (int i = 0; i < iterations; i++) {
+            double t1 = currentTime();
             auto zb = zeroBoundary(input);
             Func blurX = (shiftX(zb, -1) + zb + shiftX(zb, 1))/3;           
             output.set((shiftY(blurX, -1) + blurX + shiftY(blurX, 1))/3);
+            t = std::min(t, currentTime() - t1);
         }
-        printf("%f\n", currentTime() - t);
+        printf("%f\n", t);
         Save::apply(output, "output3.tmp");
 
         output.set(0);
-        t = currentTime();
+        t = 1e10;
         for (int i = 0; i < iterations; i++) {
+            double t1 = currentTime();        
             blur_fast(input.region(1, 1, 0, 0, input.width-2, input.height-2, input.frames, input.channels),
                       output.region(1, 1, 0, 0, input.width-2, input.height-2, input.frames, input.channels));
+            t = std::min(t, currentTime() - t1);
         }
-        printf("%f\n", currentTime() - t);
+        printf("%f\n", t);
         Save::apply(output, "output4.tmp");
-        */
+        
 
     } catch (Exception &e) {
         printf("Failure: %s\n", e.message);
