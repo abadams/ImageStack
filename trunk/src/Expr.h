@@ -1367,8 +1367,8 @@ namespace Expr {
         typedef AltIter<A, B> Iter;
 
         Iter scanline(int x, int y, int t, int c, int width) const {
-            if (y & 1) Iter::fromB(b.scanline(x, y/2, t, c, width));
-            return Iter::fromA(a.scanline(x, y/2, t, c, width));
+            if (y & 1) return Iter::fromB(b.scanline(x, y/2, t, c, width));
+            else return Iter::fromA(a.scanline(x, y/2, t, c, width));
         }
 
         bool boundedVecX() const {return a.boundedVecX() || b.boundedVecX();}
