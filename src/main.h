@@ -49,11 +49,16 @@ using ::std::isnan;
 #include "macros.h"
 #include "Exception.h"
 #include "Operation.h"
+
+namespace ImageStack {
+// time since program start in seconds (if using from a library, time since ImageStack::begin)
+float currentTime();
+}
+
 #include "Image.h"
 #include "header.h"
 
 // Below are the data structures and functions available to operations:
-class Image;
 
 // Deal with the stack of images that gives this program its name
 Image &stack(size_t index);
@@ -78,9 +83,6 @@ int randomInt(int min, int max);
 
 // Generate a uniform random float within [min, max]
 float randomFloat(float min, float max);
-
-// time since program start in seconds (if using from a library, time since ImageStack::begin)
-float currentTime();
 
 // pretty-print some help text, by word wrapping at 79 chars
 void pprintf(const char *str);

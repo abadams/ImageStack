@@ -47,6 +47,8 @@ namespace Expr {
         int x, y, t, c, width, height, frames, channels;
     };
 
+    class BaseFunc;
+
     // A base class for things which do not depend on image data
     struct Unbounded {
         int getSize(int) const {return 0;}
@@ -78,7 +80,7 @@ namespace Expr {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(val);
         }        
-        void prepare(int phase, Region r) const {}
+        void prepare(Region r, int phase) const {};
 
         std::pair<float, float> bounds(Region) const {
             return std::make_pair(val, val);
@@ -104,8 +106,7 @@ namespace Expr {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(val);
         }
-        void prepare(int phase, Region r) const {
-        }
+        void prepare(Region r, int phase) const {};
 
         std::pair<int, int> bounds(Region) const {
             return std::make_pair(val, val);
@@ -153,9 +154,10 @@ namespace Expr {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width));
         }
-        void prepare(int phase, Region r) const {
-            a.prepare(phase, r);
-        }        
+
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+        };
 
         std::pair<float, float> bounds(Region r) const {
             std::pair<int, int> a_bounds = a.bounds(r);
@@ -184,13 +186,21 @@ namespace Expr {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width));
         }
-        void prepare(int phase, Region r) const {
-            a.prepare(phase, r);
-        }        
+
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+        };
 
         std::pair<int, int> bounds(Region r) const {
             std::pair<float, float> a_bounds = a.bounds(r);
-            return std::make_pair((int)a_bounds.first, (int)a_bounds.second);
+            //printf("%f %f %d %d\n", a_bounds.first, a_bounds.second, (int)a_bounds.first, (int)a_bounds.second);
+            
+            std::pair<int, int> result = std::make_pair((int)a_bounds.first, (int)a_bounds.second);
+
+            // If the bounds aren't representable by ints, clamp them to max and min ints
+            if ((double)a_bounds.first < (double)(0x80000000)) result.first = 0x80000000;
+            if ((double)a_bounds.second > (double)(0x7fffffff)) result.second = 0x7fffffff;
+            return result;
         }
 
     };
@@ -222,7 +232,7 @@ namespace Expr {
             return Iter();
         }        
 
-        void prepare(int phase, Region r) const { 
+        void prepare(Region r, int phase) const {
         }
 
         std::pair<int, int> bounds(Region r) const {
@@ -243,7 +253,7 @@ namespace Expr {
             return Iter(y);
         }        
 
-        void prepare(int phase, Region r) const { 
+        void prepare(Region r, int phase) const {
         }
 
         std::pair<int, int> bounds(Region r) const {
@@ -265,7 +275,7 @@ namespace Expr {
             return Iter(t);
         }
         
-        void prepare(int phase, Region r) const { 
+        void prepare(Region r, int phase) const {
         }
 
         std::pair<int, int> bounds(Region r) const {
@@ -287,7 +297,7 @@ namespace Expr {
             return Iter(c);
         }
         
-        void prepare(int phase, Region r) const { 
+        void prepare(Region r, int phase) const {
         }
 
         std::pair<int, int> bounds(Region r) const {
@@ -340,9 +350,9 @@ namespace Expr {
         int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
         int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
-            b.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -386,9 +396,10 @@ namespace Expr {
         Iter scanline(int x, int y, int t, int c, int width) const {
             return Iter(a.scanline(x, y, t, c, width), b.scanline(x, y, t, c, width));
         }
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
-            b.prepare(phase, r);
+
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
         }
 
         std::pair<int, int> bounds(Region r) const {
@@ -440,10 +451,11 @@ namespace Expr {
         int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
         int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
-            b.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
         }
+
     };    
 
     // Comparison binary operators
@@ -507,10 +519,11 @@ namespace Expr {
         int minVecX() const {return -HUGE_INT;}
         int maxVecX() const {return HUGE_INT;}
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
-            b.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
         }
+ 
     };  
 
     template<typename A, typename B>
@@ -570,6 +583,63 @@ namespace Expr {
         return min(max(a, b), c);
     }
 
+    template<typename A, typename B>
+    IBinaryOp<typename A::IntExpr, typename B::IntExpr, Vec::Min>
+    min(const A &a, const B &b) {
+        return IBinaryOp<typename A::IntExpr, typename B::IntExpr, Vec::Min>(a, b);
+    }
+    template<typename A>
+    IBinaryOp<typename A::IntExpr, ConstInt, Vec::Min>
+    min(const A &a, int b) {
+        return min(a, ConstInt(b));
+    }
+    template<typename B>
+    IBinaryOp<ConstInt, typename B::IntExpr, Vec::Min>
+    min(int a, const B &b) {
+        return min(ConstInt(a), b);
+    }
+    template<typename A, typename B>
+    IBinaryOp<typename A::IntExpr, typename B::IntExpr, Vec::Max>
+    max(const A &a, const B &b) {
+        return IBinaryOp<typename A::IntExpr, typename B::IntExpr, Vec::Max>(a, b);
+    }
+    template<typename A>
+    IBinaryOp<typename A::IntExpr, ConstInt, Vec::Max>
+    max(const A &a, int b) {
+        return max(a, ConstInt(b));
+    }
+    template<typename B>
+    IBinaryOp<ConstInt, typename B::IntExpr, Vec::Max>
+    max(int a, const B &b) {
+        return max(ConstInt(a), b);
+    }
+
+    template<typename A, typename B, typename C>
+    IBinaryOp<IBinaryOp<typename A::IntExpr, typename B::IntExpr, Vec::Max>, typename C::IntExpr, Vec::Min>
+    clamp(const A &a, const B &b, const C &c) {
+        return min(max(a, b), c);
+    }
+    template<typename B, typename C>
+    IBinaryOp<IBinaryOp<ConstInt, typename B::IntExpr, Vec::Max>, typename C::IntExpr, Vec::Min>
+    clamp(int a, const B &b, const C &c) {
+        return min(max(a, b), c);
+    }
+    template<typename A, typename C>
+    IBinaryOp<IBinaryOp<typename A::IntExpr, ConstInt, Vec::Max>, typename C::IntExpr, Vec::Min>
+    clamp(const A &a, int b, const C &c) {
+        return min(max(a, b), c);
+    }
+    template<typename A, typename B>
+    IBinaryOp<IBinaryOp<typename A::IntExpr, typename B::IntExpr, Vec::Max>, ConstInt, Vec::Min>
+    clamp(const A &a, const B &b, int c) {
+        return min(max(a, b), c);
+    }
+    template<typename A>
+    IBinaryOp<IBinaryOp<typename A::IntExpr, ConstInt, Vec::Max>, ConstInt, Vec::Min>
+    clamp(const A &a, int b, int c) {
+        return min(max(a, b), c);
+    }
+
     // Lift a unary function over floats to the same function over an image (e.g. cosf)
     template<float(*fn)(float), typename A>
     struct Lift {
@@ -606,8 +676,8 @@ namespace Expr {
         int minVecX() const {return a.minVecX();}
         int maxVecX() const {return a.maxVecX();}
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
         }
 
         std::pair<float, float> bounds(Region r) const;
@@ -642,8 +712,8 @@ namespace Expr {
         int minVecX() const {return a.minVecX();}
         int maxVecX() const {return a.maxVecX();}
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -703,9 +773,9 @@ namespace Expr {
         int minVecX() const {return std::max(a.minVecX(), b.minVecX());}
         int maxVecX() const {return std::min(a.maxVecX(), b.maxVecX());}
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, r);
-            b.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
         }
 
         std::pair<float, float> bounds(Region r) const;
@@ -869,12 +939,11 @@ namespace Expr {
         int minVecX() const {return std::max(std::max(a.minVecX(), b.minVecX()), c.minVecX());}
         int maxVecX() const {return std::min(std::min(a.maxVecX(), b.maxVecX()), c.maxVecX());}
         
-        void prepare(int phase, Region r) const {
-            a.prepare(phase, r);
-            b.prepare(phase, r);
-            c.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
+            c.prepare(r, phase);
         }
-
 
         std::pair<float, float> bounds(Region r) {
             std::pair<float, float> a_bounds = a.bounds(r);
@@ -970,10 +1039,10 @@ namespace Expr {
         int minVecX() const {return std::max(std::max(a.minVecX(), b.minVecX()), c.minVecX());}
         int maxVecX() const {return std::min(std::min(a.maxVecX(), b.maxVecX()), c.maxVecX());}
         
-        void prepare(int phase, Region r) const {
-            a.prepare(phase, r);
-            b.prepare(phase, r);
-            c.prepare(phase, r);
+        void prepare(Region r, int phase) const {
+            a.prepare(r, phase);
+            b.prepare(r, phase);
+            c.prepare(r, phase);
         }
 
         std::pair<float, float> bounds(Region r) {
@@ -1051,14 +1120,14 @@ namespace Expr {
         int minVecX() const {return a.minVecX() + xo;}
         int maxVecX() const {return a.maxVecX() + xo;}
         
-        void prepare(int phase, Region r) const { 
+        void prepare(Region r, int phase) const {
             r.x -= xo;
             r.y -= yo;
             r.t -= to;
             r.c -= co;
-            a.prepare(phase, r);
+            a.prepare(r, phase);
         }
-        
+
         std::pair<float, float> bounds(Region r) const {
             r.x -= xo;
             r.y -= yo;
@@ -1184,8 +1253,8 @@ namespace Expr {
             return r;
         }
         
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegion(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegion(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1273,9 +1342,9 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegionA(r));
-            b.prepare(phase, transformRegionB(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegionA(r), phase);
+            b.prepare(transformRegionB(r), phase);            
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1387,9 +1456,9 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegionA(r));
-            b.prepare(phase, transformRegionB(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegionA(r), phase);
+            b.prepare(transformRegionB(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1473,9 +1542,9 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegionA(r));
-            b.prepare(phase, transformRegionB(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegionA(r), phase);
+            b.prepare(transformRegionB(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1560,9 +1629,9 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegionA(r));
-            b.prepare(phase, transformRegionB(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegionA(r), phase);
+            b.prepare(transformRegionB(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1718,8 +1787,8 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegion(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegion(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1774,8 +1843,8 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegion(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegion(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1830,8 +1899,8 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegion(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegion(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1886,8 +1955,8 @@ namespace Expr {
             return r;
         }
 
-        void prepare(int phase, Region r) const { 
-            a.prepare(phase, transformRegion(r));
+        void prepare(Region r, int phase) const {
+            a.prepare(transformRegion(r), phase);
         }
 
         std::pair<float, float> bounds(Region r) const {
@@ -1950,18 +2019,21 @@ namespace Expr {
         typedef ConstFloat t;
     };
 
+    template<typename T, typename Check>
+    struct AsIntExpr;
+
     template<typename T>
-    struct AsIntExpr {
-        typedef typename T::IntExpr t;        
+    struct AsIntExpr<T, typename T::IntExpr> {
+        typedef T t;  
     };
 
     template<>
-    struct AsIntExpr<int> {
+    struct AsIntExpr<int, int> {
         typedef ConstInt t;
     };
 
 #define FloatExprType(T) typename ImageStack::Expr::AsFloatExpr<T, T>::t
-#define IntExprType(T) typename ImageStack::Expr::AsIntExpr<T>::t
+#define IntExprType(T) typename ImageStack::Expr::AsIntExpr<T, T>::t
 
     // Check if something is castable to a float/int expr via the
     // Float/IntExprType macros. Useful for static asserts.
@@ -2000,6 +2072,91 @@ namespace Expr {
 
 #define IsFloatExprType(T) ImageStack::Expr::CheckFloatExprType<T, T>::value
 #define IsIntExprType(T) ImageStack::Expr::CheckIntExprType<T, T>::value
+
+
+    // Is an expression of the form a x + b
+#define AffineInX(T) ImageStack::Expr::_AffineInX<T>::value
+
+    template<typename T>
+    struct _AffineInX {
+        static const bool value = false;
+    };
+    
+    template<>
+    struct _AffineInX<X> {
+        static const bool value = true;
+    };
+    
+    template<>
+    struct _AffineInX<int> {
+        static const bool value = true;
+    };
+
+    template<>
+    struct _AffineInX<ConstInt> {
+        static const bool value = true;
+    };
+    
+    template<typename A, typename B>
+    struct _AffineInX<IBinaryOp<A, B, Vec::Add> > {
+        static const bool value = AffineInX(A) && AffineInX(B);
+    };
+    
+    template<typename A, typename B>
+    struct _AffineInX<IBinaryOp<A, B, Vec::Sub> > {
+        static const bool value = AffineInX(A) && AffineInX(B);
+    };
+    
+    template<typename A>
+    struct _AffineInX<IBinaryOp<ConstInt, A, Vec::Mul> > {
+        static const bool value = AffineInX(A);
+    };
+    
+    template<typename A>
+    struct _AffineInX<IBinaryOp<A, ConstInt, Vec::Mul> > {
+        static const bool value = AffineInX(A);
+    };
+    
+    // Is an expression of the form x + b
+#define ShiftedInX(T) ImageStack::Expr::_ShiftedInX<T>::value
+
+    template<typename T>
+    struct _ShiftedInX {
+        static const bool value = false;
+    };
+
+    template<>
+    struct _ShiftedInX<X> {
+        static const bool value = true;
+    };
+
+    template<typename A>
+    struct _ShiftedInX<IBinaryOp<A, ConstInt, Vec::Add> > {
+        static const bool value = ShiftedInX(A);
+    };
+
+    template<typename A>
+    struct _ShiftedInX<IBinaryOp<A, ConstInt, Vec::Sub> > {
+        static const bool value = ShiftedInX(A);
+    };
+
+    // Is an expression constant per scanline
+#define IndependentOfX(T) ImageStack::Expr::_IndependentOfX<T>::value
+
+    template<typename T>
+    struct _IndependentOfX {
+        static const bool value = !T::dependsOnX;
+    };
+
+    template<>
+    struct _IndependentOfX<int> {
+        static const bool value = true;
+    };
+
+    template<>
+    struct _IndependentOfX<float> {
+        static const bool value = true;
+    };
 
     // Evaluated an expression into an array
     template<typename T>

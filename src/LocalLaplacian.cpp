@@ -8,41 +8,22 @@
 #include "Func.h"
 #include "header.h"
 
-/*
-Func LocalLaplacian::pyramidDown(Func im) {
-    Func dx = subsampleX(im, 2, -1) + 3*subsampleX(im, 2, 0) + 3*subsampleX(im, 2, 1) + subsampleX(im, 2, 2);
-    Func dy = subsampleY(dx, 2, -1) + 3*subsampleY(dx, 2, 0) + 3*subsampleY(dx, 2, 1) + subsampleY(dx, 2, 2);
+using namespace Expr;
+
+Func pyramidDown(Func im) {
+    Func dx = (subsampleX(im, 2, -1) + 3*subsampleX(im, 2, 0) + 3*subsampleX(im, 2, 1) + subsampleX(im, 2, 2))/8;
+    Func dy = (subsampleY(dx, 2, -1) + 3*subsampleY(dx, 2, 0) + 3*subsampleY(dx, 2, 1) + subsampleY(dx, 2, 2))/8;
+    dx.setName("dx");
+    dy.setName("dy");
     return dy;
 }
 
-Func LocalLaplacian::pyramidUp(Func im) {
-    Func upX = interleaveX(im, im);
-    upX = shiftX(upX, -1) + 2*upX + shiftX(upX, 1);
-    Func upY = interleaveY(upX, upX);
-    upX = shiftY(upY, -1) + 2*upY + shiftY(upY, 1);    
-    return upY;
-}
-*/
-
-Image pyramidDown(Image im) {
-    auto zb = Expr::zeroBoundary(im);
-    Expr::Func dx = (subsampleX(zb, 2, -1) + 
-                     3*subsampleX(zb, 2, 0) + 
-                     3*subsampleX(zb, 2, 1) + 
-                     subsampleX(zb, 2, 2));
-    auto dy = (subsampleY(dx, 2, -1) + 
-               3*subsampleY(dx, 2, 0) + 
-               3*subsampleY(dx, 2, 1) + 
-               subsampleY(dx, 2, 2));
-    Image small(im.width/2, im.height/2, im.frames, im.channels);
-    small.set(dy/64);
-    return small;
-}
-
-Expr::Func pyramidUp(Image im) {
-    auto zb = Expr::zeroBoundary(im);
-    Expr::Func upx = interleaveX(shiftX(zb, 1) + 3*zb, 3*zb + shiftX(zb, -1));
-    return interleaveY(shiftY(upx, 1) + 3*upx, 3*upx + shiftY(upx, -1))/16;
+Func pyramidUp(Func im) {
+    Func upx = interleaveX(3*im + shiftX(im, 1), 3*im + shiftX(im, -1));
+    Func upy = interleaveY(3*upx + shiftY(upx, 1), 3*upx + shiftY(upx, -1))/16;
+    upx.setName("upx");
+    upy.setName("upy");
+    return upy;
 }
 
 void LocalLaplacian::help() {
@@ -85,6 +66,9 @@ void LocalLaplacian::parse(vector<string> args) {
 void LocalLaplacian::apply(Image im, float alpha, float beta) {
     const int K = 8, J = 8;
 
+    assert(im.channels == 3, "-locallaplacian only works on three-channel images\n");
+
+    // For multi-frame images, process each frame independently
     if (im.frames > 1) {
         for (int t = 0; t < im.frames; t++) {
             apply(im.frame(t), alpha, beta);
@@ -94,30 +78,36 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
 
     // Compute a discretized set of K intensities that span the values in the image
     Stats s = Stats(im);
-    float target[K];
-    for (int i = 0; i < K; i++) {
-        target[i] = ((float)i)/(K-1) * (s.maximum() - s.minimum()) + s.minimum();
-    }
+    float minIntensity = s.minimum();
+    float intensityDelta = (s.maximum() - s.minimum()) / (K-1);
+    alpha /= (K-1);
 
-    float sigma = 1.0f/(target[1] - target[0]);
-    alpha /= K;
-
-    // Convert to grayscale
-    Image gray(im.width, im.height, 1, 1);
-    for (int c = 0; c < im.channels; c++) {
-        gray += im.channel(c) / im.channels;
-    }
+    // Convert to grayscale and add a boundary condition
+    Func gray = zeroBoundary(im.channel(0) + im.channel(1) + im.channel(2))/3;
+    gray.setName("gray");
 
     // Compute a Gaussian and Laplacian pyramid for the input
     printf("Computing Gaussian pyramid for input\n");
-    Image imPyramid[J];
-    Image imLPyramid[J];
+    Func imPyramid[J];
+    Func imLPyramid[J];
     imPyramid[0] = gray;
     for (int j = 1; j < J; j++) {
         imPyramid[j] = pyramidDown(imPyramid[j-1]);
         imLPyramid[j-1] = imPyramid[j-1] - pyramidUp(imPyramid[j]);
+        
+        {
+            std::stringstream ss;
+            ss << "imPyramid_" << j;
+            imPyramid[j].setName(ss.str());
+        }
+        {
+            std::stringstream ss;
+            ss << "imLPyramid_" << (j-1);
+            imLPyramid[j-1].setName(ss.str());
+        }
+        imLPyramid[J-1] = imPyramid[J-1];
     }
-    imLPyramid[J-1] = imPyramid[J-1];
+
 
     // Make a lookup table for remapping
     // It's the derivative of a Gaussian centered at 1024 with std.dev 256
@@ -127,34 +117,36 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
     
     // Make a set of K processed images
     printf("Computing different processed images\n");
-    Image pyramid[J];
-    pyramid[0] = Image(gray.width, gray.height, 1, K);
-    for (int i = 0; i < K; i++) {
-        Image p = pyramid[0].channel(i);
+    Func pyramid[J];
+    Expr::X x; Expr::Y y; Expr::C c;    
+    auto diff = (gray(x, y) - minIntensity) / intensityDelta;
+    auto idx = clamp(toInt(diff * 256) - c*256 + remap.width/2, 0, remap.width-1);
+    pyramid[0] = gray(x, y) + remap(idx);
 
-        #pragma omp parallel for
-        for (int y = 0; y < im.height; y++) {
-            for (int x = 0; x < im.width; x++) {
-                float luminance = gray(x, y);
-                float v = (luminance - target[i]) * sigma;
-                int idx = clamp((int)(v * 256 + 8*256), 0, remap.width-1);
-                float adjustment = remap(idx, 0); //alpha * v * fastexp(sigma*v*v);
-                p(x, y) = luminance + adjustment;
-            }
-        }
-    }
-    
-    // Compute a J-level laplacian pyramid of the processed images
+    // Compute a J-level Gaussian pyramid of the processed images
     for (int j = 1; j < J; j++) {
         pyramid[j] = pyramidDown(pyramid[j-1]);
-        pyramid[j-1] -= pyramidUp(pyramid[j]);
+        std::stringstream ss;
+        ss << "pyramid_" << j;
+        pyramid[j].setName(ss.str());
+    }
+
+    // Compute a J-level laplacian pyramid of the processed images
+    Func lPyramid[J];
+    lPyramid[J-1] = pyramid[J-1];
+    for (int j = J-2; j >= 0; j--) {
+        lPyramid[j] = pyramid[j] - pyramidUp(pyramid[j+1]);
+        std::stringstream ss;
+        ss << "lPyramid_" << j;
+        lPyramid[j].setName(ss.str());
+        lPyramid[j].eager(); 
     }
 
     // Now construct output laplacian pyramid by looking up the
     // Laplacian pyramids as a function of intensity found in the
     // Gaussian pyramid
     printf("Computing laplacian pyramid for output\n");
-    Image output(imPyramid[J-1].width, imPyramid[J-1].height, 1, 1);
+    Func output[J];
     for (int j = J-1; j >= 0; j--) {
 
         float scale;
@@ -167,52 +159,28 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
 
         printf("%d %f\n", j, scale);
 
-        // Upsample what we have so far
-        if (j != J-1) {            
-            Image newOutput = Image(imPyramid[j].width, imPyramid[j].height, 
-                                    imPyramid[j].frames, imPyramid[j].channels);
-            newOutput.set(pyramidUp(output));
-            output = newOutput;
-        }
-
+        auto level = (imPyramid[j] - minIntensity)/intensityDelta;
+        auto intLevel = clamp(toInt(level), 0, K-2);
+        auto interp = level - toFloat(intLevel);
         // Add in the next pyramid level        
-
-        for (int t = 0; t < imPyramid[j].frames; t++) {
-            #pragma omp parallel for
-            for (int y = 0; y < imPyramid[j].height; y++) {
-                for (int x = 0; x < imPyramid[j].width; x++) {
-                    float luminance = imPyramid[j](x, y);
-                    
-                    luminance -= s.minimum();
-                    luminance /= s.maximum() - s.minimum();
-                    luminance *= K-1;
-                    
-                    int K0 = int(luminance);
-                    if (K0 < 0) K0 = 0;
-                    if (K0 >= K-1) K0 = K-1;
-                    
-                    int K1 = K0+1;
-                    
-                    float interp = luminance - K0;
-                    
-                    float modified =
-                        interp * pyramid[j](x, y, K1) +
-                        (1 - interp) * pyramid[j](x, y, K0);
-                    
-                    output(x, y) += 
-                      (1-scale) * imLPyramid[j](x, y) + scale * modified;
-
-                }
-            }
+        auto modified = 
+            interp * lPyramid[j](x, y, intLevel+1) + 
+            (1 - interp) * lPyramid[j](x, y, intLevel);
+        auto newVal = (1-scale) * imLPyramid[j] + scale * modified;
+        if (j == J-1) {
+            output[j] = newVal;
+        } else {
+            output[j] = pyramidUp(output[j+1]) + newVal;
         }
+
+        std::stringstream ss;
+        ss << "output_" << j;
+        output[j].setName(ss.str());
 
     }
 
     // Reintroduce color
-    output /= gray;
-    for (int c = 0; c < im.channels; c++) {
-        im.channel(c) *= output;
-    }
+    im *= output[0](x, y) / gray(x, y);
 }
 
 #include "footer.h"
