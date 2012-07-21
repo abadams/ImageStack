@@ -6,95 +6,13 @@
 
 namespace Expr {
 
-    // Is an expression of the form a x + b
-    #define AffineInX(T) _AffineInX<T>::value
-
-    template<typename T>
-    struct _AffineInX {
-        static const bool value = false;
-    };
-    
-    template<>
-    struct _AffineInX<X> {
-        static const bool value = true;
-    };
-    
-    template<>
-    struct _AffineInX<int> {
-        static const bool value = true;
-    };
-
-    template<>
-    struct _AffineInX<ConstInt> {
-        static const bool value = true;
-    };
-    
-    template<typename A, typename B>
-    struct _AffineInX<IBinaryOp<A, B, Vec::Add> > {
-        static const bool value = AffineInX(A) && AffineInX(B);
-    };
-    
-    template<typename A, typename B>
-    struct _AffineInX<IBinaryOp<A, B, Vec::Sub> > {
-        static const bool value = AffineInX(A) && AffineInX(B);
-    };
-    
-    template<typename A>
-    struct _AffineInX<IBinaryOp<ConstInt, A, Vec::Mul> > {
-        static const bool value = AffineInX(A);
-    };
-    
-    template<typename A>
-    struct _AffineInX<IBinaryOp<A, ConstInt, Vec::Mul> > {
-        static const bool value = AffineInX(A);
-    };
-    
-    // Is an expression of the form x + b
-    #define ShiftedInX(T) _ShiftedInX<T>::value
-
-    template<typename T>
-    struct _ShiftedInX {
-        static const bool value = false;
-    };
-
-    template<>
-    struct _ShiftedInX<X> {
-        static const bool value = true;
-    };
-
-    template<typename A>
-    struct _ShiftedInX<IBinaryOp<A, ConstInt, Vec::Add> > {
-        static const bool value = ShiftedInX(A);
-    };
-
-    template<typename A>
-    struct _ShiftedInX<IBinaryOp<A, ConstInt, Vec::Sub> > {
-        static const bool value = ShiftedInX(A);
-    };
-
-    // Is an expression constant per scanline
-    #define IndependentOfX(T) _IndependentOfX<T>::value
-
-    template<typename T>
-    struct _IndependentOfX {
-        static const bool value = !T::dependsOnX;
-    };
-
-    template<>
-    struct _IndependentOfX<int> {
-        static const bool value = true;
-    };
-
-    template<>
-    struct _IndependentOfX<float> {
-        static const bool value = true;
-    };
-
     struct BaseFunc {
         Image im;
         int minX, minY, minT, minC;
         int maxX, maxY, maxT, maxC;
         bool lazy;
+        std::string name;
+        int size[4];
 
         vector<int> evaluated;
 
@@ -126,33 +44,50 @@ namespace Expr {
         virtual void evalScanline(int y, int t, int c) = 0;
 
         // Prepare to be evaluated over a given region
-        virtual void prepareFunc(int phase, Region r) = 0;
+        virtual void prepare(Region r, int phase) = 0;
 
         // Evaluate your expression into an image (i.e. call im.set(expr))
         virtual void realize(Image im) = 0;
 
-        virtual int getSize(int i) = 0;
+        virtual std::pair<float, float> bounds(Region r) const = 0;
+
     };
 
     template<typename T, typename Enable = typename T::FloatExpr>
     struct DerivedFunc : public BaseFunc {
         const T expr;
-        int lastPhase;
+        int lastPhase, count, phaseCount;
         int minVecX;
         int maxVecX;
         bool boundedVecX;
 
         DerivedFunc(const T &e) : 
-            expr(e), lastPhase(-1), 
-            minVecX(e.minVecX()), maxVecX(e.maxVecX()), boundedVecX(e.boundedVecX()) {}
+            expr(e), lastPhase(-1), count(-1), phaseCount(0),
+            minVecX(e.minVecX()), maxVecX(e.maxVecX()), boundedVecX(e.boundedVecX()) {
+            size[0] = e.getSize(0);
+            size[1] = e.getSize(1);
+            size[2] = e.getSize(2);
+            size[3] = e.getSize(3);
+        }
 
         void realize(Image m) {
             m.set(expr);
         }
 
         void evalScanline(int y, int t, int c) {
-            //printf("Evaluating %p at scanline %d-%d %d %d %d\n",
-            //this, minX, maxX, y, t, c);
+            /*
+            printf("Evaluating %p at scanline %d-%d %d %d %d\n",
+                   this, minX, maxX, y, t, c);
+
+            assert(im.defined(), 
+                   "I was not prepared for this - no memory is allocated!");
+
+            assert(y >= minY && y < maxY && 
+                   t >= minT && t < maxT && 
+                   c >= minC && c < maxC, 
+                   "I was not prepared for evaluation over this domain!\n");
+            */
+
             //printf("Image has size: %d %d %d %d\n", im.width, im.height, im.frames, im.channels);
             //printf("Computing destination address...\n");
             float *const dst = &im(0, y-minY, t-minT, c-minC) - minX;
@@ -169,21 +104,25 @@ namespace Expr {
             //printf("Done\n"); fflush(stdout);
         }   
 
-        void prepareFunc(int phase, Region r) {
+        void prepare(Region r, int phase) {
+            /*printf("Preparing %s(%p) phase %d over region %d %d %d %d  %d %d %d %d\n", 
+                   name.c_str(), this, phase, 
+                   r.x, r.y, r.t, r.c, r.width, r.height, r.frames, r.channels);               
+            */
 
-            // recurse
-            expr.prepare(phase, r);
-
-            //printf("Preparing %p at phase %d over region %d %d %d %d  %d %d %d %d\n", this,
-            //phase, r.x, r.y, r.t, r.c, r.width, r.height, r.frames, r.channels);               
-
-            // Each phase we get called multiple times according to
-            // how many times we occur in the expression
-
-            // The start of a new page
-            // In phase zero we take unions of the regions requested
             if (phase == 0) {
+                // Topology discovery: How many times will prepare be called for each phase
                 if (lastPhase != 0) {
+                    count = 1;
+                    expr.prepare(r, phase);
+                } else {
+                    count++;
+                }
+                phaseCount = count;
+            } else if (phase == 1) {
+                // Region tracking and allocation
+                if (lastPhase != 1) {
+                    phaseCount = 1;
                     minX = r.x;
                     minY = r.y;
                     minT = r.t;
@@ -193,21 +132,17 @@ namespace Expr {
                     maxT = r.t + r.frames;
                     maxC = r.c + r.channels;
                 } else {
-                    minX = std::min(minX, r.x);
-                    minY = std::min(minY, r.y);
-                    minT = std::min(minT, r.t);
-                    minC = std::min(minC, r.c);
-                    maxX = std::max(maxX, r.x + r.width);
-                    maxY = std::max(maxY, r.y + r.height);
-                    maxT = std::max(maxT, r.t + r.frames);
-                    maxC = std::max(maxC, r.c + r.channels);
+                    phaseCount++;
+                    minX = std::min(r.x, minX);
+                    minY = std::min(r.y, minY);
+                    minT = std::min(r.t, minT);
+                    minC = std::min(r.c, minC);
+                    maxX = std::max(r.x + r.width, maxX);
+                    maxY = std::max(r.y + r.height, maxY);
+                    maxT = std::max(r.t + r.frames, maxT);
+                    maxC = std::max(r.c + r.channels, maxC);
                 }
-                //printf("New bounds are %d %d %d %d - %d %d %d %d\n", 
-                //minX, minY, minT, minC, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
-            } else if (phase == 1) {
-                // Still at the start of a new page
-                // In phase one (the first time we are called), we prepare storage
-                if (lastPhase != 1) {
+                if (phaseCount == count) {
                     if (!im.defined() ||                            
                         im.width < maxX - minX ||
                         im.height < maxY - minY ||
@@ -215,17 +150,40 @@ namespace Expr {
                         im.channels < maxC - minC) {
                         //printf("Allocating backing for %p %d %d %d %d\n", 
                         //this, maxX-minX, maxY-minY, maxT-minT, maxC-minC);
-                        im = Image(maxX - minX, maxY - minY, maxT - minT, maxC - minC);
+                        // We over-allocate by Vec::width so that vectorizing is always safe (boundedVecX() is false)
+                        im = Image(maxX - minX + Vec::width, maxY - minY, maxT - minT, maxC - minC);
                         //printf("Done\n");
-
+                        
                     } else {
                         // no need to allocate
                     }
+
+                    r.x = minX;
+                    r.y = minY;
+                    r.t = minT;
+                    r.c = minC;
+                    r.width = maxX - minX;
+                    r.height = maxY - minY;
+                    r.frames = maxT - minT;
+                    r.channels = maxC - minC;
+                    expr.prepare(r, 1);
+
+                }
+            } else if (phase == 2) {
+                // Evaluation
+                if (lastPhase != 2) {
+                    phaseCount = 1;
+                    expr.prepare(r, 2);
 
                     if (lazy) {
                         // No scanlines have been evaluated
                         evaluated.assign((maxY - minY)*(maxT - minT)*(maxC - minC), false);
                     } else {
+                        /*
+                        printf("Evaluating %s(%p) over %d %d %d %d %d %d %d %d\n",
+                               name.c_str(), this, minX, minY, minT, minC,
+                               maxX-minX, maxY-minY, maxT-minT, maxC-minC);
+                        */
                         // evaluate all scanlines here
                         for (int ec = minC; ec < maxC; ec++) {
                             for (int et = minT; et < maxT; et++) {
@@ -237,23 +195,23 @@ namespace Expr {
                                 }
                             }
                         }
-                    }                    
+                        //printf("Done evaluating %s(%p)\n", name.c_str(), this);
+                    }                                
+                } else {
+                    phaseCount++;
                 }
-            } else if (phase == 2) {
-                if (lastPhase != 2) {
-                    // Clean-up
-                    // We're done iterating over everything. Clean up.
-                    im = Image();
-                    //printf("Freeing backing for %p\n", this);
-                }
-            }       
+
+            } else if (phase == 3) {
+                // clean up
+                im = Image();
+            }                       
 
             lastPhase = phase;
 
         }
 
-        int getSize(int i) {
-            return expr.getSize(i);
+        std::pair<float, float> bounds(Expr::Region r) const {
+            return expr.bounds(r);
         }
     };
 
@@ -274,116 +232,13 @@ namespace Expr {
         typedef Func FloatExpr;
 
         const static bool dependsOnX = true;
-
-        template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
-        struct FuncRefIter;
-            
-        // Iterate across a scanline of a function that we're sampling in an unrestricted manner
-        template<typename SX, typename SY, typename ST, typename SC>
-        class FuncRefIter<SX, SY, ST, SC, false, false> {
-            const Image im;
-            const int minX, minY, minT, minC;
-            const typename SX::Iter sx;
-            const typename SY::Iter sy;
-            const typename ST::Iter st;
-            const typename SC::Iter sc;
-        public:
-            FuncRefIter() {}
-            FuncRefIter(const std::shared_ptr<BaseFunc> &f,
-                        const typename SX::Iter &sx_,
-                        const typename SY::Iter &sy_,
-                        const typename ST::Iter &st_,
-                        const typename SC::Iter &sc_) : 
-                im(f->im), minX(f->minX), minY(f->minY), minT(f->minT), minC(f->minC),
-                sx(sx_), sy(sy_), st(st_), sc(sc_) {
-            }
-            float operator[](int x) const {
-                return im(sx[x]-minX, sy[x]-minY, st[x]-minT, sc[x]-minC);
-            }
-            Vec::type vec(int x) const {
-                if (Vec::width == 8) {
-                    return Vec::set((*this)[x],
-                                    (*this)[x+1],
-                                    (*this)[x+2],
-                                    (*this)[x+3],
-                                    (*this)[x+4],
-                                    (*this)[x+5],
-                                    (*this)[x+6],
-                                    (*this)[x+7]);
-                } else if (Vec::width == 4) {
-                    return Vec::set((*this)[x],
-                                    (*this)[x+1],
-                                    (*this)[x+2],
-                                    (*this)[x+3]);
-                } else {
-                    union {
-                        float f[Vec::width];
-                        Vec::type v;
-                    } v;
-                    for (int i = 0; i < Vec::width; i++) {
-                        v.f[i] = (*this)[x];
-                    }
-                    return v.v;
-                }
-            }                                            
-        };
-
-        // Iterate across a scanline of a function where
-        // 1) The index in X is affine
-        // 2) No other indices depend on X
-        template<typename SX, typename SY, typename ST, typename SC>
-        class FuncRefIter<SX, SY, ST, SC, true, false> {
-            AffineSampleX<Image>::Iter iter;
-        public:
-            FuncRefIter() {}
-            FuncRefIter(const std::shared_ptr<BaseFunc> &f,
-                        const typename SX::Iter &sx,
-                        const typename SY::Iter &sy,
-                        const typename ST::Iter &st,
-                        const typename SC::Iter &sc) : 
-                iter(f->im.scanline(0, sy[0]-f->minY, st[0]-f->minT, sc[0]-f->minC, f->im.width), 
-                     sx[1] - sx[0], sx[0] - f->minX) {
-                // Make sure the relevant scanline has been evaluated
-
-                f->evalScanlineIfNeeded(sy[0], st[0], sc[0]);
-            }
-            float operator[](int x) const {
-                return iter[x];
-            }
-            Vec::type vec(int x) const {
-                return iter.vec(x);
-            }                             
-        };
-
-        // Iterate across a scanline of a function where
-        // 1) The index in X is X + constant
-        // 2) No other indices depend on X
-        template<typename SX, typename SY, typename ST, typename SC>
-        class FuncRefIter<SX, SY, ST, SC, true, true> {
-            _Shift<Image>::Iter iter;
-        public:
-            FuncRefIter() {}
-            FuncRefIter(const std::shared_ptr<BaseFunc> &f,
-                        const typename SX::Iter &sx,
-                        const typename SY::Iter &sy,
-                        const typename ST::Iter &st,
-                        const typename SC::Iter &sc) : 
-                iter(f->im.scanline(0, sy[0]-f->minY, st[0]-f->minT, sc[0]-f->minC, f->im.width), 
-                     f->minX - sx[0]) {
-                // Make sure the relevant scanline has been evaluated
-                f->evalScanlineIfNeeded(sy[0], st[0], sc[0]);
-            }
-            float operator[](int x) const {
-                return iter[x];
-            }
-            Vec::type vec(int x) const {
-                return iter.vec(x);
-            }                             
-        };
-
+ 
         template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
         class FuncRef {
-            std::shared_ptr<BaseFunc> ptr;
+            // We shift the args to index into the image correctly,
+            // because the backing for a function may have an
+            // arbitrary offset
+            const std::shared_ptr<BaseFunc> ptr;
             const SX sx;
             const SY sy;
             const ST st;
@@ -413,58 +268,91 @@ namespace Expr {
                     assert(sc.getSize(i) == 0 || sc.getSize(i) == sizes[i], 
                            "C coordinate must be unbounded or have the same size as other coordinates\n");
                 }
-
-                // If we're going to be sampling this func somewhat arbitrarily, then it can't be lazy
-                if (!AffineCase && !ShiftedCase) ptr->lazy = false;
             }
 
             int getSize(int i) const {
                 return sizes[i];
             }
 
-            typedef FuncRefIter<SX, SY, ST, SC, AffineCase, ShiftedCase> Iter;
+            typedef ImRefIter<IBinaryOp<SX, ConstInt, Vec::Sub>, 
+                              IBinaryOp<SY, ConstInt, Vec::Sub>, 
+                              IBinaryOp<ST, ConstInt, Vec::Sub>, 
+                              IBinaryOp<SC, ConstInt, Vec::Sub>, 
+                              AffineCase, ShiftedCase> Iter;
 
             Iter scanline(int x, int y, int t, int c, int width) const {
-                return Iter(ptr,
-                            sx.scanline(x, y, t, c, width),
-                            sy.scanline(x, y, t, c, width),
-                            st.scanline(x, y, t, c, width),
-                            sc.scanline(x, y, t, c, width));
+                auto sxIter = (sx-ptr->minX).scanline(x, y, t, c, width);
+                auto syIter = (sy-ptr->minY).scanline(x, y, t, c, width);
+                auto stIter = (st-ptr->minT).scanline(x, y, t, c, width);
+                auto scIter = (sc-ptr->minC).scanline(x, y, t, c, width);
+                if (ptr->lazy) {
+                    if (AffineCase || ShiftedCase) {
+                        ptr->evalScanlineIfNeeded(syIter[0]+ptr->minY, 
+                                                  stIter[0]+ptr->minT, 
+                                                  scIter[0]+ptr->minC);                    
+                    } else {
+                        Region r = {x, y, t, c, width, 1, 1, 1};
+                        std::pair<int, int> yb = sy.bounds(r);
+                        std::pair<int, int> tb = st.bounds(r);
+                        std::pair<int, int> cb = sc.bounds(r);
+                        /*
+                          printf("Evaluating over %d %d %d  %d %d %d\n", 
+                          yb.first, tb.first, cb.first, 
+                          yb.second, tb.second, cb.second);
+                        */
+                        for (int ec = cb.first; ec <= cb.second; ec++) {
+                            for (int et = tb.first; et <= tb.second; et++) {
+                                for (int ey = yb.first; ey <= yb.second; ey++) {
+                                    ptr->evalScanlineIfNeeded(ey, et, ec);
+                                }
+                            }
+                        }
+                    }
+                }
+                return Iter(ptr->im, sxIter, syIter, stIter, scIter);
             }
 
-            // In all cases we resolve to a load from an image, so
-            // we're not particularly bounded in how we can vectorize
+
+            // We over-allocate image backing so that this is always safe
             bool boundedVecX() const {
                 return false;
             }
             int minVecX() const {
-                return 0xa0000000;
+                return -HUGE_INT;
             }
             int maxVecX() const {
-                return 0x3fffffff;
+                return HUGE_INT;
             }
 
-            void prepare(int phase, Region r) const {
-                // prepare the args over this range
-                sx.prepare(phase, r);
-                sy.prepare(phase, r);
-                st.prepare(phase, r);
-                sc.prepare(phase, r);
+            std::pair<float, float> bounds(Region r) const {
+                //return ptr->bounds(r); 
 
-                // Prepare the func for more arbitrary sampling
+                // we could recurse here, but we intentionally don't
+                // to prevent an exponential explosion of bounds calls
+                return std::make_pair(-INF, INF);
+            }
+
+            void prepare(Region r, int phase) const {
+                // We require whatever the args reference
+                sx.prepare(r, phase);
+                sy.prepare(r, phase);
+                st.prepare(r, phase);
+                sc.prepare(r, phase);
+
+                // Plus the function itself over the bounds of what the args could evaluate to
                 std::pair<int, int> xb = sx.bounds(r);
                 std::pair<int, int> yb = sy.bounds(r);
                 std::pair<int, int> tb = st.bounds(r);
                 std::pair<int, int> cb = sc.bounds(r);
 
-                // Make sure the region is adequately bounded
                 Region r2 = {xb.first, yb.first, tb.first, cb.first, 
                              xb.second - xb.first + 1,
                              yb.second - yb.first + 1,
                              tb.second - tb.first + 1,
                              cb.second - cb.first + 1};
-                ptr->prepareFunc(phase, r2);
+                ptr->prepare(r2, phase);
             }
+
         };
 
 #define ShiftedCase(SX, SY, ST, SC)                                     \
@@ -510,15 +398,28 @@ namespace Expr {
         }
 
         int getSize(int i) const {
-            return ptr->getSize(i);
+            return ptr->size[i];
         }
 
         bool boundedVecX() const {return false;}
-        int minVecX() const {return 0xa0000000;} 
-        int maxVecX() const {return 0x3fffffff;}
+        int minVecX() const {return -HUGE_INT;} 
+        int maxVecX() const {return HUGE_INT;}
 
-        void prepare(int phase, Region r) const {
-            ptr->prepareFunc(phase, r);
+        void prepare(Region r, int phase) const {
+            ptr->prepare(r, phase);
+        }
+
+        std::pair<float, float> bounds(Region r) const {
+            //return ptr->bounds(r);
+            return std::make_pair(-INF, INF);
+        }
+        
+        void lazy() {
+            ptr->lazy = true;
+        }
+        
+        void eager() {
+            ptr->lazy = false;
         }
 
         // Evaluate yourself into an existing image
@@ -533,8 +434,7 @@ namespace Expr {
             return im;
         }
 
-        // For funcs with bounds, evaluate over the bounds into a new
-        // image
+        // For funcs with bounds, evaluate over the bounds into a new image
         Image realize() const {
             assert(getSize(0) && getSize(1) && getSize(2) && getSize(3), 
                    "Can only construct an image from a bounded function.\n"
@@ -542,6 +442,11 @@ namespace Expr {
             Image im(getSize(0), getSize(1), getSize(2), getSize(3));
             ptr->realize(im);
             return im;
+        }
+
+        // For debugging
+        void setName(const std::string &str) {
+            ptr->name = str;
         }
     };
 

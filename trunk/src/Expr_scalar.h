@@ -80,8 +80,8 @@ namespace Scalar {
 
         template<typename T>
         static std::pair<T, T> interval(std::pair<T, T> a, std::pair<T, T> b) {
-            return std::make_pair(std::min(a.first, b.first),
-                                  std::min(a.second, b.second));
+            return std::make_pair(std::max(a.first, b.first),
+                                  std::max(a.second, b.second));
         }
     };
 
