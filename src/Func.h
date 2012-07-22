@@ -20,18 +20,18 @@ namespace Expr {
         void evalScanlineIfNeeded(int y, int t, int c) {
             if (!lazy) return;
            
-            int idx = ((c-minC) * im.frames + t-minT) * im.height + y-minY;
+            int idx = ((c-minC) * im.frames + t-minT) * im.height + y;
             if (!evaluated[idx])  {
-                // TODO: consider locking the scanline during
-                // evaluation. As it stands, if multiple threads
-                // hammer on the same scanline, there will be wasted
-                // work (and probably lots of fighting over cache
-                // lines).  Fortunately, that's not how openmp
-                // schedules its threads.
+                // TODO: consider adding mem fences
+                evaluated[idx] = 1;
                 evalScanline(y, t, c);
-                evaluated[idx] = true;
-            }
-            
+                evaluated[idx] = 2;
+            } else {            
+                while (evaluated[idx] < 2) {
+                    //printf("Stalling...\n");
+                    sched_yield();
+                }
+            }            
         }
 
         _Shift<Image>::Iter scanline(int x, int y, int t, int c, int width) {
@@ -75,9 +75,11 @@ namespace Expr {
         }
 
         void evalScanline(int y, int t, int c) {
+            
+            //printf("Evaluating %s(%p) at scanline %d-%d %d %d %d\n",
+            //name.c_str(), this, minX, maxX, y, t, c);
+
             /*
-            printf("Evaluating %p at scanline %d-%d %d %d %d\n",
-                   this, minX, maxX, y, t, c);
 
             assert(im.defined(), 
                    "I was not prepared for this - no memory is allocated!");
