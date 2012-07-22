@@ -460,6 +460,8 @@ public:
         int minVX = expr.minVecX();
         int maxVX = expr.maxVecX();
 
+
+        
         Expr::Region r = {0, 0, 0, 0, width, height, frames, channels};
 
         // Figure out what regions of what functions are required here
@@ -470,38 +472,18 @@ public:
         //float t3 = currentTime();
         expr.prepare(r, 2);
         //float t4 = currentTime();
-
-        // TODO: do something with this list
+        
 
         for (int c = 0; c < channels; c++) {
             for (int t = 0; t < frames; t++) {
-                for (int yt = 0; yt < height; yt += 64) {
-                    const int maxY = min(yt + 64, height);
-                    for (int xt = 0; xt < width; xt += 1024) {
-                        const int maxX = min(xt + 1024, width);
-                        // Assume we chunk here for now. This decision assumes
-                        // no footprint in C and T, and could be grossly
-                        // wasteful! In future, we should just explicitly
-                        // check the footprint and use that to decide where to
-                        // chunk.  In fact, with the current logic inside
-                        // Func, we only keep track of which scanlines were
-                        // evaluated, not which channel or frames, so we're
-                        // going to produce bogus output. 
-
-                        //Expr::Region r = {xt, yt, t, c, maxX-xt, maxY-yt, 1, 1};
-                        //expr.prepare(0, r);
-                        //expr.prepare(1, r);
-
-                        #ifdef _OPENMP
-                        #pragma omp parallel for
-                        #endif
-                        for (int y = yt; y < maxY; y++) {
-                            //printf("Evaluating at scanline %d\n", y);
-                            FloatExprType(T)::Iter iter = expr.scanline(xt, y, t, c, maxX-xt);
-                            float *const dst = base + c*cstride + t*tstride + y*ystride;
-                            ImageStack::Expr::setScanline(iter, dst, xt, maxX, boundedVX, minVX, maxVX);
-                        }
-                    }
+                #ifdef _OPENMP
+                #pragma omp parallel for
+                #endif
+                for (int y = 0; y < height; y++) {
+                    //printf("Evaluating at scanline %d\n", y);
+                    FloatExprType(T)::Iter iter = expr.scanline(0, y, t, c, width);
+                    float *const dst = base + c*cstride + t*tstride + y*ystride;
+                    ImageStack::Expr::setScanline(iter, dst, 0, width, boundedVX, minVX, maxVX);
                 }
             }
         }
