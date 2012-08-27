@@ -424,9 +424,9 @@ public:
                 for (int y = minY; y <= maxY; y++) {
                     float *xWeightPtr = weightXBase;
                     for (int x = minX; x <= maxX; x++) {
-                        float yxWeight = (*yWeightPtr) * (*xWeightPtr);
+		      float tyxWeight = (*tWeightPtr) * (*yWeightPtr) * (*xWeightPtr);
                         for (int c = 0; c < channels; c++) {
-                            result[c] += (*this)(x, y, t, c) * yxWeight;
+                            result[c] += (*this)(x, y, t, c) * tyxWeight;
                         }
                         xWeightPtr++;
                     }
