@@ -15,9 +15,9 @@
 #include <limits>
 #include <list>
 #include <sstream>
-#include <memory>
+#include <tr1/memory>
 
-using ::std::shared_ptr;
+using ::std::tr1::shared_ptr;
 using ::std::string;
 using ::std::vector;
 using ::std::pair;
@@ -37,10 +37,11 @@ inline float isinf(float x) {
     return (!_finite(x) && !_isnan(x));
 }
 #else
-using ::std::isfinite;
+
 #endif
 
 #ifdef __CYGWIN__
+using ::std::isfinite;
 using ::std::isinf;
 using ::std::isnan;
 #endif

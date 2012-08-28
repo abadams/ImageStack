@@ -47,7 +47,7 @@ namespace Expr {
         int x, y, t, c, width, height, frames, channels;
     };
 
-    class BaseFunc;
+    struct BaseFunc;
 
     // A base class for things which do not depend on image data
     struct Unbounded {
