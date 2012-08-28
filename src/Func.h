@@ -218,7 +218,7 @@ namespace Expr {
     };
 
     class Func {
-        std::shared_ptr<BaseFunc> ptr;
+        shared_ptr<BaseFunc> ptr;
     public:
 
         template<typename T>
@@ -240,7 +240,7 @@ namespace Expr {
             // We shift the args to index into the image correctly,
             // because the backing for a function may have an
             // arbitrary offset
-            const std::shared_ptr<BaseFunc> ptr;
+            const shared_ptr<BaseFunc> ptr;
             const SX sx;
             const SY sy;
             const ST st;
@@ -251,7 +251,7 @@ namespace Expr {
 
             static const bool dependsOnX = true;
             
-            FuncRef(const std::shared_ptr<BaseFunc> &ptr_,
+            FuncRef(const shared_ptr<BaseFunc> &ptr_,
                     const SX &sx_, 
                     const SY &sy_, 
                     const ST &st_, 

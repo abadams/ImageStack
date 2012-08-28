@@ -784,7 +784,7 @@ private:
     };
 
     // Compute a 32-byte aligned address within data
-    static float *compute_base(const std::shared_ptr<const Payload> &payload) {
+    static float *compute_base(const shared_ptr<const Payload> &payload) {
         float *base = payload->data;
         while (((size_t)base) & 0x1f) base++;
         return base;
@@ -809,12 +809,12 @@ private:
         */
     }
 
-    std::shared_ptr<const Payload> data;
+    shared_ptr<const Payload> data;
     float *base;
 };
 
 template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
-struct ImRefIter;
+class ImRefIter;
 
 
 // Iterate across a scanline of a function that we're sampling in an unrestricted manner
