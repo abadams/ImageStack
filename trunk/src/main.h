@@ -27,8 +27,11 @@ using ::std::map;
 using ::std::list;
 using ::std::swap;
 using ::std::isfinite;
+
+#ifdef __CYGWIN__
 using ::std::isinf;
 using ::std::isnan;
+#endif
 
 #ifdef _MSC_VER
 #include <windows.h>
