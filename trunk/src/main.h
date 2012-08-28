@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -25,6 +26,9 @@ using ::std::make_pair;
 using ::std::map;
 using ::std::list;
 using ::std::swap;
+using ::std::isfinite;
+using ::std::isinf;
+using ::std::isnan;
 
 #ifdef _MSC_VER
 #include <windows.h>
@@ -36,15 +40,6 @@ using ::std::swap;
 inline float isinf(float x) {
     return (!_finite(x) && !_isnan(x));
 }
-#endif
-
-#ifdef __GNUC__
-using std::isfinite;
-#endif
-
-#ifdef __CYGWIN__
-using ::std::isinf;
-using ::std::isnan;
 #endif
 
 // Some core files that everyone should include
