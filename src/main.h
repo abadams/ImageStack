@@ -36,12 +36,13 @@ using ::std::swap;
 inline float isinf(float x) {
     return (!_finite(x) && !_isnan(x));
 }
-#else
+#endif
 
+#ifdef __GNUC__
+using std::isfinite;
 #endif
 
 #ifdef __CYGWIN__
-using ::std::isfinite;
 using ::std::isinf;
 using ::std::isnan;
 #endif
