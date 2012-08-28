@@ -28,7 +28,7 @@ using ::std::list;
 using ::std::swap;
 using ::std::isfinite;
 
-#ifdef __CYGWIN__
+#ifndef linux
 using ::std::isinf;
 using ::std::isnan;
 #endif
