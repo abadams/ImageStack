@@ -329,11 +329,14 @@ void Save::apply(Image im, string filename, string arg) {
         FileJPG::save(im, filename, quality);
     } else if (suffixMatch(filename, ".exr")) {
         string compression;
-        if (arg == "") { compression = "piz"; }
-        else { compression = arg; }
+        if (arg == "") compression = "piz";
+        else compression = arg;
         FileEXR::save(im, filename, compression);
     } else if (suffixMatch(filename, ".png")) {
-        FilePNG::save(im, filename);
+        int bits;
+        if (arg == "") bits = 8;
+        else bits = readInt(arg);
+        FilePNG::save(im, filename, bits);
     } else if (suffixMatch(filename, ".tga")) {
         FileTGA::save(im, filename);
     } else if (suffixMatch(filename, ".wav")) {
