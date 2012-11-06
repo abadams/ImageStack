@@ -122,7 +122,7 @@ Image load(string filename);
 namespace FilePNG {
 void help();
 Image load(string filename);
-void save(Image im, string filename);
+ void save(Image im, string filename, int bits);
 }
 
 namespace FilePPM {

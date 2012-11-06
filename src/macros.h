@@ -79,6 +79,12 @@ static inline float LDR16toHDR(unsigned short x) {
     return x * (1.0f/65535);
 }
 
+static inline unsigned short HDRtoLDR16(float x) {
+    if (x < 0) return 0;
+    if (x > 1) return 65535;    
+    return (unsigned short)(x * 65535.0f + 0.49999f);
+}
+
 #include <math.h>
 
 #include "footer.h"

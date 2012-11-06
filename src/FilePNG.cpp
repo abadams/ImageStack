@@ -14,15 +14,11 @@ namespace FilePNG {
 #include <png.h>
 
 void help() {
-    printf(".png files. These have a bit depth of 8, and may have 1-4 channels. They may\n"
-           "only have 1 frame.\n");
+    pprintf(".png files. These have a bit depth of 8 or 16, and may have 1-4 channels. They may only have 1 frame.");
 }
 
 Image load(string filename) {
     png_byte header[8];        // 8 is the maximum size that can be checked
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytep *row_pointers;
 
     /* open file and test for it being a png */
     FILE *f = fopen(filename.c_str(), "rb");
@@ -31,11 +27,11 @@ Image load(string filename) {
     assert(!png_sig_cmp(header, 0, 8), "File %s is not recognized as a PNG file\n", filename.c_str());
 
     /* initialize stuff */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
     assert(png_ptr, "[read_png_file] png_create_read_struct failed\n");
 
-    info_ptr = png_create_info_struct(png_ptr);
+    png_infop info_ptr = png_create_info_struct(png_ptr);
     assert(info_ptr, "[read_png_file] png_create_info_struct failed\n");
 
     assert(!setjmp(png_jmpbuf(png_ptr)), "[read_png_file] Error during init_io\n");
@@ -63,12 +59,14 @@ Image load(string filename) {
     // read the file
     assert(!setjmp(png_jmpbuf(png_ptr)), "[read_png_file] Error during read_image\n");
 
-    row_pointers = new png_bytep[im.height];
+    std::vector<png_bytep> row_pointers(im.height);
+    int row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+    std::vector<png_byte> data(row_bytes * im.height);
     for (int y = 0; y < im.height; y++) {
-        row_pointers[y] = new png_byte[png_get_rowbytes(png_ptr, info_ptr)];
+        row_pointers[y] = &data[y * row_bytes];
     }
 
-    png_read_image(png_ptr, row_pointers);
+    png_read_image(png_ptr, &row_pointers[0]);
 
     fclose(f);
 
@@ -84,7 +82,6 @@ Image load(string filename) {
             }
         }
     } else if (bit_depth == 16) {
-        printf("Reading a 16-bit PNG image (Image may be darker than expected!)\n");
         for (int y = 0; y < im.height; y++) {
             png_bytep srcPtr = row_pointers[y];
             for (int x = 0; x < im.width; x++) {
@@ -97,24 +94,14 @@ Image load(string filename) {
         }
     }
 
-    // clean up
-    for (int y = 0; y < im.height; y++) {
-        delete[] row_pointers[y];
-    }
-    delete[] row_pointers;
-
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
     return im;
 }
 
 
-void save(Image im, string filename) {
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytep *row_pointers;
-    png_byte color_type;
-
+  void save(Image im, string filename, int bits) {
+    assert(bits == 8 || bits == 16, "Can only save 8 or 16 bit pngs\n");
     assert(im.frames == 1, "Can't save a multi-frame PNG image\n");
     assert(im.channels > 0 && im.channels < 5,
            "Imagestack can't write PNG files that have other than 1, 2, 3, or 4 channels\n");
@@ -122,17 +109,17 @@ void save(Image im, string filename) {
     png_byte color_types[4] = {PNG_COLOR_TYPE_GRAY, PNG_COLOR_TYPE_GRAY_ALPHA,
                                PNG_COLOR_TYPE_RGB,  PNG_COLOR_TYPE_RGB_ALPHA
                               };
-    color_type = color_types[im.channels - 1];
+    png_byte color_type = color_types[im.channels - 1];
 
     // open file
     FILE *f = fopen(filename.c_str(), "wb");
     assert(f, "[write_png_file] File %s could not be opened for writing\n", filename.c_str());
 
     // initialize stuff
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     assert(png_ptr, "[write_png_file] png_create_write_struct failed\n");
 
-    info_ptr = png_create_info_struct(png_ptr);
+    png_infop info_ptr = png_create_info_struct(png_ptr);
     assert(info_ptr, "[write_png_file] png_create_info_struct failed\n");
 
     assert(!setjmp(png_jmpbuf(png_ptr)), "[write_png_file] Error during init_io\n");
@@ -143,38 +130,43 @@ void save(Image im, string filename) {
     assert(!setjmp(png_jmpbuf(png_ptr)), "[write_png_file] Error during writing header\n");
 
     png_set_IHDR(png_ptr, info_ptr, im.width, im.height,
-                 8, color_type, PNG_INTERLACE_NONE,
+                 bits, color_type, PNG_INTERLACE_NONE,
                  PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
     png_write_info(png_ptr, info_ptr);
 
     // convert the floats to bytes
-    row_pointers = new png_bytep[im.height];
+    int row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+    std::vector<png_bytep> row_pointers(im.height);
+    std::vector<png_byte> data(row_bytes * im.height);
     for (int y = 0; y < im.height; y++) {
-        row_pointers[y] = new png_byte[png_get_rowbytes(png_ptr, info_ptr)];
-        png_bytep dstPtr = row_pointers[y];
-        for (int x = 0; x < im.width; x++) {
-            for (int c = 0; c < im.channels; c++) {
-                *dstPtr++ = (png_byte)(HDRtoLDR(im(x, y, c)));
+        png_bytep dstPtr = row_pointers[y] = &data[y*row_bytes];
+        if (bits == 8) {
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {                
+                    *dstPtr++ = (png_byte)(HDRtoLDR(im(x, y, c)));
+                }
             }
+        } else if (bits == 16) {
+            for (int x = 0; x < im.width; x++) {
+                for (int c = 0; c < im.channels; c++) {                
+                    unsigned short val = HDRtoLDR16(im(x, y, c));
+                    *dstPtr++ = (png_byte)(val >> 8);
+                    *dstPtr++ = (png_byte)(val & 0xff);
+                }
+            }            
         }
     }
 
     // write data
     assert(!setjmp(png_jmpbuf(png_ptr)), "[write_png_file] Error during writing bytes");
 
-    png_write_image(png_ptr, row_pointers);
+    png_write_image(png_ptr, &row_pointers[0]);
 
     // finish write
     assert(!setjmp(png_jmpbuf(png_ptr)), "[write_png_file] Error during end of write");
 
     png_write_end(png_ptr, NULL);
-
-    // clean up
-    for (int y = 0; y < im.height; y++) {
-        delete[] row_pointers[y];
-    }
-    delete[] row_pointers;
 
     fclose(f);
 
