@@ -6,6 +6,7 @@
 #define close closesocket
 #else
 #include <sys/errno.h>
+#include <unistd.h>
 #endif
 
 #include "header.h"
