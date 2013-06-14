@@ -172,7 +172,7 @@ Image GaussTransform::apply(Image slice, Image splat, Image values,
         vector<float> val(values.channels);
         for (int t = 0; t < splat.frames; t++) {
             for (int y = 0; y < splat.height; y++) {
-                for (int x = 0; x < splat.width; x++) {
+                for (int x = 0; x < splat.width; x++) {                    
                     for (int c = 0; c < splat.channels; c++) {
                         pos[c] = splat(x, y, t, c) * invSigma[c];
                     }
@@ -1026,9 +1026,9 @@ Image FastNLMeans::apply(Image im, float patchSize, float spatialSigma, float pa
             weight.region(max(-dx, 0), max(-dy, 0), 0, 0, w, h, f, 1) += delta;
             for (int c = 0; c < im.channels; c++) {
                 out.region(max(dx, 0), max(dy, 0), 0, c, w, h, f, 1) += delta *
-                                                                        im.region(max(-dx, 0), max(-dy, 0), 0, c, w, h, f, 1);
+                    im.region(max(-dx, 0), max(-dy, 0), 0, c, w, h, f, 1);
                 out.region(max(-dx, 0), max(-dy, 0), 0, c, w, h, f, 1) += delta *
-                                                                          im.region(max(dx, 0), max(dy, 0), 0, c, w, h, f, 1);
+                    im.region(max(dx, 0), max(dy, 0), 0, c, w, h, f, 1);
             }
         }
     }
