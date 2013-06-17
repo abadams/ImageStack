@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_GKDTREE_H
 #define IMAGESTACK_GKDTREE_H
-#include "header.h"
+namespace ImageStack {
 
 #include <limits>
 #include <math.h>
@@ -405,6 +405,6 @@ private:
 };
 
 
-#include "footer.h"
+}
 
 #endif

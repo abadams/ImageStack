@@ -6,7 +6,7 @@
 #include "Calculus.h"
 #include "Statistics.h"
 #include "Convolve.h"
-#include "header.h"
+namespace ImageStack {
 
 void Inpaint::help() {
     printf("\n-inpaint takes the image on the top of the stack, and a one channel mask of the\n"
@@ -207,4 +207,4 @@ void SeamlessClone::apply(Image dst, Image src, Image mask) {
     }
 }
 
-#include "footer.h"
+}

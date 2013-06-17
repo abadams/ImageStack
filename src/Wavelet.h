@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_WAVELET_H
 #define IMAGESTACK_WAVELET_H
-#include "header.h"
+namespace ImageStack {
 
 class Haar : public Operation {
 public:
@@ -34,5 +34,5 @@ public:
     static void apply(Image im);
 };
 
-#include "footer.h"
+}
 #endif

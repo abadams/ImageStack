@@ -1,7 +1,7 @@
 #include "main.h"
 #include "Exception.h"
 
-#include "header.h"
+namespace ImageStack {
 
 Exception::Exception(const char *fmt, ...) {
     va_list arglist;
@@ -33,4 +33,4 @@ void assert(bool cond, const char *fmt, ...) throw(Exception) {
     }
 }
 
-#include "footer.h"
+}

@@ -10,7 +10,7 @@
 #include "Convolve.h"
 #include "File.h"
 #include "Filter.h"
-#include "header.h"
+namespace ImageStack {
 
 void GaussTransform::help() {
     pprintf("-gausstransform evaluates a weighted sum of Gaussians at a discrete"
@@ -1041,4 +1041,4 @@ Image FastNLMeans::apply(Image im, float patchSize, float spatialSigma, float pa
     return out;
 }
 
-#include "footer.h"
+}

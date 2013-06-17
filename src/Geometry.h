@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_GEOMETRY_H
 #define IMAGESTACK_GEOMETRY_H
-#include "header.h"
+namespace ImageStack {
 
 class Upsample : public Operation {
 public:
@@ -182,5 +182,5 @@ public:
     static Image apply(Image im, int newWidth, int newHeight, int newFrames, int newChannels);
 };
 
-#include "footer.h"
+}
 #endif

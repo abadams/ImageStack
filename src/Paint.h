@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_PAINT_H
 #define IMAGESTACK_PAINT_H
-#include "header.h"
+namespace ImageStack {
 
 class Eval : public Operation {
 public:
@@ -35,5 +35,5 @@ public:
     static void apply(Image dst, Image src, Image mask);
 };
 
-#include "footer.h"
+}
 #endif

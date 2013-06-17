@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_DENSE_GRID_H
 #define IMAGESTACK_DENSE_GRID_H
-#include "header.h"
+namespace ImageStack {
 
 /******************************************************************
  * This is the Bilateral Grid from the paper:                     *
@@ -341,7 +341,7 @@ private:
     int *sizes;
 };
 
-#include "footer.h"
+}
 #endif
 
 

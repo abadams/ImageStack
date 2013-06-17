@@ -1,6 +1,6 @@
 #include "main.h"
 #include "File.h"
-#include "header.h"
+namespace ImageStack {
 
 #ifdef NO_PNG
 namespace FilePNG {
@@ -177,4 +177,4 @@ Image load(string filename) {
 }
 
 #endif
-#include "footer.h"
+}

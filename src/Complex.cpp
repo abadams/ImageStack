@@ -1,7 +1,7 @@
 #include "main.h"
 #include "Complex.h"
 #include "Statistics.h"
-#include "header.h"
+namespace ImageStack {
 
 void ComplexMultiply::help() {
     pprintf("-complexmultiply multiplies the top image in the stack by the second"
@@ -388,4 +388,4 @@ void ComplexConjugate::apply(Image im) {
     }
 }
 
-#include "footer.h"
+}

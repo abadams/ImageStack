@@ -9,7 +9,7 @@
 #include "Display.h"
 #include "LAHBPCG.h"
 #include "Statistics.h"
-#include "header.h"
+namespace ImageStack {
 
 void Gradient::help() {
     pprintf("-gradient takes the backward differences in the dimension specified by"
@@ -244,4 +244,4 @@ Image Poisson::apply(Image dx, Image dy, float rms) {
     return LAHBPCG::apply(zerosc, dx, dy, zeros1, ones1, ones1, 999999, rms);
 }
 
-#include "footer.h"
+}

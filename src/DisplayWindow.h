@@ -12,7 +12,7 @@
 #include <SDL_thread.h>
 #include <SDL_mutex.h>
 
-#include "header.h"
+namespace ImageStack {
 
 // a singleton SDL window
 class DisplayWindow {
@@ -62,6 +62,6 @@ private:
     int stop_;
 };
 
-#include "footer.h"
+}
 #endif
 #endif

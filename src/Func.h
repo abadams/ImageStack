@@ -2,7 +2,7 @@
 #define IMAGESTACK_FUNC_H
 
 #include "Image.h"
-#include "header.h"
+namespace ImageStack {
 
 namespace Expr {
 
@@ -464,5 +464,5 @@ namespace Expr {
 
 
 
-#include "footer.h"
+}
 #endif

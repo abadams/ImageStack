@@ -1,6 +1,6 @@
 #include "main.h"
 #include "Plugin.h"
-#include "header.h"
+namespace ImageStack {
 
 #ifdef __WIN32__
 #else
@@ -51,4 +51,4 @@ void Plugin::help() {
             "Usage: ImageStack -plugin foo.so -foo 1 2 3\n");
 }
 
-#include "footer.h"
+}

@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_COMPLEX_H
 #define IMAGESTACK_COMPLEX_H
-#include "header.h"
+namespace ImageStack {
 
 class ComplexMultiply : public Operation {
 public:
@@ -66,5 +66,5 @@ public:
     static void apply(Image im);
 };
 
-#include "footer.h"
+}
 #endif

@@ -8,7 +8,7 @@
 #include "Geometry.h"
 #include "Reduction.h"
 #include <list>
-#include "header.h"
+namespace ImageStack {
 
 // This is an implementation of "Locally Adaptive Hierachical Basis
 // Preconditioning" by Rick Szeliski. It was written by Eric Chu with
@@ -886,4 +886,4 @@ Image LAHBPCG::apply(Image d, Image gx, Image gy, Image w, Image sx, Image sy, i
 
     return out;
 }
-#include "footer.h"
+}

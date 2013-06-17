@@ -1,6 +1,6 @@
 #ifndef WLS_H
 #define WLS_H
-#include "header.h"
+namespace ImageStack {
 
 class WLS : public Operation {
 public:
@@ -10,5 +10,5 @@ public:
     static Image apply(Image im, float alpha, float lambda, float tolerance);
 };
 
-#include "footer.h"
+}
 #endif

@@ -6,7 +6,7 @@
 #include "Filter.h"
 #include "File.h"
 #include "Func.h"
-#include "header.h"
+namespace ImageStack {
 
 using namespace Expr;
 
@@ -150,4 +150,4 @@ void LocalLaplacian::apply(Image im, float alpha, float beta) {
     im *= output(x, y, 0);
 }
 
-#include "footer.h"
+}

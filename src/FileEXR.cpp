@@ -2,18 +2,18 @@
 #include "File.h"
 
 #ifdef NO_OPENEXR
-#include "header.h"
+namespace ImageStack {
 namespace FileEXR {
 #include "FileNotImplemented.h"
 }
-#include "footer.h"
+}
 #else
 
 #include <ImfRgbaFile.h>
 #include <ImfArray.h>
 #include <ImfChannelList.h>
 
-#include "header.h"
+namespace ImageStack {
 namespace FileEXR {
 
 void help() {
@@ -184,6 +184,6 @@ void save(Image im, string filename, string compression = "piz") {
 
 }
 
-#include "footer.h"
+}
 #endif
 

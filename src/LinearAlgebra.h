@@ -2,7 +2,7 @@
 #define IMAGESTACK_LINEARALGEBRA_H
 #include <stdio.h>
 #include <math.h>
-#include "header.h"
+namespace ImageStack {
 
 /*
 
@@ -248,5 +248,5 @@ public:
     }
 };
 
-#include "footer.h"
+}
 #endif

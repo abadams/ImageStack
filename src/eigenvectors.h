@@ -2,7 +2,7 @@
 #define IMAGESTACK_EIGENVECTORS_H
 
 #include <math.h>
-#include "header.h"
+namespace ImageStack {
 
 class Eigenvectors {
 public:
@@ -189,5 +189,5 @@ private:
     int count;
 };
 
-#include "footer.h"
+}
 #endif

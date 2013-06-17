@@ -3,7 +3,7 @@
 
 #include "Arithmetic.h"
 
-#include "header.h"
+namespace ImageStack {
 
 class Convolve : public Operation {
 public:
@@ -19,5 +19,5 @@ private:
     static void convolveSingle(Image im, Image filter, Image out, BoundaryCondition b);
 };
 
-#include "footer.h"
+}
 #endif

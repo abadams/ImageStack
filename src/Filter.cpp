@@ -5,7 +5,7 @@
 #include "Geometry.h"
 #include "Arithmetic.h"
 #include "Statistics.h"
-#include "header.h"
+namespace ImageStack {
 
 void GaussianBlur::help() {
     pprintf("-gaussianblur takes a floating point width, height, and frames, and"
@@ -1516,4 +1516,4 @@ Image HotPixelSuppression::apply(Image im) {
     return out;
 }
 
-#include "footer.h"
+}

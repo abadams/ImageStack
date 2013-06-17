@@ -3,7 +3,7 @@
 #include "Arithmetic.h"
 #include "Statistics.h"
 #include "File.h"
-#include "header.h"
+namespace ImageStack {
 
 void ColorMatrix::help() {
     pprintf("-colormatrix treats each pixel as a vector over its channels and multiplies "
@@ -790,4 +790,4 @@ Image Demosaic::apply(Image im, int xoff, int yoff, bool awb) {
     return out;
 }
 
-#include "footer.h"
+}

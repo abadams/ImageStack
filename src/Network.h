@@ -15,7 +15,7 @@ using ::std::string;
 
 #include "macros.h"
 #include "Image.h"
-#include "header.h"
+namespace ImageStack {
 
 class Address {
 public:
@@ -77,5 +77,5 @@ private:
     int sock;
 };
 
-#include "footer.h"
+}
 #endif

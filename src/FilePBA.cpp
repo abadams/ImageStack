@@ -1,6 +1,6 @@
 #include "main.h"
 #include "File.h"
-#include "header.h"
+namespace ImageStack {
 
 namespace FilePBA {
 
@@ -87,4 +87,4 @@ Image load(string filename) {
 }
 
 }
-#include "footer.h"
+}

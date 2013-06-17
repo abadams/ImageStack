@@ -1,6 +1,6 @@
 #include "main.h"
 #include "File.h"
-#include "header.h"
+namespace ImageStack {
 #include <stdint.h>
 
 namespace FileTMP {
@@ -200,4 +200,4 @@ Image load(string filename) {
     return im;
 }
 }
-#include "footer.h"
+}

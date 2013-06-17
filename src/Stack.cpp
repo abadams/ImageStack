@@ -2,7 +2,7 @@
 #include "Stack.h"
 #include <list>
 #include <map>
-#include "header.h"
+namespace ImageStack {
 
 void Pop::help() {
     pprintf("-pop removes the top image from the stack\n\n"
@@ -110,4 +110,4 @@ void Stash::parse(vector<string> args) {
     stash[args[0]] = im;
 }
 
-#include "footer.h"
+}

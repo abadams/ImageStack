@@ -11,7 +11,7 @@
 #include <SDL_mutex.h>
 #endif
 
-#include "header.h"
+namespace ImageStack {
 
 void Send::help() {
     printf("\n-send sends an image over a TCP connection. It has an optional first and second\n"
@@ -121,4 +121,4 @@ Image Receive::apply(int port) {
 }
 
 map<int, TCPServer *> Receive::servers;
-#include "footer.h"
+}

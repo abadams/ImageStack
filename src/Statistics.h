@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_STATISTICS_H
 #define IMAGESTACK_STATISTICS_H
-#include "header.h"
+namespace ImageStack {
 
 class Dimensions : public Operation {
 public:
@@ -213,5 +213,5 @@ public:
     static void apply(Image im);
 };
 
-#include "footer.h"
+}
 #endif

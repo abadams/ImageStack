@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_PLUGIN_H
 #define IMAGESTACK_PLUGIN_H
 
-#include "header.h"
+namespace ImageStack {
 
 
 class Plugin : public Operation {
@@ -11,6 +11,6 @@ public:
     void help();
 };
 
-#include "footer.h"
+}
 
 #endif

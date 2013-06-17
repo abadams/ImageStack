@@ -8,7 +8,7 @@
 #include <SDL_thread.h>
 #include <SDL_mutex.h>
 #include <sstream>
-#include "header.h"
+namespace ImageStack {
 
 DisplayWindow &DisplayWindow::instance() {
     if (!instance_) {
@@ -375,6 +375,6 @@ void DisplayWindow::wait() {
 DisplayWindow *DisplayWindow::instance_ = NULL;
 
 
-#include "footer.h"
+}
 #endif
 

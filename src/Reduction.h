@@ -2,7 +2,7 @@
 #define IMAGESTACK_REDUCTION_H
 
 #include "Expr.h"
-#include "header.h"
+namespace ImageStack {
 
 namespace Reduce {
 
@@ -87,6 +87,6 @@ double sum(const T expr_, const FloatExprType(T) *ptr = NULL) {
 
 };
 
-#include "footer.h"
+}
 
 #endif

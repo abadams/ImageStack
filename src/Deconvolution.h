@@ -1,7 +1,7 @@
 #ifndef NO_FFTW
 #ifndef DECONVOLUTION_H
 #define DECONVOLUTION_H
-#include "header.h"
+namespace ImageStack {
 
 class Deconvolve : public Operation {
 public:
@@ -15,6 +15,6 @@ private:
     static Image applyPadding(Image im);
 };
 
-#include "footer.h"
+}
 #endif
 #endif

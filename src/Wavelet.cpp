@@ -4,7 +4,7 @@
 #include "Statistics.h"
 #include "Calculus.h"
 #include "Convolve.h"
-#include "header.h"
+namespace ImageStack {
 
 void Haar::help() {
     pprintf("-haar performs the standard 2D haar transform of an image. The image"
@@ -406,4 +406,4 @@ void InverseDaubechies::apply(Image im) {
 
 
 
-#include "footer.h"
+}

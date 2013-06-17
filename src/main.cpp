@@ -6,7 +6,7 @@
 #ifndef WIN32
 #include <sys/time.h>
 #endif
-#include "header.h"
+namespace ImageStack {
 
 vector<Image> stack_;
 Image &stack(size_t idx) {
@@ -203,7 +203,7 @@ void pprintf(const char *str) {
         }
     }
 }
-#include "footer.h"
+}
 
 #ifndef NO_MAIN
 

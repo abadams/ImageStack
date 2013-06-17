@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "header.h"
+namespace ImageStack {
 
 /*******************************************************************
  * Hash table implementation for permutohedral lattice             *
@@ -506,5 +506,5 @@ public:
     HashTablePermutohedral hashTable;
 };
 
-#include "footer.h"
+}
 #endif

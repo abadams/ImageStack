@@ -3,7 +3,7 @@
 #include "Parser.h"
 #include "File.h"
 #include "Geometry.h"
-#include "header.h"
+namespace ImageStack {
 
 using namespace Expr;
 
@@ -338,4 +338,4 @@ void Composite::apply(Image dst, Image src, Image mask) {
     }
 }
 
-#include "footer.h"
+}

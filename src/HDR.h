@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_HDR_H
 #define IMAGESTACK_HDR_H
-#include "header.h"
+namespace ImageStack {
 
 class AssembleHDR : public Operation {
 public:
@@ -15,5 +15,5 @@ private:
 
 };
 
-#include "footer.h"
+}
 #endif

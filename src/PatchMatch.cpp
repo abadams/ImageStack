@@ -15,7 +15,7 @@
 #include "Paint.h"
 #include "Prediction.h"
 #include "Display.h"
-#include "header.h"
+namespace ImageStack {
 // PATCHMATCH =============================================================//
 
 void PatchMatch::help() {
@@ -570,4 +570,4 @@ void Heal::apply(Image image, Image mask, int numIter, int numIterPM) {
     BidirectionalSimilarity::apply(image.copy(), image, mask, 1-mask, 0, numIter, numIterPM);
 
 }
-#include "footer.h"
+}
