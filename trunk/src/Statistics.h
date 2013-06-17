@@ -205,5 +205,13 @@ public:
     static Image apply(Image im, float sigma, int newChannels);
 };
 
+class Orthonormalize : public Operation {
+public:
+    void help();
+    bool test();
+    void parse(vector<string> args);
+    static void apply(Image im);
+};
+
 #include "footer.h"
 #endif
