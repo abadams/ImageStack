@@ -6,6 +6,7 @@
 #include "Convolve.h"
 #include "Statistics.h"
 #include "Geometry.h"
+#include "Reduction.h"
 #include <list>
 #include "header.h"
 
@@ -108,10 +109,6 @@ private:
     Image Ax(Image im); // apply A to "x" the image
 
     Image hbPrecondition(Image r); // apply the preconditioner to the residual r
-
-    float dot(Image a, Image b);
-
-    void alphax(float alpha, Image im);
 
     void RBBmaps();
     void constructPreconditioner();
@@ -729,26 +726,6 @@ Image PCG::hbPrecondition(Image r) {
     return hbRes;
 }
 
-// compute dot product
-float PCG::dot(Image im1, Image im2) {
-    assert(im1.frames == im2.frames &&
-           im1.height == im2.height &&
-           im1.width == im2.width &&
-           im1.channels == im2.channels,
-           "a and b need to be the same size\n");
-    double result = 0;
-    for (int t = 0; t < im1.frames; t++) {
-        for (int y = 0; y < im1.height; y++) {
-            for (int x = 0; x < im1.width; x++) {
-                for (int c = 0; c < im1.channels; c++) {
-                    result += im1(x,y,t,c)*im2(x,y,t,c);
-                }
-            }
-        }
-    }
-    return result;
-}
-
 // solve the PCG!
 void PCG::solve(Image guess, int max_iter, float tol) {
 
@@ -758,7 +735,7 @@ void PCG::solve(Image guess, int max_iter, float tol) {
     r -= Ax(guess);
     Image dr = hbPrecondition(r); // precondition, dr to differentiate from d
 
-    float delta = dot(r,dr);
+    float delta = Reduce::sum(r*dr);
     float epsilon = tol*tol*delta;
     printf("initial error: %f\n", delta);
 
@@ -768,17 +745,17 @@ void PCG::solve(Image guess, int max_iter, float tol) {
         }
 
         Image wr = Ax(dr);
-        float alpha = delta / dot(dr,wr);
+        float alpha = delta / Reduce::sum(dr*wr);
 
         guess += dr * alpha;
         r -= wr * alpha;
-        float resNorm = dot(r, r);
+        float resNorm = Reduce::sum(r*r);
         printf("iteration %d, error %f\n", i, resNorm);
         if (resNorm < epsilon) break;
 
         s = hbPrecondition(r);
         float delta_old = delta;
-        delta = dot(r,s);
+        delta = Reduce::sum(r*s);
 
         dr = s + dr * (delta / delta_old);
     }

@@ -67,6 +67,7 @@ void loadOperations() {
     operationMap["-pca"] = new PCA();
     operationMap["-patchpca"] = new PatchPCA();
     operationMap["-patchpca3d"] = new PatchPCA3D();
+    operationMap["-orthonormalize"] = new Orthonormalize();
 
     // file IO
     operationMap["-load"] = new Load();

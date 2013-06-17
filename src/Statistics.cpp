@@ -1,6 +1,7 @@
 #include "main.h"
 #include "Statistics.h"
 #include "Calculus.h"
+#include "Reduction.h"
 #include "Arithmetic.h"
 #include "eigenvectors.h"
 #include <algorithm>
@@ -111,7 +112,7 @@ void Stats::computeMoments() {
                         float val2 = im_(x, y, t, c2);
                         if (!isfinite(val2)) { continue; }
                         float diff2 = (float)(val2 - means[c2]);
-                        covarianceMatrix[c *channels + c2] += diff * diff2;
+                        covarianceMatrix[c * channels + c2] += diff * diff2;
                         covarianceCounts[c * channels + c2]++;
                     }
                     float power = diff * diff;
@@ -138,7 +139,7 @@ void Stats::computeMoments() {
     kurtosis_ -= 3;
     for (int c = 0; c < im_.channels; c++) {
         for (int c2 = 0; c2 < im_.channels; c2++) {
-            covarianceMatrix[c *channels + c2] /= covarianceCounts[c * channels + c2] - 1;
+            covarianceMatrix[c * channels + c2] /= covarianceCounts[c * channels + c2] - 1;
         }
         variances[c] /= (counts[c] - 1);
         skews[c] /= (counts[c] - 1) * variances[c] * ::sqrt(variances[c]);
@@ -1852,6 +1853,60 @@ Image PatchPCA3D::apply(Image im, float sigma, int newChannels) {
     }
 
     return filters;
+}
+
+
+
+void Orthonormalize::help() {
+    pprintf("-orthonormalize treats the channels of an image as columns of a"
+            " matrix, and applies Gram-Schmidt orthonormalization. That is, the"
+            " first channel is scaled so that it has an L2 norm of 1, the"
+            " projection of the second channel onto the first is subtracted from"
+            " the second channel and it is normalized, and so on, so that all"
+            " channels become orthogonal to all other channels, and each has an L2"
+            " norm of 1. It is useful for computing the eigenvectors of some operation"
+            " via power iteration.\n"
+            "Usage: ImageStack -load pics/dog1.jpg -orthonormalize -save normalized.tmp \n");
+}
+
+bool Orthonormalize::test() {
+    Image a(50, 10, 10, 3);
+
+    Noise::apply(a, 0, 1);
+
+    Orthonormalize::apply(a);    
+    double s00 = Reduce::sum(a.channel(0) * a.channel(0));
+    double s01 = Reduce::sum(a.channel(0) * a.channel(1));
+    double s02 = Reduce::sum(a.channel(0) * a.channel(2));
+    double s11 = Reduce::sum(a.channel(1) * a.channel(1));
+    double s12 = Reduce::sum(a.channel(1) * a.channel(2));
+    double s22 = Reduce::sum(a.channel(2) * a.channel(2));
+
+    return (nearlyEqual(s00, 1) &&
+            nearlyEqual(s01, 0) && 
+            nearlyEqual(s02, 0) &&
+            nearlyEqual(s11, 1) &&
+            nearlyEqual(s12, 0) && 
+            nearlyEqual(s22, 1));
+}
+
+void Orthonormalize::parse(vector<string> args) {
+    assert(args.size() == 0, "-orthonormalize takes no arguments\n");
+    apply(stack(0));
+}
+
+void Orthonormalize::apply(Image im) {
+    for (int c1 = 0; c1 < im.channels; c1++) {
+        // Subtract the projection onto all previous channels
+        for (int c2 = 0; c2 < c1; c2++) {
+            double dot_prod = Reduce::sum(im.channel(c1) * im.channel(c2));
+            im.channel(c1) -= dot_prod * im.channel(c2);
+        }
+
+        // Normalize the channel
+        double norm = Reduce::sum(im.channel(c1) * im.channel(c1));
+        im.channel(c1) *= 1.0/sqrt(norm);
+    }
 }
 
 

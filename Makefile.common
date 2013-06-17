@@ -1,6 +1,6 @@
 # the components of imagestack
 IMAGESTACK_OBJECTS = \
-    Calculus.o \
+	Calculus.o \
 	Color.o \
 	Complex.o \
 	Control.o \

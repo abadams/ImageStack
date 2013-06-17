@@ -2158,6 +2158,44 @@ namespace Expr {
         static const bool value = true;
     };
 
+    // Evaluate an expression into some generic consumer of it (e.g. a sum reduction)
+    template<typename T, typename C>
+    void evaluateInto(const T src, C &dst, 
+                      int x, const int maxX, 
+                      const bool boundedVX, const int minVX, const int maxVX) {
+
+
+        // Is it worth vectorizing this?
+        if (Vec::width > 1 && (maxX - x) > Vec::width*2) {
+            // Scalar warm up
+            while (x < maxX &&  // Don't go past the end
+                   (boundedVX && x < minVX)) { // Walk at least until it's safe to start vectorizing
+                dst.accept(x, src[x]);
+                x++;
+            }
+
+            // Vectorized steady-state until we reach the end or until
+            // we're no longer allowed to vectorize
+            int lastX = maxX - Vec::width;
+            if (boundedVX) lastX = std::min(lastX, maxVX);
+
+            // Put a marker in the asm to make the important bit
+            // easier to find for checking it's doing the right thing
+            asm("# begin vector evaluateInto");
+            while (x <= lastX) {
+                dst.accept(x, src.vec(x));
+                x += Vec::width;
+            }
+            asm("# end vector evaluateInto");
+        }
+
+        // Scalar wind down 
+        while (x < maxX) {
+            dst.accept(x, src[x]);
+            x++;
+        }        
+    }
+
     // Evaluated an expression into an array
     template<typename T>
     void setScanline(const T src, float *const dst, 
