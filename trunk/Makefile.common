@@ -69,7 +69,7 @@ clean:
 # ImageStack the program #
 ##########################
 
-$(BIN_TARGET): IMAGESTACK_CCFLAGS = $(BIN_CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
+$(BIN_TARGET): IMAGESTACK_CCFLAGS = $(BIN_CCFLAGS) $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS) 
 $(BIN_TARGET): IMAGESTACK_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 BIN_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),bin/build/$f)
 
@@ -80,8 +80,10 @@ bin/build/main.h.gch: src/main.h
 $(BIN_TARGET): $(BIN_OBJECTS)
 	$(CXX) $(IMAGESTACK_CCFLAGS) $(BIN_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN_TARGET)
 
+-include $(addprefix bin/build/, $(IMAGESTACK_OBJECTS:.o=.d))
+
 bin/build/%.o: src/%.cpp bin/build/main.h.gch
-	$(CXX) -include bin/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
+	$(CXX) -include bin/build/main.h $(IMAGESTACK_CCFLAGS) -MMD -MP -MF bin/build/$*.d -MT $@ -c $< -o $@
 
 ##########################
 # ImageStack the library #
