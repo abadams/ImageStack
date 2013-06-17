@@ -1,7 +1,7 @@
 #include "main.h"
 #include "File.h"
 
-#include "header.h"
+namespace ImageStack {
 namespace FileHDR {
 
 void help() {
@@ -404,4 +404,4 @@ Image load(string filename) {
 }
 
 }
-#include "footer.h"
+}

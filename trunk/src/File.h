@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_FILE_H
 #define IMAGESTACK_FILE_H
-#include "header.h"
+namespace ImageStack {
 
 class Load : public Operation {
 public:
@@ -184,5 +184,5 @@ void save(Image im, string filename);
 Image load(string filename);
 }
 
-#include "footer.h"
+}
 #endif

@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_CONTROL_H
 #define IMAGESTACK_CONTROL_H
-#include "header.h"
+namespace ImageStack {
 
 class Loop : public Operation {
 public:
@@ -23,5 +23,5 @@ public:
     void parse(vector<string> args);
 };
 
-#include "footer.h"
+}
 #endif

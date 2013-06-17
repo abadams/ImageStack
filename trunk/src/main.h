@@ -56,7 +56,7 @@ float currentTime();
 }
 
 #include "Image.h"
-#include "header.h"
+namespace ImageStack {
 
 // Below are the data structures and functions available to operations:
 
@@ -95,5 +95,5 @@ bool nearlyEqual(Image a, Image b);
 extern map<string, Operation *> operationMap;
 typedef map<string, Operation *>::iterator OperationMapIterator;
 
-#include "footer.h"
+}
 #endif

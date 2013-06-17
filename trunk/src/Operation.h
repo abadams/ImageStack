@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_OPERATION_H
 #define IMAGESTACK_OPERATION_H
-#include "header.h"
+namespace ImageStack {
 
 class Operation {
 public:
@@ -30,5 +30,5 @@ public:
     static bool apply(string name, Operation *op);
 };
 
-#include "footer.h"
+}
 #endif

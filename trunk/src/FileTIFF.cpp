@@ -7,7 +7,7 @@
 #endif
 #endif
 
-#include "header.h"
+namespace ImageStack {
 
 #ifdef NO_TIFF
 
@@ -220,4 +220,4 @@ void save(Image im, string filename, string type) {
 }
 
 #endif
-#include "footer.h"
+}

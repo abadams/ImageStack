@@ -3,7 +3,7 @@
 
 #include "Image.h"
 #include "Statistics.h"
-#include "header.h"
+namespace ImageStack {
 
 #ifndef roundf
 #define roundf(x) floorf(x+0.5);
@@ -394,5 +394,5 @@ public:
 
 };
 
-#include "footer.h"
+}
 #endif

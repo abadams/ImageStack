@@ -10,7 +10,7 @@
 #include "KernelEstimation.h"
 #include "Statistics.h"
 #include "Filter.h"
-#include "header.h"
+namespace ImageStack {
 
 #define FourierTransform(X) (FFT::apply(X, true, true, false))
 #define InverseFourierTransform(X) (IFFT::apply(X, true, true, false))
@@ -649,6 +649,6 @@ Image Deconvolve::applyLevin2007(Image blurred, Image kernel, float weight) {
     return ComplexReal::apply(fft_im);
 }
 
-#include "footer.h"
+}
 
 #endif

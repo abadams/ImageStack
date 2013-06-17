@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_GAUSS_TRANSFORM_H
 #define IMAGESTACK_GAUSS_TRANSFORM_H
-#include "header.h"
+namespace ImageStack {
 
 
 class GaussTransform : public Operation {
@@ -82,5 +82,5 @@ public:
                       GaussTransform::Method m = GaussTransform::AUTO);
 };
 
-#include "footer.h"
+}
 #endif

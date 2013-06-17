@@ -11,7 +11,7 @@
 #include "GaussTransform.h"
 #include "Filter.h"
 #include "Statistics.h"
-#include "header.h"
+namespace ImageStack {
 
 #define FourierTransform(X) (FFT::apply(X, true, true, false))
 #define InverseFourierTransform(X) (IFFT::apply(X, true, true, false))
@@ -559,5 +559,5 @@ Image KernelEstimation::apply(Image B, int kernelSize) {
     return K;
 }
 
-#include "footer.h"
+}
 #endif

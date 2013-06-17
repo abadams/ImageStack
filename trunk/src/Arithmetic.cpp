@@ -1,7 +1,8 @@
 #include "main.h"
 #include "Arithmetic.h"
-#include "header.h"
 #include "Statistics.h"
+
+namespace ImageStack {
 
 void Add::help() {
     printf("\n-add adds the second image in the stack to the top image in the stack.\n\n"
@@ -753,4 +754,4 @@ void Quantize::apply(Image a, float increment) {
     a.set(a - Expr::fmod(a, increment) - Expr::Select(a > 0, 0, increment));
 }
 
-#include "footer.h"
+}

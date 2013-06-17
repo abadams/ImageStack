@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_EXPR_SCALAR_H
 #define IMAGESTACK_EXPR_SCALAR_H
 
-#include "header.h"
+namespace ImageStack {
 
 // This file contains scalar definitions of various operators used by Expr.h
 
@@ -137,6 +137,6 @@ namespace Scalar {
     };
 }
 
-#include "footer.h"
+}
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef NO_FFTW
 #ifndef KERNELESTIMATION_H
 #define KERNELESTIMATION_H
-#include "header.h"
+namespace ImageStack {
 
 class KernelEstimation : public Operation {
 public:
@@ -21,6 +21,6 @@ private:
     static void bilateralFilterIteration(Image im, float sigmaR);
 };
 
-#include "footer.h"
+}
 #endif
 #endif

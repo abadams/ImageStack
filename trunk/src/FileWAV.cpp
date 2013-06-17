@@ -2,18 +2,18 @@
 #include "File.h"
 
 #ifdef NO_SDL
-#include "header.h"
+namespace ImageStack {
 namespace FileWAV {
 #include "FileNotImplemented.h"
 }
-#include "footer.h"
+}
 #else
 
 #include "SDL.h"
 #include "Network.h" // for ntohs
 #include "Geometry.h"
 
-#include "header.h"
+namespace ImageStack {
 namespace FileWAV {
 void help() {
     printf(".wav sound files. They are represented as one or two channel images with\n"
@@ -176,6 +176,6 @@ Image load(string filename) {
 }
 }
 
-#include "footer.h"
+}
 #endif
 

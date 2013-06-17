@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_NETWORKOPS_H
 #define IMAGESTACK_NETWORKOPS_H
-#include "header.h"
+namespace ImageStack {
 
 #include <stdio.h>
 
@@ -23,5 +23,5 @@ public:
     static map<int, TCPServer *> servers;
 };
 
-#include "footer.h"
+}
 #endif

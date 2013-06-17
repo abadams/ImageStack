@@ -3,7 +3,7 @@
 
 #include <immintrin.h>
 
-#include "header.h"
+namespace ImageStack {
 
 namespace Vec {
     typedef __m256 type;
@@ -115,6 +115,6 @@ namespace Vec {
     }
 }
 
-#include "footer.h"
+}
 
 #endif

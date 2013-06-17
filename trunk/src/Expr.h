@@ -3,21 +3,8 @@
 
 #include <stdint.h>
 #include "Exception.h" // assert
-#include "header.h"
-
-// This file defines a set of image-like function objects. They
-// represent pure functions over a 4-d integer domain. Their body is
-// completely contained within their type, so that they compile to
-// efficient code (with no dynamic dispatch).
-//
-// E.g., the function f(x, y, t, c) = x*3 + 4 has type Add<Mul<X, Const>, Const>
-//
-// They are all tagged with a nested type called Expr so that sfinae prevents unwanted constructions
-
-class Image;
 
 // Include structures describing various primitive ops like add and floor
-
 // Scalar versions of the ops
 #include "Expr_scalar.h"
 #ifdef __AVX__
@@ -32,6 +19,19 @@ class Image;
 #include "Expr_scalar_fallback.h"
 #endif
 #endif
+
+namespace ImageStack {
+
+// This file defines a set of image-like function objects. They
+// represent pure functions over a 4-d integer domain. Their body is
+// completely contained within their type, so that they compile to
+// efficient code (with no dynamic dispatch).
+//
+// E.g., the function f(x, y, t, c) = x*3 + 4 has type Add<Mul<X, Const>, Const>
+//
+// They are all tagged with a nested type called Expr so that sfinae prevents unwanted constructions
+
+class Image;
 
 // Used for safety when comparing bounds of things. In general we
 // don't expect things will be compared against this, but in case they
@@ -2473,6 +2473,6 @@ namespace Expr {
 }
 
 
-#include "footer.h"
+}
 
 #endif

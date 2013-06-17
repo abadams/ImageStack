@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_EXPR_SCALAR_FALLBACK_H
 #define IMAGESTACK_EXPR_SCALAR_FALLBACK_H
 
-#include "header.h"
+namespace ImageStack {
 
 // This file gets included if no sse or avx is available. It provides
 // for a vector type that's just a float
@@ -97,6 +97,6 @@ namespace Vec {
 }
 
 
-#include "footer.h"
+}
 
 #endif

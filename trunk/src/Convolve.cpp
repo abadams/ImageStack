@@ -5,7 +5,7 @@
 #include "DFT.h"
 #include "File.h"
 #include "Statistics.h"
-#include "header.h"
+namespace ImageStack {
 
 void Convolve::help() {
     pprintf("-convolve takes a width, height, and frames and a single-channel 3D"
@@ -292,5 +292,5 @@ Image Convolve::apply(Image im, Image filter, BoundaryCondition b, Multiply::Mod
     return out;
 }
 
-#include "footer.h"
+}
 

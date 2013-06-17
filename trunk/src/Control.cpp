@@ -1,6 +1,6 @@
 #include "main.h"
 #include "Control.h"
-#include "header.h"
+namespace ImageStack {
 
 void Loop::help() {
     printf("\n-loop takes an integer and a sequence of commands, and loops that sequence\n"
@@ -89,7 +89,7 @@ void Time::parse(vector<string> args) {
     printf("%3.3f s\n", t2 - t1);
 }
 
-#include "footer.h"
+}
 
 
 

@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 
-#include "header.h"
+namespace ImageStack {
 
 #define EXCEPTION_LENGTH 1024
 
@@ -19,6 +19,6 @@ void panic(const char *fmt, ...) throw(Exception);
 #undef assert
 void assert(bool cond, const char *fmt, ...) throw(Exception);
 
-#include "footer.h"
+}
 
 #endif

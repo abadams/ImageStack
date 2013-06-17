@@ -9,7 +9,7 @@
 #include <unistd.h>
 #endif
 
-#include "header.h"
+namespace ImageStack {
 
 void checkInitialized() {
 #ifdef WIN32
@@ -317,4 +317,4 @@ int UDPServer::recv(char *buffer, int maxlen, Address *address, int timeout) {
 
     return received;
 }
-#include "footer.h"
+}

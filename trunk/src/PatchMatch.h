@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_PATCHMATCH_H
 #define IMAGESTACK_PATCHMATCH_H
-#include "header.h"
+namespace ImageStack {
 
 class PatchMatch : public Operation {
 public:
@@ -40,5 +40,5 @@ public:
     void apply(Image image, Image mask, int numIter = 5, int numIterPM = 5);
 };
 
-#include "footer.h"
+}
 #endif

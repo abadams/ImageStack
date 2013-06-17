@@ -5,7 +5,7 @@
 #include "Statistics.h"
 #include "Geometry.h"
 #include <fstream>
-#include "header.h"
+namespace ImageStack {
 
 //#define HDR_DEBUG
 
@@ -380,4 +380,4 @@ float AssembleHDR::weightFunc(float maxVal, CutoffType cutoff) {
     }
     return 1.0;
 }
-#include "footer.h"
+}

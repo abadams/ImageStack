@@ -4,7 +4,7 @@
 #include "Expr.h"
 
 #include "tables.h"
-#include "header.h"
+namespace ImageStack {
 
 // The image data type.
 
@@ -1032,5 +1032,5 @@ Image::operator()(const SX &x) const {
 #undef ShiftedCase
 
 
-#include "footer.h"
+}
 #endif

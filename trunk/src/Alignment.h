@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_ALIGNMENT_H
 #define IMAGESTACK_ALIGNMENT_H
 
-#include "header.h"
+namespace ImageStack {
 
 class Align : public Operation {
 public:
@@ -23,6 +23,6 @@ public:
     static void apply(Image im, Align::Mode m);
 };
 
-#include "footer.h"
+}
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_STACK_H
 #define IMAGESTACK_STACK_H
 #include <map>
-#include "header.h"
+namespace ImageStack {
 
 // These operations apply only to the stack, so they have no apply
 // method. They also have no unit tests.
@@ -42,5 +42,5 @@ public:
     static map<string, Image> stash;
 };
 
-#include "footer.h"
+}
 #endif

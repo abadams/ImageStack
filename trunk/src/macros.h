@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 
-#include "header.h"
+namespace ImageStack {
 
 #ifdef WIN32
 #undef min
@@ -87,5 +87,5 @@ static inline unsigned short HDRtoLDR16(float x) {
 
 #include <math.h>
 
-#include "footer.h"
+}
 #endif

@@ -1,7 +1,7 @@
 #include "main.h"
 #include "Display.h"
 #include "DisplayWindow.h"
-#include "header.h"
+namespace ImageStack {
 
 #ifndef NO_SDL
 Display::~Display() {
@@ -63,4 +63,4 @@ void Display::apply(Image im, bool fullscreen) {
 }
 
 #endif
-#include "footer.h"
+}

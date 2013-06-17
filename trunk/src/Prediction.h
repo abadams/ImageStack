@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_PREDICTION_H
 #define IMAGESTACK_PREDICTION_H
-#include "header.h"
+namespace ImageStack {
 
 class Inpaint : public Operation {
 public:
@@ -19,5 +19,5 @@ public:
     static void apply(Image dst, Image src);
 };
 
-#include "footer.h"
+}
 #endif

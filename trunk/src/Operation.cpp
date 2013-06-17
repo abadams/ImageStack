@@ -36,7 +36,7 @@
 #include "WLS.h"
 #include "Plugin.h"
 #include "LocalLaplacian.h"
-#include "header.h"
+namespace ImageStack {
 
 
 // add your operation to the operations table here
@@ -335,4 +335,4 @@ bool Test::apply(string name, Operation *op) {
     }
 };
 
-#include "footer.h"
+}

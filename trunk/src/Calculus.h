@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_CALCULUS_H
 #define IMAGESTACK_CALCULUS_H
-#include "header.h"
+namespace ImageStack {
 
 class Gradient : public Operation {
 public:
@@ -36,5 +36,5 @@ public:
     static Image apply(Image dx, Image dy, float termination = 0.01);
 };
 
-#include "footer.h"
+}
 #endif

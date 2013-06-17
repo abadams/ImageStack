@@ -1,6 +1,6 @@
 #include "main.h"
 #include "File.h"
-#include "header.h"
+namespace ImageStack {
 
 namespace FileCSV {
 void help() {
@@ -65,4 +65,4 @@ void save(Image im, string filename) {
     fclose(f);
 }
 }
-#include "footer.h"
+}

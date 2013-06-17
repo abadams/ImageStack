@@ -6,7 +6,7 @@
 #include "eigenvectors.h"
 #include <algorithm>
 #include <iostream>
-#include "header.h"
+namespace ImageStack {
 
 void Dimensions::help() {
     pprintf("-dimensions prints the size of the current image.\n\n"
@@ -1910,4 +1910,4 @@ void Orthonormalize::apply(Image im) {
 }
 
 
-#include "footer.h"
+}

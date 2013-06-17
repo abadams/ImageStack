@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_FILTER_H
 #define IMAGESTACK_FILTER_H
-#include "header.h"
+namespace ImageStack {
 
 class GaussianBlur : public Operation {
 public:
@@ -108,5 +108,5 @@ public:
     static Image apply(Image im);
 };
 
-#include "footer.h"
+}
 #endif

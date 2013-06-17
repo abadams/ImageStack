@@ -1,6 +1,6 @@
 #ifndef LAHBPCG_H
 #define LAHBPCG_H
-#include "header.h"
+namespace ImageStack {
 
 class LAHBPCG : public Operation {
 public:
@@ -13,5 +13,5 @@ public:
 private:
 };
 
-#include "footer.h"
+}
 #endif

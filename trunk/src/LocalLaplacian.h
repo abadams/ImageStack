@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_LOCAL_LAPLACIAN_H
 #define IMAGESTACK_LOCAL_LAPLACIAN_H
-#include "header.h"
+namespace ImageStack {
 
 class LocalLaplacian : public Operation {
 public:
@@ -11,5 +11,5 @@ public:
 };
 
 
-#include "footer.h"
+}
 #endif

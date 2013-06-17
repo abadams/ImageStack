@@ -1,7 +1,10 @@
 #ifndef NO_FFTW
 #ifndef DFT_H
 #define DFT_H
-#include "header.h"
+
+#include "Convolve.h"
+
+namespace ImageStack {
 
 class DCT : public Operation {
 public:
@@ -27,8 +30,6 @@ public:
     static void apply(Image im, bool x = true, bool y = true, bool t = true);
 };
 
-#include "Convolve.h"
-
 class FFTConvolve : public Operation {
 public:
     void help();
@@ -49,6 +50,6 @@ public:
     static Image apply(Image dx, Image dy, Image target, float targetStrength = 0);
 };
 
-#include "footer.h"
+}
 #endif
 #endif

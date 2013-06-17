@@ -8,7 +8,7 @@
 #include "Paint.h"
 #include "Statistics.h"
 #include "LAHBPCG.h"
-#include "header.h"
+namespace ImageStack {
 
 void WLS::help() {
     pprintf("-wls filters the image with the wls-filter described in the paper"
@@ -125,4 +125,4 @@ Image WLS::apply(Image im, float alpha, float lambda, float tolerance) {
 
     return x;
 }
-#include "footer.h"
+}

@@ -1,6 +1,6 @@
 #ifndef IMAGESTACK_MATH_H
 #define IMAGESTACK_MATH_H
-#include "header.h"
+namespace ImageStack {
 
 class Add : public Operation {
 public:
@@ -142,5 +142,5 @@ public:
     static void apply(Image a, float increment);
 };
 
-#include "footer.h"
+}
 #endif

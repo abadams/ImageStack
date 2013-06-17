@@ -1,7 +1,8 @@
 #include "main.h"
 #include "File.h"
-#include "header.h"
 #include "Geometry.h"
+
+namespace ImageStack {
 
 namespace FileTGA {
 
@@ -239,4 +240,4 @@ void save(Image im, string filename) {
     fclose(f);
 }
 }
-#include "footer.h"
+}

@@ -5,7 +5,7 @@
 #include "Arithmetic.h"
 #include "Statistics.h"
 #include "Filter.h"
-#include "header.h"
+namespace ImageStack {
 
 namespace {
 // used for picking file formats
@@ -907,4 +907,4 @@ void SaveArray::apply(Image im, string filename) {
 
     fclose(f);
 }
-#include "footer.h"
+}

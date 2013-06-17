@@ -1,6 +1,6 @@
 #include "main.h"
 #include "File.h"
-#include "header.h"
+namespace ImageStack {
 
 /* PPM file format:
 
@@ -123,4 +123,4 @@ void save(Image im, string filename, int depth) {
     fclose(f);
 }
 }
-#include "footer.h"
+}

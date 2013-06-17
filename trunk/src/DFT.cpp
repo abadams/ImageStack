@@ -10,7 +10,7 @@
 #include "Calculus.h"
 #include "File.h"
 #include <fftw3.h>
-#include "header.h"
+namespace ImageStack {
 
 void DCT::help() {
     pprintf("-dct performs a real discrete cosine transform on the current"
@@ -689,6 +689,6 @@ Image FFTPoisson::apply(Image dx, Image dy, Image target, float targetStrength) 
 }
 
 
-#include "footer.h"
+}
 #endif
 
