@@ -28,7 +28,7 @@ using ::std::list;
 using ::std::swap;
 using ::std::isfinite;
 
-#ifndef linux
+#ifndef __GNUC__
 using ::std::isinf;
 using ::std::isnan;
 #endif

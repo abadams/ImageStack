@@ -172,7 +172,7 @@ Image GaussTransform::apply(Image slice, Image splat, Image values,
         vector<float> val(values.channels);
         for (int t = 0; t < splat.frames; t++) {
             for (int y = 0; y < splat.height; y++) {
-                for (int x = 0; x < splat.width; x++) {                    
+                for (int x = 0; x < splat.width; x++) {
                     for (int c = 0; c < splat.channels; c++) {
                         pos[c] = splat(x, y, t, c) * invSigma[c];
                     }
@@ -1010,15 +1010,11 @@ Image FastNLMeans::apply(Image im, float patchSize, float spatialSigma, float pa
             }
             delta = delta.channel(0);
 
-            if (dx == 1 && dy == 1) Save::apply(delta, "delta.tmp");
-
             // 3) Pass the patch-space distance into a
             // cheap-to-compute Gaussian-like function to get the
             // patch weight. The -0.1 and the max makes it truncate at
             // 3 standard deviations.
             delta.set(spatialWeight * max(0, 1.1f/((delta*delta)/(patchSigma*patchSigma) + 1) - 0.1));
-
-            if (dx == 1 && dy == 1) Save::apply(delta, "delta2.tmp");
 
             // 4) Accumulate into the output.
             // We transfer energy in the +dx, +dy and the -dx, -dy directions using the same weights
