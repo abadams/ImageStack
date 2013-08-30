@@ -1,4 +1,5 @@
 #ifndef IMAGESTACK_PERMUTOHEDRAL_H
+#define IMAGESTACK_PERMUTOHEDRAL_H
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -287,7 +288,7 @@ public:
 
 
     void splat_or_slice(float *position, float *value, bool splatting, bool record) {
-        
+
         // first rotate position into the (d+1)-dimensional hyperplane
         elevated[d] = -d*position[d-1]*scaleFactor[d-1];
         for (int i = d-1; i > 0; i--)

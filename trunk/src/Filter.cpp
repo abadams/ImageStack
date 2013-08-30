@@ -1333,6 +1333,11 @@ Image CircularFilter::apply(Image im, int radius) {
     float average = 0;
     int count = 0;
 
+    if (radius <= 0) {
+        out.set(im);
+        return out;
+    }
+
     // make the filter edge profile
     vector<int> edge(radius*2+1);
     for (int i = 0; i < 2*radius+1; i++) {
