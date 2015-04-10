@@ -2,7 +2,7 @@
 #define IMAGESTACK_NETWORKOPS_H
 namespace ImageStack {
 
-#include <stdio.h>
+#include <cstdio>
 
 class TCPServer;
 

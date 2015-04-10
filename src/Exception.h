@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_EXCEPTION_H
 #define IMAGESTACK_EXCEPTION_H
 
-#include <stdarg.h>
+#include <cstdarg>
 
 namespace ImageStack {
 

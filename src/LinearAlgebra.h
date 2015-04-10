@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_LINEARALGEBRA_H
 #define IMAGESTACK_LINEARALGEBRA_H
-#include <stdio.h>
-#include <math.h>
+#include <cstdio>
+#include <cmath>
 namespace ImageStack {
 
 /*

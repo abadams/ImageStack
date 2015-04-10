@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # Make the operation listing page
 echo "#labels Featured" > OperationIndex.wiki

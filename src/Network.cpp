@@ -6,7 +6,7 @@
 #define close closesocket
 #else
 #include <sys/errno.h>
-#include <unistd.h>
+#include <cunistd>
 #endif
 
 namespace ImageStack {

@@ -1,7 +1,7 @@
 #include "main.h"
 #include "File.h"
 namespace ImageStack {
-#include <stdint.h>
+#include <cstdint>
 
 namespace FileTMP {
 enum TypeCode {FLOAT32 = 0, FLOAT64, UINT8, INT8, UINT16, INT16, UINT32, INT32, UINT64, INT64};

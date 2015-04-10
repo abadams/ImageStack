@@ -105,7 +105,7 @@ Image AssembleHDR::apply(Image frames, const vector<float> &exposures, string ga
         }
     } catch (Exception) {
         // Exposure isn't a float - assume it's a file name for a camera curve as output by HDRShop
-        ::std::ifstream curveFile(gamma.c_str());
+        std::ifstream curveFile(gamma.c_str());
         assert(curveFile.is_open(), ("Can't open filename "+gamma+" for reading a camera curve").c_str());
 
         gi.type = gammaInfo::Map;

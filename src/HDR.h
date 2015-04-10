@@ -1,5 +1,6 @@
 #ifndef IMAGESTACK_HDR_H
 #define IMAGESTACK_HDR_H
+
 namespace ImageStack {
 
 class AssembleHDR : public Operation {

@@ -11,7 +11,7 @@
 #endif
 
 #include <string>
-using ::std::string;
+using std::string;
 
 #include "macros.h"
 #include "Image.h"

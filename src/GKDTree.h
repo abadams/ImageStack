@@ -3,9 +3,9 @@
 namespace ImageStack {
 
 #include <limits>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 
 float rand_float() {
     return rand()/(RAND_MAX+1.0f);

@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_EXPR_H
 #define IMAGESTACK_EXPR_H
 
-#include <stdint.h>
+#include <cstdint>
 #include "Exception.h" // assert
 
 // Include structures describing various primitive ops like add and floor

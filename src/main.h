@@ -1,13 +1,13 @@
 #ifndef IMAGESTACK_MAIN_H
 #define IMAGESTACK_MAIN_H
 
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-
 #include <cmath>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+
+// #include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -19,18 +19,18 @@
 #include <memory>
 
 using std::shared_ptr;
-using ::std::string;
-using ::std::vector;
-using ::std::pair;
-using ::std::make_pair;
-using ::std::map;
-using ::std::list;
-using ::std::swap;
-using ::std::isfinite;
+using std::string;
+using std::vector;
+using std::pair;
+using std::make_pair;
+using std::map;
+using std::list;
+using std::swap;
+using std::isfinite;
 
 #ifndef __GNUC__
-using ::std::isinf;
-using ::std::isnan;
+using std::isinf;
+using std::isnan;
 #endif
 
 #ifdef _MSC_VER

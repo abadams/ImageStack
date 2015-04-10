@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_EIGENVECTORS_H
 #define IMAGESTACK_EIGENVECTORS_H
 
-#include <math.h>
+#include <cmath>
 namespace ImageStack {
 
 class Eigenvectors {

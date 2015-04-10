@@ -376,7 +376,7 @@ public:
             h.x = 35 + (hist[0]-hist[34])/(hist[34]+hist[0]+hist[35]);
             maxima.push_back(h);
         }
-        ::std::sort(maxima.begin(), maxima.end());
+        std::sort(maxima.begin(), maxima.end());
 
 
         // Pick major orientation
@@ -571,7 +571,7 @@ public:
 
         // Find local maxima
         vector<LocalMaxima::Maximum> maxima = LocalMaxima::apply(dogPyramid, true, true, true, 0.00001, 10);
-        ::std::sort(maxima.begin(), maxima.end());
+        std::sort(maxima.begin(), maxima.end());
 
         //printf("Assigning features.. %d\n",maxima.size());
 
@@ -666,7 +666,7 @@ public:
         // this list. This is a little inefficient, given that we're
         // going to throw out most of these, but compared to the image
         // processing steps, everything is cheap.
-        ::std::sort(allCorrespondences.begin(), allCorrespondences.end());
+        std::sort(allCorrespondences.begin(), allCorrespondences.end());
 
         // Select up to 1024 of the best correspondences.
         for (unsigned i = 0; i < allCorrespondences.size() && correspondences.size() < 1024; i++) {
