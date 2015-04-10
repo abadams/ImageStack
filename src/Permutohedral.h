@@ -1,9 +1,9 @@
 #ifndef IMAGESTACK_PERMUTOHEDRAL_H
 #define IMAGESTACK_PERMUTOHEDRAL_H
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 
 namespace ImageStack {
 

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 cat header.inc > index.html
 #echo "<html><head><title>ImageStack Help</title></head>" > index.html
 #echo "<body>" >> index.html

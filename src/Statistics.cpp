@@ -1030,7 +1030,7 @@ void Sort::apply(Image im, char dimension) {
                     for (int c = 0; c < im.channels; c++) {
                         tmp[c] = im(x, y, t, c);
                     }
-                    ::std::sort(tmp.begin(), tmp.end());
+                    std::sort(tmp.begin(), tmp.end());
                     for (int c = 0; c < im.channels; c++) {
                         im(x, y, t, c) = tmp[c];
                     }
@@ -1263,7 +1263,7 @@ bool LocalMaxima::test() {
     a(90, 90, 2, 0) = 70;
 
     vector<Maximum> results = apply(a, true, true, true, 5, 10);
-    ::std::sort(results.begin(), results.end());
+    std::sort(results.begin(), results.end());
 
     if (results.size() != 3) return false;
 
@@ -1469,7 +1469,7 @@ vector<LocalMaxima::Maximum> LocalMaxima::apply(Image im, bool tCheck, bool xChe
     }
 
     // Order the collisions from maximum strength disparity to minimum (i.e from easy decisions to hard ones)
-    ::std::sort(collisions.begin(), collisions.end());
+    std::sort(collisions.begin(), collisions.end());
 
     // Start by accepting them all, and knock some out greedily using
     // the collisions. This is a heurstic. To do this perfectly is a

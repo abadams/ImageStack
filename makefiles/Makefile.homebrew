@@ -1,0 +1,66 @@
+
+BIN_CCFLAGS = -O3 -std=c++14 -stdlib=libc++ \
+              -Winvalid-pch -Wall -Werror \
+              -march=corei7 -msse4 \
+              -Wno-uninitialized -Wno-deprecated-register
+
+LIB_CCFLAGS = $(BIN_CCFLAGS) -fPIC
+
+CC = /usr/local/opt/llvm/bin/clang
+CXX = /usr/local/opt/llvm/bin/clang++
+LD = /usr/local/opt/llvm/bin/lld
+
+################
+# Dependencies #
+################
+
+# Needs the following homebrew packages:
+#       llvm --with-clang
+#       fftw
+#       openexr
+#       sdl
+#       jpeg
+#       libtiff
+#       libpng
+# Comment out any dependencies you do not wish to include, or do not have
+
+SDL_CCFLAGS = $(shell sdl-config --cflags)
+SDL_LIBS = $(shell sdl-config --libs)
+
+JPEG_CCFLAGS = -I/usr/local/opt/jpeg/include
+JPEG_LIBS = -L/usr/local/opt/jpeg/lib -ljpeg
+
+TIFF_CCFLAGS = $(shell pkg-config libtiff-4 --cflags)
+TIFF_LIBS = $(shell pkg-config libtiff-4 --libs)
+
+PNG_CCFLAGS = $(shell pkg-config libpng16 --cflags)
+PNG_LIBS = $(shell pkg-config libpng16 --libs)
+
+FFTW_CCFLAGS = $(shell pkg-config fftw3f --cflags)
+FFTW_LIBS = $(shell pkg-config fftw3f --libs)
+
+OPENEXR_CCFLAGS = $(shell pkg-config OpenEXR --cflags)
+OPENEXR_LIBS = $(shell pkg-config OpenEXR --libs)
+
+#################################
+# Target names and installation #
+#################################
+
+BIN_TARGET = bin/ImageStack
+LIB_TARGET = lib/libImageStack.dylib
+LIB_FLAGS = -dynamiclib
+
+EXAMPLE_TARGET = examples/ExamplePlugin.so
+
+default: $(BIN_TARGET) library
+
+install: $(BIN_TARGET)
+	cp $(BIN_TARGET) /usr/local/bin
+
+libinstall: library
+	cp $(LIB_TARGET) /usr/local/lib
+	mkdir -p /usr/local/include/ImageStack
+	cp include/*.h /usr/local/include/ImageStack/
+
+include Makefile.ansicolor
+include Makefile.common

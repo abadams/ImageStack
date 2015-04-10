@@ -2,9 +2,9 @@
 #define IMAGESTACK_DISPLAYWINDOW_H
 #ifndef NO_SDL
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 #include "main.h"
 #include "Image.h"
 

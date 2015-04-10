@@ -1,7 +1,7 @@
 #ifndef IMAGESTACK_MACROS_H
 #define IMAGESTACK_MACROS_H
 
-#include <stdarg.h>
+#include <cstdarg>
 
 namespace ImageStack {
 

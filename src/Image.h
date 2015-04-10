@@ -2,20 +2,16 @@
 #define IMAGESTACK_IMAGE_H
 
 #include "Expr.h"
-
 #include "tables.h"
+
 namespace ImageStack {
 
-// The image data type.
-
-// It's a reference-counted pointer type.
-
+// The image data type. It's a reference-counted pointer type.
 // Note that "const Image" means that the reference doesn't change, not
 // that the pixel data doesn't. It's equivalent to "float * const
 // foo", not "const float * foo". This means that methods tagged const
 // are those which do not change the metadata, not those which do not
 // change the pixel data.
-
 
 template<typename SX, typename SY, typename ST, typename SC, bool AffineCase, bool ShiftedCase>
 class ImageRef;
@@ -1028,9 +1024,9 @@ Image::operator()(const SX &x) const {
     ((*this), x, 0, 0, 0);
 }
 
-#undef AffineCase        
+#undef AffineCase
 #undef ShiftedCase
 
 
-}
+};
 #endif

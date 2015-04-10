@@ -1,1 +1,1 @@
-ImageStack -push 1920 1200 1 1 -noise 0 1 -threshold 0.75 -loop 1000 --convolve 3 3 1 1 1 1 1 0.5 1 1 1 1 zero --eval "(val < 3.75) * (val > 2.25)" --display full
+../bin/ImageStack -push 1024 768 1 1 -noise 0 1 -threshold 0.75 -loop 1000 --convolve 3 3 1 1 1 1 1 0.5 1 1 1 1 zero --eval "(val < 3.75) * (val > 2.25)" --display full

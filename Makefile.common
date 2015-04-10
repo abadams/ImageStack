@@ -1,5 +1,9 @@
+
 # the components of imagestack
+
 IMAGESTACK_OBJECTS = \
+	Arithmetic.o \
+	Alignment.o \
 	Calculus.o \
 	Color.o \
 	Complex.o \
@@ -31,15 +35,13 @@ IMAGESTACK_OBJECTS = \
 	LAHBPCG.o \
 	LightField.o \
         LocalLaplacian.o \
-	Arithmetic.o \
-	Alignment.o \
-	NetworkOps.o \
 	Network.o \
+	NetworkOps.o \
 	Operation.o \
 	Paint.o \
-	PatchMatch.o \
 	Parser.o \
         Plugin.o \
+	PatchMatch.o \
 	Prediction.o \
 	Stack.o \
 	Statistics.o \
@@ -60,10 +62,33 @@ OPENEXR_CCFLAGS ?= -DNO_OPENEXR
 # Top-level targets      #
 ##########################
 
-all: $(BIN_TARGET) library
+all: prepare $(BIN_TARGET) library 
 
+BIN_BUILD_DIR = bin/build/
+LIB_BUILD_DIR = lib/build/
+EXAMPLES_BUILD_DIR = examples/build/
+
+
+$(BIN_BUILD_DIR):
+	mkdir -p $(BIN_BUILD_DIR)
+	@$(PRINT_OK)
+
+$(LIB_BUILD_DIR):
+	mkdir -p $(LIB_BUILD_DIR)
+	@$(PRINT_OK)
+
+$(EXAMPLES_BUILD_DIR):
+	mkdir -p $(EXAMPLES_BUILD_DIR)
+	@$(PRINT_OK)
+
+prepare: $(BIN_BUILD_DIR) $(LIB_BUILD_DIR) $(EXAMPLES_BUILD_DIR)
+
+# lib/*.* bin/build/*.* lib/build/*.* include/*.* && rm -rf
 clean:
-	-rm -f $(BIN_TARGET) lib/*.* bin/build/*.* lib/build/*.* include/*.*
+	rm -rf $(BIN_TARGET) $(BIN_BUILD_DIR) $(LIB_BUILD_DIR) $(EXAMPLES_BUILD_DIR)
+	@$(PRINT_OK)
+
+.PHONY: clean
 
 ##########################
 # ImageStack the program #
@@ -74,38 +99,74 @@ $(BIN_TARGET): IMAGESTACK_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIB
 BIN_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),bin/build/$f)
 
 # Everything includes main.h. By precompiling that header we can speed up compilation about 30%
-bin/build/main.h.gch: src/main.h
-	$(CXX) $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o bin/build/main.h.gch src/main.h
+bin/build/main.pch: CMD = $(CXX) $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o bin/build/main.pch src/main.h
+
+bin/build/main.pch: prepare src/main.h
+	@$(BUILD_CMD)
+
+$(BIN_TARGET): CMD = $(CXX) $(IMAGESTACK_CCFLAGS) $(BIN_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN_TARGET)
 
 $(BIN_TARGET): $(BIN_OBJECTS)
-	$(CXX) $(IMAGESTACK_CCFLAGS) $(BIN_OBJECTS) $(IMAGESTACK_LIBS) -o $(BIN_TARGET)
+	@$(BUILD_CMD)
 
--include $(addprefix bin/build/, $(IMAGESTACK_OBJECTS:.o=.d))
+bin/build/%.o: CMD = $(CXX) -include bin/build/main.h $(IMAGESTACK_CCFLAGS) -MMD -MP -MF bin/build/$*.d -MT $@ -c $< -o $@
 
-bin/build/%.o: src/%.cpp bin/build/main.h.gch
-	$(CXX) -include bin/build/main.h $(IMAGESTACK_CCFLAGS) -MMD -MP -MF bin/build/$*.d -MT $@ -c $< -o $@
+bin/build/%.o: src/%.cpp bin/build/main.pch bin/build/ImageStack.h
+	@$(BUILD_CMD)
+
+bin/build/ImageStack.h:
+	cp src/*.h bin/build/
+	@$(PRINT_OK)
 
 ##########################
 # ImageStack the library #
 ##########################
 
 $(LIB_TARGET): IMAGESTACK_CCFLAGS = $(LIB_CCFLAGS) -DNO_MAIN $(SDL_CCFLAGS) $(JPEG_CCFLAGS) $(TIFF_CCFLAGS) $(PNG_CCFLAGS) $(FFTW_CCFLAGS) $(OPENEXR_CCFLAGS)
-$(LIB_TARGET): IMAGESTACK_LIBS = $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
+$(LIB_TARGET): IMAGESTACK_LIBS = $(SDL_LIBS) $(JPEG_LIBS) $(TIFF_LIBS) $(PNG_LIBS) $(FFTW_LIBS) $(OPENEXR_LIBS)
 LIB_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),lib/build/$f)
 
-library: $(LIB_TARGET) include/ImageStack.h 
+library: $(LIB_TARGET) lib/build/ImageStack.h lib/build/main.pch
 
-lib/build/main.h.gch: src/main.h
-	$(CXX) $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o lib/build/main.h.gch src/main.h
+lib/build/main.pch: CMD = $(CXX) $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o lib/build/main.pch src/main.h
+
+lib/build/main.pch: prepare src/main.h
+	@$(BUILD_CMD)
+
+$(LIB_TARGET): CMD = $(CXX) $(LIB_FLAGS) $(LIB_OBJECTS) -o $(LIB_TARGET) $(IMAGESTACK_LIBS)
 
 $(LIB_TARGET): $(LIB_OBJECTS)
-	$(CXX) $(LIB_FLAGS) $(LIB_OBJECTS) -o $(LIB_TARGET) $(IMAGESTACK_LIBS)
+	@$(BUILD_CMD)
 
-include/ImageStack.h: src/ImageStack.h
-	cp src/*.h include
+lib/build/%.o: CMD = $(CXX) -include lib/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
 
-lib/build/%.o: src/%.cpp lib/build/main.h.gch
-	$(CXX) -include lib/build/main.h $(IMAGESTACK_CCFLAGS) -c $< -o $@
+lib/build/%.o: src/%.cpp lib/build/main.pch lib/build/ImageStack.h
+	@$(BUILD_CMD)
+
+lib/build/ImageStack.h:
+	cp src/*.h lib/build/
+	@$(PRINT_OK)
+
+##########################
+# ImageStack the example #
+##########################
+
+$(EXAMPLE_TARGET): IMAGESTACK_OBJECT = examples/build/ExamplePlugin.o
+$(EXAMPLE_TARGET): IMAGESTACK_CCFLAGS = $(BIN_CCFLAGS) -c examples/plugin.cpp -o $(IMAGESTACK_OBJECT) -I src/
+$(EXAMPLE_TARGET): IMAGESTACK_LDFLAGS = -o $(EXAMPLE_TARGET) -flavor darwin -arch x86_64 -dylib 
+
+example: $(EXAMPLE_TARGET) $(LIB_TARGET) $(BIN_TARGET)
+
+$(EXAMPLE_TARGET): CMD = $(LD) $(IMAGESTACK_OBJECT) $(IMAGESTACK_LDFLAGS)
+
+$(EXAMPLE_TARGET): $(IMAGESTACK_OBJECT)
+	$(LD) $(IMAGESTACK_OBJECT) $(IMAGESTACK_LDFLAGS)
+
+$(IMAGESTACK_OBJECT): CMD = $(CXX) $(IMAGESTACK_CCFLAGS)
+
+$(IMAGESTACK_OBJECT): prepare
+	$(CXX) $(IMAGESTACK_CCFLAGS)
+
 
 ##########################
 # Source Style Fixing    #

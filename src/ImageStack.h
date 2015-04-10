@@ -24,7 +24,7 @@
 #include <netdb.h>
 #endif
 
-#include <math.h>
+#include <cmath>
 
 #include "main.h"
 #include "Operation.h"
