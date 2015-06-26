@@ -1,5 +1,6 @@
 #ifndef NO_SDL
 #include "DisplayWindow.h"
+#include "Geometry.h"
 #ifdef __CYGWIN__
 #define WIN32
 #endif
@@ -25,6 +26,7 @@ DisplayWindow::DisplayWindow() {
     displayImage = NULL;
     width_ = height_ = 0;
     xOffset_ = yOffset_ = tOffset_ = 0;
+    zoom_ = 0;
     fullscreen_ = false;
     cursorVisible_ = true;
 
@@ -57,19 +59,28 @@ DisplayWindow::~DisplayWindow() {
 void DisplayWindow::setMode(int w, int h, bool f, bool cursorVisible,
                             float bgRed, float bgGreen, float bgBlue) {
 
+    SDL_mutexP(mutex);
+    printf("%d %d\n", w, h);
+    if (w < 640) w = 640;
+    if (h < 480) h = 480;
+
     cursorVisible_ = cursorVisible;
     // set the clear color
     bgRed_   = (unsigned char)(bgRed   * 255 + 0.499);
     bgGreen_ = (unsigned char)(bgGreen * 255 + 0.499);
     bgBlue_  = (unsigned char)(bgBlue  * 255 + 0.499);
 
-    if (w == width_ && h == height_ && f == fullscreen_) { return; }
+    if (w == width_ && h == height_ && f == fullscreen_) {
+        SDL_mutexV(mutex);
+        return;
+    }
 
     width_ = w;
     height_ = h;
     fullscreen_ = f;
 
     modeChange = true;
+    SDL_mutexV(mutex);
 
     // wait on the thread
     if (thread) {
@@ -113,13 +124,24 @@ void DisplayWindow::setImage(Image im) {
     amask = 0xff000000;
 #endif
 
+    // Pick a sane zoom level
+    zoom_ = 0;
+    while ((im.width << zoom_) <= width_/2 &&
+           (im.height << zoom_) <= height_/2) {
+        zoom_++;
+    }
+    while ((im.width >> (-zoom_)) >= width_*2 ||
+           (im.height >> (-zoom_)) >= height_*2) {
+        zoom_--;
+    }
+
     SDL_mutexP(mutex);
     if (surface) {
         // free the previous surface
         SDL_FreeSurface(surface);
     }
 
-    surface = SDL_CreateRGBSurface(SDL_SWSURFACE, im.width, im.height, 32, rmask, gmask, bmask, amask);
+    surface = SDL_CreateRGBSurface(SDL_SWSURFACE, width_, height_, 32, rmask, gmask, bmask, amask);
     if (!surface) {
         SDL_mutexV(mutex);
         panic("Unable to allocate SDL surface: %s\n", SDL_GetError());
@@ -142,40 +164,73 @@ void DisplayWindow::renderSurface() {
 
     SDL_LockSurface(surface);
 
+    // Grab the appropriate frame
     Image im = image_.frame(tOffset_);
+
+    // Figure out the portion of the image that we want
+    int w = width_;
+    int h = height_;
+    int minX = xOffset_;
+    int minY = yOffset_;
+
+    if (zoom_ > 0) {
+        // If we're zooming in, then crop and then zoom.
+        w += (1 << zoom_) - 1;
+        w = w >> zoom_;
+        h += (1 << zoom_) - 1;
+        h = h >> zoom_;
+        minX = minX >> zoom_;
+        minY = minY >> zoom_;
+
+        // Crop the image to the region to draw
+        im = Crop::apply(im, -minX, -minY, w, h);
+
+        // zoom it
+        if (zoom_ > 0) {
+            im = Upsample::apply(im, (1 << zoom_), (1 << zoom_));
+        }
+    } else {
+        // Otherwise, zoom and then crop
+        im = Downsample::apply(im, (1 << (-zoom_)), (1 << (-zoom_)));
+        im = Crop::apply(im, -minX, -minY, w, h);
+    }
+
+    // scale it
+    scale *= 256;
+    im = min(max(im * scale, 0.0f), 255.0f);
 
     switch (image_.channels) {
 
     case 1:
-        for (int y = 0; y < im.height; y++, SDL_y++) {
+        for (int y = 0; y < height_; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            for (int x = 0; x < im.width; x++) {
-                *scanlinePtr++ = HDRtoLDR(scale * im(x, y));
-                *scanlinePtr++ = HDRtoLDR(scale * im(x, y));
-                *scanlinePtr++ = HDRtoLDR(scale * im(x, y));
+            for (int x = 0; x < width_; x++) {
+                *scanlinePtr++ = (Uint8)(im(x, y));
+                *scanlinePtr++ = (Uint8)(im(x, y));
+                *scanlinePtr++ = (Uint8)(im(x, y));
                 *scanlinePtr++ = 255;
             }
         }
         break;
     case 2:
-        for (int y = 0; y < im.height; y++, SDL_y++) {
+        for (int y = 0; y < height_; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            for (int x = 0; x < im.width; x++) {
-                *scanlinePtr++ = HDRtoLDR(scale*im(x, y, 0));
+            for (int x = 0; x < width_; x++) {
+                *scanlinePtr++ = (Uint8)(im(x, y, 0));
                 *scanlinePtr++ = 0;
-                *scanlinePtr++ = HDRtoLDR(scale*im(x, y, 1));
+                *scanlinePtr++ = (Uint8)(im(x, y, 1));
                 *scanlinePtr++ = 255;
             }
         }
         break;
 
     default:
-        for (int y = 0; y < im.height; y++, SDL_y++) {
+        for (int y = 0; y < height_; y++, SDL_y++) {
             Uint8 *scanlinePtr = (Uint8 *)surface->pixels + SDL_y*surface->pitch;
-            for (int x = 0; x < im.width; x++) {
-                *scanlinePtr++ = HDRtoLDR(scale*im(x, y, 0));
-                *scanlinePtr++ = HDRtoLDR(scale*im(x, y, 1));
-                *scanlinePtr++ = HDRtoLDR(scale*im(x, y, 2));
+            for (int x = 0; x < width_; x++) {
+                *scanlinePtr++ = (Uint8)(im(x, y, 0));
+                *scanlinePtr++ = (Uint8)(im(x, y, 1));
+                *scanlinePtr++ = (Uint8)(im(x, y, 2));
                 *scanlinePtr++ = 255;
             }
         }
@@ -217,8 +272,8 @@ void DisplayWindow::redraw() {
            "Clearing the screen failed: %s\n", SDL_GetError());
 
     SDL_Rect dstpos;
-    dstpos.x = xOffset_;
-    dstpos.y = yOffset_;
+    dstpos.x = 0;
+    dstpos.y = 0;
     dstpos.w = width_;
     dstpos.h = height_;
 
@@ -236,9 +291,16 @@ void DisplayWindow::redraw() {
 void DisplayWindow::updateCaption() {
     int x = mouseX_ - xOffset_;
     int y = mouseY_ - yOffset_;
+    if (zoom_ > 0) {
+        x >>= zoom_;
+        y >>= zoom_;
+    } else {
+        x <<= (-zoom_);
+        y <<= (-zoom_);
+    }
     int t = tOffset_;
     std::stringstream cap;
-    cap << "ImageStack (x2^" << stop_ << ") (" << t << ", " << x << ", " << y << ")";
+    cap << "ImageStack (x2^" << stop_ << ") (" << t << ", " << x << ", " << y << ") x" << zoom_;
 
     if (x >= 0 && x < image_.width && y >= 0 && y < image_.height) {
         cap << " = (" << image_(x, y, t, 0);
@@ -318,24 +380,24 @@ bool DisplayWindow::update() {
                 break;
             case SDLK_PAGEDOWN:
                 tOffset_++;
-                renderSurface();
                 needRedraw = true;
                 break;
             case SDLK_PAGEUP:
                 tOffset_--;
-                renderSurface();
                 needRedraw = true;
                 break;
             case SDLK_KP_PLUS:
             case SDLK_EQUALS:
                 stop_ ++;
-                renderSurface();
                 needRedraw = true;
                 break;
             case SDLK_KP_MINUS:
             case SDLK_MINUS:
                 stop_ --;
-                renderSurface();
+                needRedraw = true;
+                break;
+            case SDLK_1:
+                xOffset_ = yOffset_ = zoom_ = 0;
                 needRedraw = true;
                 break;
             default:
@@ -343,14 +405,51 @@ bool DisplayWindow::update() {
             }
             break;
         case SDL_MOUSEMOTION:
+        {
+            int oldX = mouseX_;
+            int oldY = mouseY_;
             mouseX_ = event.motion.x;
             mouseY_ = event.motion.y;
+            if (event.motion.state) {
+                xOffset_ += mouseX_ - oldX;
+                yOffset_ += mouseY_ - oldY;
+                needRedraw = true;
+            }
             updateCaption();
+            break;
+        }
+        case SDL_MOUSEBUTTONDOWN:
+        {
+            if (event.button.button == SDL_BUTTON_WHEELUP && zoom_ < 10) {
+                zoom_++;
+                // Also adjust x and y offset to zoom on the mouse position
+                xOffset_ -= mouseX_;
+                xOffset_ *= 2;
+                xOffset_ += mouseX_;
+                yOffset_ -= mouseY_;
+                yOffset_ *= 2;
+                yOffset_ += mouseY_;
+                needRedraw = true;
+            } else if (event.button.button == SDL_BUTTON_WHEELDOWN && zoom_ > -10) {
+                zoom_--;
+                xOffset_ -= width_/2;
+                xOffset_ /= 2;
+                xOffset_ += width_/2;
+                yOffset_ -= height_/2;
+                yOffset_ /= 2;
+                yOffset_ += height_/2;
+                needRedraw = true;
+            }
+            break;
+        }
+        case SDL_MOUSEBUTTONUP:
+            needRedraw = true;
             break;
         }
     }
 
     if (needRedraw) {
+        renderSurface();
         redraw();
         needRedraw = false;
     }
@@ -377,4 +476,3 @@ DisplayWindow *DisplayWindow::instance_ = NULL;
 
 }
 #endif
-

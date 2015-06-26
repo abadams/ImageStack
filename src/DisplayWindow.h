@@ -58,6 +58,7 @@ private:
     SDL_Thread *thread;
     SDL_mutex *mutex;
     int mouseX_, mouseY_;
+    int zoom_;
     Image image_;
     int stop_;
 };
