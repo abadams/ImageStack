@@ -75,6 +75,7 @@ BIN_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),bin/build/$f)
 
 # Everything includes main.h. By precompiling that header we can speed up compilation about 30%
 bin/build/main.h.gch: src/main.h
+	mkdir -p bin/build
 	$(CXX) $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o bin/build/main.h.gch src/main.h
 
 $(BIN_TARGET): $(BIN_OBJECTS)
