@@ -5,7 +5,7 @@
 %   [width height frames channels]
 %
 % Format specification is here:
-% https://github.com/mit-gfx/ImageStack/blob/master/src/FileTMP.cpp
+% https://github.com/abadams/ImageStack/blob/master/src/FileTMP.cpp
 function [] = saveTMP(a, filename)
 
 if ndims(a) > 4
