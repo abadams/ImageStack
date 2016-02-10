@@ -5,7 +5,7 @@
 % [height width channels frames]
 %
 % Format specification is here:
-% https://github.com/mit-gfx/ImageStack/blob/master/src/FileTMP.cpp
+% https://github.com/abadams/ImageStack/blob/master/src/FileTMP.cpp
 function output = loadTMP(filename)
 
 type_strings = {'*float32', '*float64', '*uint8', '*int8', ...
