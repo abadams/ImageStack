@@ -73,8 +73,15 @@ Image ColorMatrix::apply(Image im, const float *matrix, int outChannels) {
 void ColorConvert::help() {
     printf("\n-colorconvert converts from one colorspace to another. It is called with two\n"
            "arguments representing these colorspaces.\n\n"
-           "Allowable colorspaces are rgb, yuv, hsv, xyz, lab and y (luminance alone). grayscale,\n"
-           "gray, and luminance are synonyms for y, and hsb and hsl are synonyms for hsv.\n\n"
+           "Allowable colorspaces are:\n"
+           "  rgb: gamma-corrected sRGB\n"
+           "  lrgb: linear-luminance sRGB\n"
+           "  argb: Adobe RGB\n"
+           "  yuv: Standard YUV -- a linear transform of gamma-corrected sRGB\n"
+           "  hsv, hsb, hsl: hue-saturation-value space\n"
+           "  xyz: CIE 1931 XYZ\n"
+           "  lab: CIE LAB\n"
+           "  y, gray: The brightness component of yuv alone\n"
            "Usage: ImageStack -load a.tga -colorconvert rgb hsv -scale 0.1 1 1\n"
            "                  -colorconvert hsv rgb -save out.tga\n\n");
 }
@@ -84,10 +91,8 @@ bool ColorConvert::test() {
     Noise::apply(a, 0.3, 0.7); // Gotta be in-gamut for all our spaces tested
     Image b = a;
 
-    if (!nearlyEqual(a, xyz2rgb(rgb2xyz(a)))) return false;
-
-    string spaces[] = {"xyz", "rgb", "argb", "yuv", "lab", "hsv"};
-    for (int i = 0; i < 6; i++) {
+    string spaces[] = {"xyz", "rgb", "argb", "yuv", "lab", "hsv", "lrgb"};
+    for (int i = 0; i < 7; i++) {
         for (int j = 0; j < i; j++) {
             printf("%s -> %s -> %s\n", spaces[j].c_str(), spaces[i].c_str(), spaces[j].c_str());
             Image to = apply(a, spaces[j], spaces[i]);
@@ -123,7 +128,11 @@ Image ColorConvert::apply(Image im, string from, string to) {
         panic("Unsupported destination color space: %s\n", to.c_str());
     }
 
-    // direct conversions that don't have to go via rgb
+    if (from == "hsl" || from == "hsb") from = "hsv";
+    if (to == "hsl" || to == "hsb") to = "hsv";
+    if (from == "gray") from = "y";
+    if (to == "gray") to = "y";
+
     if (from == "yuyv" && to == "yuv") {
         return yuyv2yuv(im);
     } else if (from == "uyvy" && to == "yuv") {
@@ -136,48 +145,40 @@ Image ColorConvert::apply(Image im, string from, string to) {
         return argb2xyz(im);
     } else if (from == "xyz" && to == "argb") {
         return xyz2argb(im);
-    } else if (from != "rgb" && to != "rgb") {
-        // conversions that go through rgb
-        Image halfway = apply(im, from, "rgb");
-        return apply(halfway, "rgb", to);
-    } else if (from == "rgb") { // from rgb
-        if (to == "hsv" || to == "hsl" || to == "hsb") {
-            return rgb2hsv(im);
-        } else if (to == "yuv") {
-            return rgb2yuv(im);
-        } else if (to == "xyz") {
-            return rgb2xyz(im);
-        } else if (to == "y" || to == "gray" ||
-                   to == "grayscale" || to == "luminance") {
-            return rgb2y(im);
-        } else if (to == "lab") {
-            return rgb2lab(im);
-        } else if (to == "argb") {
-            return rgb2argb(im);
-        } else {
-            panic("Unknown color space %s\n", to.c_str());
-        }
-    } else { //(to == "rgb")
-        if (from == "hsv" || from == "hsl" || from == "hsb") {
-            return hsv2rgb(im);
-        } else if (from == "yuv") {
-            return yuv2rgb(im);
-        } else if (from == "xyz") {
-            return xyz2rgb(im);
-        } else if (from == "y" || from == "gray" ||
-                   from == "grayscale" || from == "luminance") {
-            return y2rgb(im);
-        } else if (from == "lab") {
-            return lab2rgb(im);
-        } else if (from == "uyvy") {
-            return uyvy2rgb(im);
-        } else if (from == "yuyv") {
-            return yuyv2rgb(im);
-        } else if (from == "argb") {
-            return argb2rgb(im);
-        } else {
-            panic("Unknown color space %s\n", from.c_str());
-        }
+    } else if (from == "lrgb" && to == "xyz") {
+        return lrgb2xyz(im);
+    } else if (from == "xyz" && to == "lrgb") {
+        return xyz2lrgb(im);
+    } else if (from == "rgb" && to == "hsv") {
+        return rgb2hsv(im);
+    } else if (from == "rgb" && to == "yuv") {
+        return rgb2yuv(im);
+    } else if (from == "rgb" && to == "y") {
+        return rgb2y(im);
+    } else if (from == "rgb" && to == "lrgb") {
+        return rgb2lrgb(im);
+    } else if (from == "hsv" && to == "rgb") {
+        return hsv2rgb(im);
+    } else if (from == "yuv" && to == "rgb") {
+        return yuv2rgb(im);
+    } else if (from == "y" && to == "rgb") {
+        return y2rgb(im);
+    } else if (from == "lrgb" && to == "rgb") {
+        return lrgb2rgb(im);
+    } else if (from == "yuyv" || from == "uyvy") {
+        // The only path from uyvy or yuyv goes via yuv
+        return apply(apply(im, from, "yuv"), "yuv", to);
+    } else if (from == "yuv" || to == "yuv" || from == "hsv" || to == "hsv" || from == "y" || to == "y") {
+        // The only paths to yuv or hsv are via rgb
+        return apply(apply(im, from, "rgb"), "rgb", to);
+    } else if (from == "argb" || to == "argb" || from == "lab" || to == "lab") {
+        // Getting to and from argb or lab is via xyz
+        return apply(apply(im, from, "xyz"), "xyz", to);
+    } else if ((from == "xyz" && to == "rgb") ||
+               (from == "rgb" && to == "xyz")) {
+        return apply(apply(im, from, "lrgb"), "lrgb", to);
+    } else {
+        panic("Could not figure out how to convert from %s to %s\n", from.c_str(), to.c_str());
     }
 
     // keep the compiler happy
@@ -236,16 +237,6 @@ Image ColorConvert::lab2xyz(Image im) {
     Z.set(Select(Z > s, Zn*Z*Z*Z, (Z-16.0/116)*3*s*s*Zn));
 
     return out;
-}
-
-Image ColorConvert::rgb2lab(Image im) {
-    assert(im.channels == 3, "Image does not have 3 channels\n");
-    return xyz2lab(rgb2xyz(im));
-}
-
-Image ColorConvert::lab2rgb(Image im) {
-    assert(im.channels == 3, "Image does not have 3 channels\n");
-    return xyz2rgb(lab2xyz(im));
 }
 
 
@@ -396,15 +387,28 @@ Image ColorConvert::yuv2rgb(Image im) {
     return out;
 }
 
-Image ColorConvert::rgb2xyz(Image im) {
+Image ColorConvert::rgb2lrgb(Image im) {
+     // Convert from linear luminance srgb to gamma-encoded srgb
+    return Select(im <= 0.04045f,
+                  im/12.95f,
+                  pow(max((im + 0.055f)/1.055f, 0), 2.4f));
+
+}
+
+Image ColorConvert::lrgb2rgb(Image im) {
+    // Convert from gamma-encoded srgb to linear luminance srgb
+    return Select(im <= 0.0031308f,
+                  12.92f * im,
+                  1.055f * pow(Expr::max(im, 0), 1.0f/2.4f) - 0.055f);
+}
+    
+
+Image ColorConvert::lrgb2xyz(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
-    // convert to linear luminance srgb
-    Image out = Select(im <= 0.04045f,
-                       im/12.95f,
-                       pow(max((im + 0.055f)/1.055f, 0), 2.4f));
-    Image r = out.channel(0), g = out.channel(1), b = out.channel(2);
+    Image r = im.channel(0), g = im.channel(1), b = im.channel(2);
 
+    Image out(im.width, im.height, im.frames, 3);
     // Apply the linear transform to get to xyz
     out.setChannels(0.4124f * r + 0.3576f * g + 0.1805f * b,
                     0.2126f * r + 0.7152f * g + 0.0722f * b,
@@ -412,23 +416,20 @@ Image ColorConvert::rgb2xyz(Image im) {
     return out;
 }
 
-Image ColorConvert::xyz2rgb(Image im) {
+Image ColorConvert::xyz2lrgb(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
     // Apply linear transform to get to linear-luminance rgb
-    Image out(im.width, im.height, im.frames, 3);
     Image x = im.channel(0), y = im.channel(1), z = im.channel(2);
+
+    Image out(im.width, im.height, im.frames, 3);
     out.setChannels(3.2406f * x - 1.5372f * y - 0.4986f * z,
                     -0.9689f * x + 1.8758f * y + 0.0415f * z,
                     0.0557f * x - 0.2040f * y + 1.0570f * z);
 
-    // Convert from linear luminance to gamma-encoded srgb
-    out.set(Select(out <= 0.0031308f,
-                   12.92f * out,
-                   1.055f * pow(Expr::max(out, 0), 1.0f/2.4f) - 0.055f));
-
     return out;
 }
+
 
 Image ColorConvert::uyvy2yuv(Image im) {
     assert(im.channels == 2,
@@ -480,14 +481,6 @@ Image ColorConvert::yuyv2yuv(Image im) {
     return out;
 }
 
-Image ColorConvert::uyvy2rgb(Image im) {
-    return yuv2rgb(uyvy2yuv(im));
-}
-
-Image ColorConvert::yuyv2rgb(Image im) {
-    return yuv2rgb(yuyv2yuv(im));
-}
-
 Image ColorConvert::argb2xyz(Image im) {
     assert(im.channels == 3, "Image does not have 3 channels\n");
 
@@ -517,14 +510,6 @@ Image ColorConvert::xyz2argb(Image im) {
     out.set(pow(Expr::max(out, 0), 256/563.0f));
 
     return out;
-}
-
-Image ColorConvert::argb2rgb(Image im) {
-    return xyz2rgb(argb2xyz(im));
-}
-
-Image ColorConvert::rgb2argb(Image im) {
-    return xyz2argb(rgb2xyz(im));
 }
 
 void Demosaic::help() {

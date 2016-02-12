@@ -16,9 +16,8 @@
 #include <limits>
 #include <list>
 #include <sstream>
-#include <tr1/memory>
 
-using ::std::tr1::shared_ptr;
+using ::std::shared_ptr;
 using ::std::string;
 using ::std::vector;
 using ::std::pair;

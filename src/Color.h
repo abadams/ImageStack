@@ -23,24 +23,19 @@ public:
     static Image y2rgb(Image im);
     static Image rgb2yuv(Image im);
     static Image yuv2rgb(Image im);
-    static Image rgb2xyz(Image im);
-    static Image xyz2rgb(Image im);
+    static Image lrgb2xyz(Image im);
+    static Image xyz2lrgb(Image im);
     static Image lab2xyz(Image im);
     static Image xyz2lab(Image im);
-    static Image rgb2lab(Image im);
-    static Image lab2rgb(Image im);
-
+    static Image rgb2lrgb(Image im);
+    static Image lrgb2rgb(Image im);    
     static Image uyvy2yuv(Image im);
     static Image yuyv2yuv(Image im);
-
-    static Image uyvy2rgb(Image im);
-    static Image yuyv2rgb(Image im);
-
     static Image argb2xyz(Image im);
     static Image xyz2argb(Image im);
 
-    static Image argb2rgb(Image im);
-    static Image rgb2argb(Image im);
+
+
 };
 
 class Demosaic : public Operation {
