@@ -396,11 +396,13 @@ bool DisplayWindow::update() {
                 stop_ --;
                 needRedraw = true;
                 break;
-            case SDLK_1:
+            case SDLK_HOME:
                 xOffset_ = yOffset_ = zoom_ = 0;
                 needRedraw = true;
                 break;
             default:
+                printf("Unhandled key press: %c\n", (uint8_t)event.key.keysym.sym);
+                fflush(stdout);
                 break;
             }
             break;
