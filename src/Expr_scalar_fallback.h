@@ -42,7 +42,7 @@ namespace Vec {
     struct GT : public ImageStack::Scalar::GT {
         static bool vec(type a, type b) {return scalar_f(a, b);}
     };
-    struct LT : public ImageStack::Scalar::Lt {
+    struct LT : public ImageStack::Scalar::LT {
         static bool vec(type a, type b) {return scalar_f(a, b);}
     };
     struct GE : public ImageStack::Scalar::GE {
