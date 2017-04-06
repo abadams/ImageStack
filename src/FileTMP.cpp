@@ -1,5 +1,12 @@
 #include "main.h"
 #include "File.h"
+
+#ifndef _WIN32
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
+
 namespace ImageStack {
 #include <stdint.h>
 
@@ -157,7 +164,17 @@ Image loadData<float>(FILE *f, int width, int height, int frames, int channels) 
 }
 
 Image load(string filename) {
-    FILE *file = fopen(filename.c_str(), "rb");
+    static map<string, FILE *> open_fifos;
+
+    FILE *file = NULL;
+
+    map<string, FILE *>::iterator it = open_fifos.find(filename);
+    if (it == open_fifos.end()) {
+        file = fopen(filename.c_str(), "rb");
+    } else {
+        file = it->second;
+    }
+
     assert(file, "Could not open file %s\n", filename.c_str());
 
     // get the dimensions
@@ -195,7 +212,22 @@ Image load(string filename) {
         im = loadData<float>(file, h.width, h.height, h.frames, h.channels);
     }
 
-    fclose(file);
+    bool is_fifo = false;
+
+#ifndef _WIN32
+    {
+        struct stat buf {0};
+        is_fifo = (fstat(fileno(file), &buf) == 0) && (S_ISFIFO(buf.st_mode));
+    }
+#endif
+
+    // If the file is actually a fifo, keep it open so that we don't
+    // crash the writer.
+    if (is_fifo) {
+        open_fifos[filename] = file;
+    } else {
+        fclose(file);
+    }
 
     return im;
 }
