@@ -1433,21 +1433,20 @@ void Envelope::parse(vector<string> args) {
 }
 
 void Envelope::apply(Image im, Mode m, int radius) {
+    Image blurry = im.copy();
+    FastBlur::apply(blurry, radius, radius, 0);
+    im -= blurry;
+
     if (m == Upper) {
         MaxFilter::apply(im, radius);
-        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
-        radius = (radius+2)/3;
-        MaxFilter::apply(im, radius);
-        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
     }
 
     if (m == Lower) {
         MinFilter::apply(im, radius);
-        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
-        radius = (radius+2)/3;
-        MinFilter::apply(im, radius);
-        RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
     }
+
+    RectFilter::apply(im, 2*radius+1, 2*radius+1, 1);
+    im += blurry;
 }
 
 void HotPixelSuppression::help() {
