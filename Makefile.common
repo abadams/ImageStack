@@ -17,7 +17,8 @@ IMAGESTACK_OBJECTS = \
 	FileJPG.o \
 	FilePNG.o \
 	FileTMP.o \
-	FilePPM.o \
+        FileMAT.o \
+        FilePPM.o \
 	FilePBA.o \
 	FileTGA.o \
 	FileTIFF.o \
@@ -97,7 +98,7 @@ LIB_OBJECTS = $(foreach f,$(IMAGESTACK_OBJECTS),lib/build/$f)
 library: $(LIB_TARGET) include/ImageStack.h
 
 lib/build/main.h.gch: src/main.h
-	mkdir -p lib/build 
+	mkdir -p lib/build
 	$(CXX) $(IMAGESTACK_CCFLAGS) -x c++-header -O3 -o lib/build/main.h.gch src/main.h
 
 $(LIB_TARGET): $(LIB_OBJECTS)

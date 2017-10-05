@@ -125,6 +125,12 @@ Image load(string filename);
  void save(Image im, string filename, int bits);
 }
 
+namespace FileMAT {
+void help();
+Image load(string filename);
+void save(Image im, string filename, string type);
+}
+
 namespace FilePPM {
 void help();
 Image load(string filename);

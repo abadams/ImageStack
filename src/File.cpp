@@ -141,6 +141,8 @@ Image Load::apply(string filename) {
         return FileTGA::load(filename);
     } else if (suffixMatch(filename, ".wav")) {
         return FileWAV::load(filename);
+    } else if (suffixMatch(filename, ".mat")) {
+        return FileMAT::load(filename);
     } else if (suffixMatch(filename, ".ppm") ||
                suffixMatch(filename, ".pgm")) {
         return FilePPM::load(filename);
@@ -282,6 +284,8 @@ void Save::help() {
     printf("\n");
     FilePNG::help();
     printf("\n");
+    FileMAT::help();
+    printf("\n");
     FilePPM::help();
     printf("\n");
     FileTGA::help();
@@ -341,6 +345,9 @@ void Save::apply(Image im, string filename, string arg) {
         FileTGA::save(im, filename);
     } else if (suffixMatch(filename, ".wav")) {
         FileWAV::save(im, filename);
+    } else if (suffixMatch(filename, ".mat")) {
+        if (arg == "") { arg = "float32"; }
+        FileMAT::save(im, filename, arg);
     } else if (suffixMatch(filename, ".ppm") ||
                suffixMatch(filename, ".pgm")) {
         int bitdepth;
