@@ -15,9 +15,9 @@ public:
     char message[EXCEPTION_LENGTH];
 };
 
-void panic(const char *fmt, ...) throw(Exception);
+void panic(const char *fmt, ...);
 #undef assert
-void assert(bool cond, const char *fmt, ...) throw(Exception);
+void assert(bool cond, const char *fmt, ...);
 
 }
 
