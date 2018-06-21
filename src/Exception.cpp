@@ -15,7 +15,7 @@ Exception::Exception(const char *fmt, va_list arglist) {
     vsnprintf(message, EXCEPTION_LENGTH, fmt, arglist);
 }
 
-void panic(const char *fmt, ...) throw(Exception) {
+void panic(const char *fmt, ...) {
     va_list arglist;
     va_start(arglist, fmt);
     Exception e(fmt, arglist);
@@ -23,7 +23,7 @@ void panic(const char *fmt, ...) throw(Exception) {
     throw e;
 }
 
-void assert(bool cond, const char *fmt, ...) throw(Exception) {
+void assert(bool cond, const char *fmt, ...) {
     if (!cond) {
         va_list arglist;
         va_start(arglist, fmt);
