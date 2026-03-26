@@ -1,3 +1,5 @@
+#include <setjmp.h>
+
 #include "main.h"
 #include "File.h"
 namespace ImageStack {
@@ -8,10 +10,12 @@ namespace FilePNG {
 }
 #else
 
-namespace FilePNG {
-
 #define PNG_DEBUG 3
+extern "C" {
 #include <png.h>
+}
+
+namespace FilePNG {
 
 void help() {
     pprintf(".png files. These have a bit depth of 8 or 16, and may have 1-4 channels. They may only have 1 frame.");
@@ -143,18 +147,18 @@ Image load(string filename) {
         png_bytep dstPtr = row_pointers[y] = &data[y*row_bytes];
         if (bits == 8) {
             for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {                
+                for (int c = 0; c < im.channels; c++) {
                     *dstPtr++ = (png_byte)(HDRtoLDR(im(x, y, c)));
                 }
             }
         } else if (bits == 16) {
             for (int x = 0; x < im.width; x++) {
-                for (int c = 0; c < im.channels; c++) {                
+                for (int c = 0; c < im.channels; c++) {
                     unsigned short val = HDRtoLDR16(im(x, y, c));
                     *dstPtr++ = (png_byte)(val >> 8);
                     *dstPtr++ = (png_byte)(val & 0xff);
                 }
-            }            
+            }
         }
     }
 

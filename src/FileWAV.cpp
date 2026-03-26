@@ -48,9 +48,9 @@ void save(Image im, string filename) {
     fwrite(&s, 2, 1, f);
     s = im.channels;
     fwrite(&s, 2, 1, f);
-    l = 44100;
+    l = 96000;
     fwrite(&l, 4, 1, f);
-    l = 44100 * im.channels * 2;
+    l = 96000 * im.channels * 2;
     fwrite(&l, 4, 1, f);
     s = im.channels * 2;
     fwrite(&s, 2, 1, f);
@@ -167,9 +167,9 @@ Image load(string filename) {
 
     SDL_FreeWAV(wav_buffer);
 
-    // resample to 44100
-    if (wav_spec.freq != 44100) {
-        return Resample::apply(sound, 1, 1, (sound.width * 44100) / wav_spec.freq);
+    // resample to 96000
+    if (wav_spec.freq != 96000) {
+        return Resample::apply(sound, 1, 1, (sound.width * 96000) / wav_spec.freq);
     } else {
         return sound;
     }
@@ -178,4 +178,3 @@ Image load(string filename) {
 
 }
 #endif
-

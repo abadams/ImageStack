@@ -44,7 +44,7 @@ bool Send::test() {
     Send_test_port = randomInt(10000, 15000);
 
     // Create a child thread to send myself an image
-    SDL_Thread *thread = SDL_CreateThread(Send_test_thread, NULL);
+    SDL_Thread *thread = SDL_CreateThread(Send_test_thread, "imagestack", NULL);
 
     // Wait to receive it
     Image im = Receive::apply(Send_test_port);

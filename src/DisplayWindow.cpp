@@ -35,7 +35,7 @@ DisplayWindow::DisplayWindow() {
     modeChange = false;
     terminate = false;
     needRedraw = false;
-
+    window = NULL;
     thread = NULL;
 
     mutex = SDL_CreateMutex();
@@ -95,16 +95,24 @@ void DisplayWindow::handleModeChange() {
     if (!cursorVisible_) { SDL_ShowCursor(SDL_DISABLE); }
 
     SDL_mutexP(mutex);
-    SDL_Surface *result;
-    if (fullscreen_) { result = SDL_SetVideoMode(width_, height_, 32, SDL_DOUBLEBUF | SDL_FULLSCREEN); }
-    else { result = SDL_SetVideoMode(width_, height_, 32, SDL_DOUBLEBUF); }
+
+    if (window) {
+        SDL_DestroyWindow(window);
+    }
+
+    // Create a window instead of setting a video mode directly
+    window = SDL_CreateWindow("ImageStack Display Window",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              width_, height_,
+                              fullscreen_ ? SDL_WINDOW_FULLSCREEN : 0);
+    if (window == nullptr) {
+        panic("Could not create window: %s\n", SDL_GetError());
+    }
     SDL_mutexV(mutex);
-    assert(result != NULL, "Setting video mode failed: %s\n", SDL_GetError());
 
-    SDL_WM_SetCaption("ImageStack Display Window","");
-
-    // enable key repeat
-    SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+    // enable key repeat (TODO)
+    // SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 }
 
 void DisplayWindow::setImage(Image im) {
@@ -264,7 +272,7 @@ void DisplayWindow::redraw() {
     srcpos.h = height_;
 
     // get the video surface
-    SDL_Surface *screenbuffer = SDL_GetVideoSurface();
+    SDL_Surface *screenbuffer = SDL_GetWindowSurface(window);
     assert(screenbuffer, "Unable to get screen buffer: %s\n", SDL_GetError());
 
     // clear the screen buffer
@@ -281,8 +289,8 @@ void DisplayWindow::redraw() {
     assert((SDL_BlitSurface(surface, &srcpos, screenbuffer, &dstpos) >= 0),
            "Blit failed: %s\n", SDL_GetError());
 
-    // flip
-    SDL_Flip(screenbuffer);
+    // present the surface to the screen
+    SDL_UpdateWindowSurface(window);
 
     // update the caption
     updateCaption();
@@ -310,7 +318,7 @@ void DisplayWindow::updateCaption() {
         cap << ")";
     }
 
-    SDL_WM_SetCaption(cap.str().c_str(), "");
+    SDL_SetWindowTitle(window, cap.str().c_str());
 }
 
 void DisplayWindow::show() {
@@ -330,7 +338,7 @@ int DisplayWindow_showAsync_thread(void *data) {
 void DisplayWindow::showAsync() {
     if (thread) { return; }
     terminate = false;
-    thread = SDL_CreateThread(DisplayWindow_showAsync_thread, NULL);
+    thread = SDL_CreateThread(DisplayWindow_showAsync_thread, "imagestack", NULL);
 }
 
 bool DisplayWindow::update() {
@@ -420,9 +428,9 @@ bool DisplayWindow::update() {
             updateCaption();
             break;
         }
-        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEWHEEL:
         {
-            if (event.button.button == SDL_BUTTON_WHEELUP && zoom_ < 10) {
+            if (event.wheel.y > 0 && zoom_ < 10) {
                 zoom_++;
                 // Also adjust x and y offset to zoom on the mouse position
                 xOffset_ -= mouseX_;
@@ -432,7 +440,7 @@ bool DisplayWindow::update() {
                 yOffset_ *= 2;
                 yOffset_ += mouseY_;
                 needRedraw = true;
-            } else if (event.button.button == SDL_BUTTON_WHEELDOWN && zoom_ > -10) {
+            } else if (event.wheel.y < 0 && zoom_ > -10) {
                 zoom_--;
                 xOffset_ -= width_/2;
                 xOffset_ /= 2;

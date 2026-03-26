@@ -54,6 +54,7 @@ private:
     unsigned char bgRed_, bgGreen_, bgBlue_;
     int tOffset_, xOffset_, yOffset_;
     SDL_Surface *surface;
+    SDL_Window *window;
     Uint8 *displayImage; // a 3D buffer of the 8bit image
     SDL_Thread *thread;
     SDL_mutex *mutex;
